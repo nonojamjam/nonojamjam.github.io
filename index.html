@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Juhyeok Park — Portfolio</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --line:#262b36; --txt:#e6e9ef; --mut:#9aa3b2;
+    --accent:#6ea8fe; --green:#39d98a; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans KR",sans-serif;line-height:1.6}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px}
+  header{padding:72px 0 36px;border-bottom:1px solid var(--line)}
+  h1{font-size:2.3rem;margin:0 0 6px} .role{font-size:1.1rem;color:var(--accent);margin:0 0 14px}
+  .lead{font-size:1.08rem;color:var(--mut);max-width:680px;margin:0 0 18px}
+  .links{display:flex;gap:14px;flex-wrap:wrap;font-size:.92rem}
+  .links a{background:var(--card);border:1px solid var(--line);padding:7px 13px;border-radius:8px}
+  .meta{margin-top:16px;font-size:.88rem;color:var(--mut)}
+  section{padding:40px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:1.4rem;margin:0 0 6px}
+  .sub{color:var(--mut);font-size:.9rem;margin:0 0 22px}
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px;transition:transform .15s ease,border-color .15s ease}
+  .feat:hover{transform:translateY(-2px);border-color:#36425e}
+  .feat .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .feat h3{margin:0;font-size:1.18rem}
+  .feat .when{color:var(--mut);font-size:.82rem;white-space:nowrap}
+  .feat .one{color:var(--accent);font-size:.95rem;margin:4px 0 12px}
+  .feat ul{margin:0;padding-left:18px} .feat li{margin:5px 0;font-size:.94rem}
+  .feat .res{margin-top:12px;font-size:.9rem}
+  .feat .res b{color:var(--green)}
+  .tags{margin-top:14px;display:flex;gap:7px;flex-wrap:wrap}
+  .tag{font-size:.74rem;color:var(--mut);background:#0b0d12;border:1px solid var(--line);padding:3px 9px;border-radius:20px;font-family:var(--mono)}
+  .cta{display:inline-block;margin-top:14px;background:var(--accent);color:#08101f;font-weight:600;padding:9px 15px;border-radius:8px;font-size:.9rem}
+  .cta:hover{text-decoration:none;opacity:.92}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+  .mini{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:15px;transition:border-color .15s ease}
+  .mini:hover{border-color:#36425e}
+  .cta.ghost{background:transparent;border:1px solid var(--accent);color:var(--accent);margin-left:8px}
+  .cta.ghost:hover{background:rgba(110,168,254,.1)}
+  .prep{display:inline-block;margin-top:14px;font-size:.8rem;color:var(--mut);font-style:italic}
+  .mini h4{margin:0 0 5px;font-size:1rem} .mini p{margin:0;font-size:.86rem;color:var(--mut)}
+  .mini .t{margin-top:9px;font-size:.72rem;color:var(--mut);font-family:var(--mono)}
+  .skills{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;font-size:.9rem}
+  .skills .b{font-weight:600;color:var(--txt)} .skills .v{color:var(--mut)}
+  .edu{font-size:.95rem} .edu b{color:var(--txt)}
+  footer{padding:34px 0 60px;color:var(--mut);font-size:.88rem}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <h1>Juhyeok Park <span style="color:var(--mut);font-size:1.3rem;font-weight:400">박주혁</span></h1>
+  <p class="role">Electronic Engineering · AI/ML &amp; Signal Processing</p>
+  <p class="lead">I work where <b style="color:var(--txt)">signals meet AI</b> — building learning systems and understanding the input layer (sensing &amp; signal processing) that determines what a model can actually perceive. Interested in robust perception for Physical AI.</p>
+  <div class="links">
+    <a href="https://github.com/nonojamjam">GitHub</a>
+    <a href="mailto:2021076023@chungbuk.ac.kr">Email</a>
+    <a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">FedV9 live demo</a>
+  </div>
+  <p class="meta">B.S. Electronic Engineering, Chungbuk National University (GPA 3.91/4.5, expected Feb 2027) · Research intern @ KAERI · Undergrad researcher @ NAVIS Lab</p>
+</div></header>
+
+<section><div class="wrap">
+  <h2>Featured work</h2>
+  <p class="sub">Three projects I led end-to-end — problem, my role, technique, result.</p>
+
+  <div class="feat">
+    <div class="top"><h3>FedV9 — Noise-Robust Object Detection via Heterogeneous Relational KD</h3><span class="when">2025.11 – present · team lead</span></div>
+    <p class="one">Keeping a lightweight detector accurate under satellite sensor noise by distilling a foundation model's relational structure.</p>
+    <ul>
+      <li>Distill DINOv2 (ViT) → YOLOv8s-seg (CNN) across a <b>heterogeneous</b> gap via distance-wise relational KD + 50:50 mixed-noise training.</li>
+      <li>Built the full ML pipeline solo: RKD loss, custom Ultralytics trainer (SPPF hook + adapter + mixed noise), and 3 framework-level bug fixes.</li>
+      <li>Teacher &amp; adapter detached at inference → zero added cost.</li>
+    </ul>
+    <p class="res">Result (σ=0.3, iSAID): noisy mAP50 <b>0.009 → 0.196</b>, clean <b>0.278 → 0.426</b>; deployed model 11.8M / 22MB.</p>
+    <div class="tags"><span class="tag">PyTorch</span><span class="tag">DINOv2</span><span class="tag">YOLOv8</span><span class="tag">Knowledge Distillation</span><span class="tag">Ultralytics</span></div>
+    <a class="cta" href="https://nonojamjam.github.io/noise-robust-detection-rkd/">Open interactive demo →</a>
+    <a class="cta ghost" href="https://github.com/nonojamjam/noise-robust-detection-rkd">Code &amp; deep-dive</a>
+  </div>
+
+  <div class="feat">
+    <div class="top"><h3>Imagination Learning — Finding &amp; Verifying Where LLM/VLM Robot Control Breaks (KAERI)</h3><span class="when">2026 · ~6 mo intern</span></div>
+    <p class="one">Pinpointing the failure modes of zero/few-shot LLM-VLM control — and building ways to check for them.</p>
+    <ul>
+      <li>Designed controlled ablations (DOF 1→2→5; hints No-hint / CoT / joint-info / image feedback; VLM read-vs-generate) to isolate <i>where</i> spatial reasoning fails.</li>
+      <li>Surfaced concrete failure signals: joint-info hints <i>hurt</i> (165.7mm → 276.9mm), a Verifier ceiling at 5-DOF, and same-family self-verification bias.</li>
+      <li>Ran the full research loop solo (design, data, visualization, report) — driving toward a verification layer that catches these errors at runtime.</li>
+    </ul>
+    <p class="res">Direction: AI doesn't reliably read raw physical/spatial signals → I'm working on <b>detecting and verifying</b> those failures (cross-modal checks, sensor grounding). <b>Oral presentation</b>, Korea Society of Industrial Information Systems 2026.</p>
+    <div class="tags"><span class="tag">GPT-4o / VLM</span><span class="tag">ablation design</span><span class="tag">failure analysis</span><span class="tag">runtime verification</span></div>
+    <span class="prep">Demo &amp; deep-dive in preparation</span>
+  </div>
+
+  <div class="feat">
+    <div class="top"><h3>eLoran Coherent Accumulation under Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – present</span></div>
+    <p class="one">Recovering time-of-arrival estimation when random samples are dropped at the receiver.</p>
+    <ul>
+      <li>BPF + valid-sample filtering, recursive noise suppression, reference-based interpolation + cross-correlation, S-Transform/FFT smart filtering.</li>
+      <li>Hybrid hard/soft-decision sub-sample PPM demodulation.</li>
+      <li>Counter-intuitive finding: simple accumulation's statistical robustness beat complex compensation — model vs. reality gap, observed directly.</li>
+    </ul>
+    <p class="res">Results: <b>~7 dB</b> output gain at SNR −20 dB · PPM BER <b>×1.67</b> better · 5→3 accumulations → <b>1.5 dB</b> SNR.</p>
+    <div class="tags"><span class="tag">DSP</span><span class="tag">S-Transform / FFT</span><span class="tag">TOA</span><span class="tag">MATLAB</span></div>
+    <span class="prep">Deep-dive in preparation</span>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Other projects</h2>
+  <p class="sub">Coursework &amp; side builds — AI/ML, embedded, communications, systems.</p>
+  <div class="grid">
+    <div class="mini"><h4>ResNet-18 KD + Ensemble</h4><p>4-model ensemble as a teacher; KL+MSE hybrid distillation. 29% → 69.66%.</p><div class="t">PyTorch · Mixup/CutMix · KD</div></div>
+    <div class="mini"><h4>Raspberry-Pi Band-Assist System</h4><p>Real-time OpenCV + TTS, Teachable-Machine pitch monitoring, TCP/IP sockets, master–slave IoT sync.</p><div class="t">Linux · OpenCV · IoT</div></div>
+    <div class="mini"><h4>Cortex-M3 SHA-256 OTP</h4><p>Hardware OTP with wired (USART) + wireless (BT) hybrid; solved 3.3V/5V level mismatch via common ground.</p><div class="t">ARM · embedded security</div></div>
+    <div class="mini"><h4>PPM System (MATLAB)</h4><p>Hard- vs soft-decision under AWGN; sub-sample hybrid demodulation for BER gains.</p><div class="t">MATLAB · comms</div></div>
+    <div class="mini"><h4>AES-128 + CBC (C++)</h4><p>Implemented from scratch (no libraries), including PKCS#7 padding.</p><div class="t">C++ · cryptography</div></div>
+    <div class="mini"><h4>Project Jakum — AI Orchestration</h4><p>Personal multi-agent orchestration + retrieval/memory system: precedent-based routing across LLMs, knowledge graph, automation hooks.</p><div class="t">multi-agent · RAG · tooling</div></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Skills</h2>
+  <div class="skills">
+    <div><span class="b">Languages</span> · <span class="v">Python (main), C/C++, MATLAB</span></div>
+    <div><span class="b">AI/ML</span> · <span class="v">PyTorch, YOLOv8/Ultralytics, DINOv2, ResNet, Knowledge Distillation</span></div>
+    <div><span class="b">Signal processing</span> · <span class="v">DSP, S-Transform, FFT, BPF, coherent accumulation, TOA</span></div>
+    <div><span class="b">Embedded / Comms</span> · <span class="v">ARM Cortex-M3, Raspberry Pi, USART, TCP/IP, PPM</span></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Education</h2>
+  <p class="edu"><b>B.S. Electronic Engineering</b>, Chungbuk National University — GPA 3.91 / 4.5 · expected Feb 2027<br>
+  <span style="color:var(--mut);font-size:.9rem">Signals &amp; systems, digital communication, DSP · Electronic circuits, digital/SoC design, computer architecture · AI systems, AI semiconductor design, automatic control</span></p>
+</div></section>
+
+<footer><div class="wrap">
+  Juhyeok Park · <a href="mailto:2021076023@chungbuk.ac.kr">2021076023@chungbuk.ac.kr</a> · <a href="https://github.com/nonojamjam">github.com/nonojamjam</a>
+</div></footer>
+</body>
+</html>
