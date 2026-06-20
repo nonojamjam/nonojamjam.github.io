@@ -42,6 +42,9 @@
   .cta.ghost{background:transparent;border:1px solid var(--accent);color:var(--accent);margin-left:8px}
   .cta.ghost:hover{background:rgba(110,168,254,.1)}
   .prep{display:inline-block;margin-top:14px;font-size:.8rem;color:var(--mut);font-style:italic}
+  .demo-fig{margin:16px 0 0}
+  .demo-fig img{width:100%;border-radius:10px;border:1px solid var(--line);display:block}
+  .demo-fig figcaption{font-size:.82rem;color:var(--mut);margin-top:8px}
   .mini h4{margin:0 0 5px;font-size:1rem} .mini p{margin:0;font-size:.86rem;color:var(--mut)}
   .mini .t{margin-top:9px;font-size:.72rem;color:var(--mut);font-family:var(--mono)}
   .skills{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;font-size:.9rem}
@@ -92,7 +95,10 @@
     </ul>
     <p class="res">Direction: AI doesn't reliably read raw physical/spatial signals → I'm working on <b>detecting and verifying</b> those failures (cross-modal checks, sensor grounding). <b>Oral presentation</b>, Korea Society of Industrial Information Systems 2026.</p>
     <div class="tags"><span class="tag">GPT-4o / VLM</span><span class="tag">ablation design</span><span class="tag">failure analysis</span><span class="tag">runtime verification</span></div>
-    <span class="prep">Demo &amp; deep-dive in preparation</span>
+    <figure class="demo-fig">
+      <img src="assets/ive_verification_demo.gif" alt="Imagination + step-wise verification loop on a robot pick task" loading="lazy">
+      <figcaption>Imagination + step-wise verification loop: each pick step is checked (render / IK+FK / collision / semantic+workspace / image-text) with a cube-error readout — surfacing exactly where the plan breaks.</figcaption>
+    </figure>
   </div>
 
   <div class="feat">
@@ -105,7 +111,10 @@
     </ul>
     <p class="res">Results: <b>~7 dB</b> output gain at SNR −20 dB · PPM BER <b>×1.67</b> better · 5→3 accumulations → <b>1.5 dB</b> SNR.</p>
     <div class="tags"><span class="tag">DSP</span><span class="tag">S-Transform / FFT</span><span class="tag">TOA</span><span class="tag">MATLAB</span></div>
-    <span class="prep">Deep-dive in preparation</span>
+    <figure class="demo-fig">
+      <img src="assets/eloran_accumulation.png" alt="eLoran pulse groups recovered by coherent accumulation under 50% sample loss" loading="lazy">
+      <figcaption>Real eLoran data, 50% random sample loss. <b>Top — simple coherent accumulation:</b> all four pulse groups survive above the noise floor (correct TOA). <b>Middle/bottom — my proposed time- &amp; frequency-domain compensation:</b> higher SNR but overfit / ringing → wrong TOA. 1000× Monte-Carlo confirmed the simple method is the most robust — a result that overturned the intuitive approach.</figcaption>
+    </figure>
   </div>
 </div></section>
 
