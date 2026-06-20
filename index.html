@@ -45,6 +45,15 @@
   .demo-fig{margin:16px 0 0}
   .demo-fig img{width:100%;border-radius:10px;border:1px solid var(--line);display:block}
   .demo-fig figcaption{font-size:.82rem;color:var(--mut);margin-top:8px}
+  .ba{position:relative;width:100%;max-width:460px;margin:16px auto 0;border-radius:10px;overflow:hidden;user-select:none;aspect-ratio:1174/1090;background:#000}
+  .ba img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+  .ba-top{clip-path:inset(0 45% 0 0)}
+  .ba-div{position:absolute;top:0;bottom:0;left:55%;width:2px;background:#fff;transform:translateX(-1px);pointer-events:none}
+  .ba-handle{position:absolute;top:50%;left:55%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-size:.9rem;box-shadow:0 2px 10px rgba(0,0,0,.5);pointer-events:none}
+  .ba-tag{position:absolute;bottom:9px;font-size:.72rem;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(8,10,16,.78)}
+  .ba-tag.l{left:9px;color:#ffb4b4} .ba-tag.r{right:9px;color:#9ff0c4}
+  .ba-wipe{width:100%;max-width:460px;margin:12px auto 0;display:block;accent-color:var(--accent)}
+  .ba-cap{font-size:.82rem;color:var(--mut);margin:8px 0 0;text-align:center}
   .mini h4{margin:0 0 5px;font-size:1rem} .mini p{margin:0;font-size:.86rem;color:var(--mut)}
   .mini .t{margin-top:9px;font-size:.72rem;color:var(--mut);font-family:var(--mono)}
   .skills{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;font-size:.9rem}
@@ -81,6 +90,16 @@
     </ul>
     <p class="res">Result (σ=0.3, iSAID): noisy mAP50 <b>0.009 → 0.196</b>, clean <b>0.278 → 0.426</b>; deployed model 11.8M / 22MB.</p>
     <div class="tags"><span class="tag">PyTorch</span><span class="tag">DINOv2</span><span class="tag">YOLOv8</span><span class="tag">Knowledge Distillation</span><span class="tag">Ultralytics</span></div>
+    <div class="ba" id="ba">
+      <img class="ba-base" src="assets/n1.png" alt="Proposed model detects the aircraft under noise">
+      <img class="ba-top" id="baTop" src="assets/bl0.png" alt="Baseline fails under noise">
+      <div class="ba-div" id="baDiv"></div>
+      <div class="ba-handle" id="baHandle"><span>⟷</span></div>
+      <span class="ba-tag l">Baseline · 0 detections</span>
+      <span class="ba-tag r">Proposed · detects ✓</span>
+    </div>
+    <input type="range" id="wipe" class="ba-wipe" min="0" max="100" value="55" aria-label="compare baseline and proposed">
+    <p class="ba-cap">Drag — same noisy tile (σ=0.3): baseline finds nothing, the distilled model keeps the lock.</p>
     <a class="cta" href="https://nonojamjam.github.io/noise-robust-detection-rkd/">Open interactive demo →</a>
     <a class="cta ghost" href="https://github.com/nonojamjam/noise-robust-detection-rkd">Code &amp; deep-dive</a>
   </div>
@@ -96,8 +115,12 @@
     <p class="res">Direction: AI doesn't reliably read raw physical/spatial signals → I'm working on <b>detecting and verifying</b> those failures (cross-modal checks, sensor grounding). <b>Oral presentation</b>, Korea Society of Industrial Information Systems 2026.</p>
     <div class="tags"><span class="tag">GPT-4o / VLM</span><span class="tag">ablation design</span><span class="tag">failure analysis</span><span class="tag">runtime verification</span></div>
     <figure class="demo-fig">
+      <img src="assets/ive_2d_failure.png" alt="2D one-link reach: VLM imagines the arm not moving instead of rotating to the target" loading="lazy">
+      <figcaption><b>The failure, in the simplest possible case (2D, one link, reach the ball):</b> A — start (θ=0°). B — what the VLM <i>imagines</i>: it leaves the arm where it is (Δθ=0°). C — ground truth: rotate to 32.9°. The model can't do the basic kinematics — a clean, reproducible failure that holds across seeds.</figcaption>
+    </figure>
+    <figure class="demo-fig">
       <img src="assets/ive_verification_demo.gif" alt="Imagination + step-wise verification loop on a robot pick task" loading="lazy">
-      <figcaption>Imagination + step-wise verification loop: each pick step is checked (render / IK+FK / collision / semantic+workspace / image-text) with a cube-error readout — surfacing exactly where the plan breaks.</figcaption>
+      <figcaption>…so I built a step-wise verification loop (render / IK+FK / collision / semantic+workspace / image-text checks with a cube-error readout) to catch exactly where the plan breaks.</figcaption>
     </figure>
   </div>
 
@@ -150,5 +173,34 @@
 <footer><div class="wrap">
   Juhyeok Park · <a href="mailto:2021076023@chungbuk.ac.kr">2021076023@chungbuk.ac.kr</a> · <a href="https://github.com/nonojamjam">github.com/nonojamjam</a>
 </div></footer>
+
+<script>
+  (function(){
+    const ba = document.getElementById('ba');
+    if(!ba) return;
+    const wipe = document.getElementById('wipe');
+    const baTop = document.getElementById('baTop');
+    const baDiv = document.getElementById('baDiv');
+    const baHnd = document.getElementById('baHandle');
+    function setWipe(v){
+      v = Math.max(0, Math.min(100, v));
+      baTop.style.clipPath = `inset(0 ${100 - v}% 0 0)`;
+      baDiv.style.left = v + '%';
+      baHnd.style.left = v + '%';
+      if (wipe.value != v) wipe.value = v;
+    }
+    wipe.addEventListener('input', e => setWipe(+e.target.value));
+    let dragging = false;
+    function fromEvent(e){
+      const r = ba.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+      setWipe(Math.round(x / r.width * 100));
+    }
+    ba.addEventListener('pointerdown', e => { dragging = true; fromEvent(e); });
+    window.addEventListener('pointermove', e => { if (dragging) fromEvent(e); });
+    window.addEventListener('pointerup', () => { dragging = false; });
+    setWipe(55);
+  })();
+</script>
 </body>
 </html>
