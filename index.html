@@ -115,8 +115,8 @@
     <p class="res">Direction: AI doesn't reliably read raw physical/spatial signals → I'm working on <b>detecting and verifying</b> those failures (cross-modal checks, sensor grounding). <b>Oral presentation</b>, Korea Society of Industrial Information Systems 2026.</p>
     <div class="tags"><span class="tag">GPT-4o / VLM</span><span class="tag">ablation design</span><span class="tag">failure analysis</span><span class="tag">runtime verification</span></div>
     <figure class="demo-fig">
-      <img src="assets/ive_2d_failure.png" alt="2D one-link reach: VLM imagines the arm not moving instead of rotating to the target" loading="lazy">
-      <figcaption><b>The failure, in the simplest possible case (2D, one link, reach the ball):</b> A — start (θ=0°). B — what the VLM <i>imagines</i>: it leaves the arm where it is (Δθ=0°). C — ground truth: rotate to 32.9°. The model can't do the basic kinematics — a clean, reproducible failure that holds across seeds.</figcaption>
+      <img src="assets/ive_robot_fail.png" alt="Image-generation model fails on robot kinematics: predicted arm ~18cm off the true pose" loading="lazy">
+      <figcaption><b>The failure, made concrete:</b> generation/VLM models trained on human poses can't represent robot kinematics. Asked to place the arm, the model's prediction (red) lands <b>~18 cm</b> off the true pose (dashed) — keypoint similarity collapses from <b>0.95+</b> (human) to <b>~0.24</b> (robot). The structure itself breaks, not just the endpoint.</figcaption>
     </figure>
     <figure class="demo-fig">
       <img src="assets/ive_verification_demo.gif" alt="Imagination + step-wise verification loop on a robot pick task" loading="lazy">
