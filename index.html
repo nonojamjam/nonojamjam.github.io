@@ -58,6 +58,9 @@
   .mini .t{margin-top:9px;font-size:.72rem;color:var(--mut);font-family:var(--mono)}
   .skills{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;font-size:.9rem}
   .skills .b{font-weight:600;color:var(--txt)} .skills .v{color:var(--mut)}
+  .pubs{margin:0;padding-left:1.2em;font-size:.95rem;line-height:1.75}
+  .pubs li{margin-bottom:12px} .pubs b{color:var(--txt)}
+  .pubs .pv{display:block;color:var(--mut);font-size:.86rem;margin-top:2px}
   .edu{font-size:.95rem} .edu b{color:var(--txt)}
   footer{padding:34px 0 60px;color:var(--mut);font-size:.88rem}
 </style>
@@ -66,8 +69,8 @@
 
 <header><div class="wrap">
   <h1>Juhyeok Park <span style="color:var(--mut);font-size:1.3rem;font-weight:400">박주혁</span></h1>
-  <p class="role">Electronic Engineering · AI/ML &amp; Signal Processing</p>
-  <p class="lead">I work where <b style="color:var(--txt)">signals meet AI</b> — building learning systems and understanding the input layer (sensing &amp; signal processing) that determines what a model can actually perceive. Interested in robust perception for Physical AI.</p>
+  <p class="role">Electronic Engineering · Signal Processing &amp; AI</p>
+  <p class="lead">Undergraduate research on <b style="color:var(--txt)">eLoran receivers</b> — estimating time-of-arrival when samples are randomly dropped. At KAERI I built a check that tests a VLM's robot-manipulation commands against forward kinematics before they run. I want to keep working on <b style="color:var(--txt)">navigation &amp; positioning (PNT) signal processing</b>.</p>
   <div class="links">
     <a href="https://github.com/nonojamjam">GitHub</a>
     <a href="mailto:2021076023@chungbuk.ac.kr">Email</a>
@@ -110,9 +113,9 @@
     <ul>
       <li>Designed controlled ablations (DOF 1→2→5; hints No-hint / CoT / joint-info / image feedback; VLM read-vs-generate) to isolate <i>where</i> spatial reasoning fails.</li>
       <li>Surfaced concrete failure signals: joint-info hints <i>hurt</i> (165.7mm → 276.9mm), a Verifier ceiling at 5-DOF, and same-family self-verification bias.</li>
-      <li>Ran the full research loop solo (design, data, visualization, report) — driving toward a verification layer that catches these errors at runtime.</li>
+      <li>Ran the full research loop solo — experiment design, data collection, visualization, and the report submitted to the lab.</li>
     </ul>
-    <p class="res">Direction: AI doesn't reliably read raw physical/spatial signals → I'm working on <b>detecting and verifying</b> those failures (cross-modal checks, sensor grounding). <b>Oral presentation</b>, Korea Society of Industrial Information Systems 2026.</p>
+    <p class="res">What it establishes: a model checking <i>itself</i> is not enough. <b>Oral presentation + proceedings</b>, Korea Society of Industrial Information Systems 2026. The project closed in 2026; that negative result is what moved me toward <b>independent, physically-grounded checks</b>.</p>
     <div class="tags"><span class="tag">GPT-4o / VLM</span><span class="tag">ablation design</span><span class="tag">failure analysis</span><span class="tag">runtime verification</span></div>
     <figure class="demo-fig">
       <img src="assets/ive_robot_fail.png" alt="Image-generation model fails on robot kinematics: predicted arm ~18cm off the true pose" loading="lazy">
@@ -130,15 +133,24 @@
     <ul>
       <li>BPF + valid-sample filtering, recursive noise suppression, reference-based interpolation + cross-correlation, S-Transform/FFT smart filtering.</li>
       <li>Hybrid hard/soft-decision sub-sample PPM demodulation.</li>
-      <li>Counter-intuitive finding: simple accumulation's statistical robustness beat complex compensation — model vs. reality gap, observed directly.</li>
+      <li>Evaluated every variant against a <b>1000-run Monte-Carlo</b> baseline rather than a single trial — which is what showed the compensation schemes were overfitting.</li>
     </ul>
     <p class="res">Results: <b>~7 dB</b> output gain at SNR −20 dB · PPM BER <b>×1.67</b> better · 5→3 accumulations → <b>1.5 dB</b> SNR.</p>
     <div class="tags"><span class="tag">DSP</span><span class="tag">S-Transform / FFT</span><span class="tag">TOA</span><span class="tag">MATLAB</span></div>
     <figure class="demo-fig">
       <img src="assets/eloran_accumulation.png" alt="eLoran pulse groups recovered by coherent accumulation under 50% sample loss" loading="lazy">
-      <figcaption>Real eLoran data, 50% random sample loss. <b>Top — simple coherent accumulation:</b> all four pulse groups survive above the noise floor (correct TOA). <b>Middle/bottom — my proposed time- &amp; frequency-domain compensation:</b> higher SNR but overfit / ringing → wrong TOA. 1000× Monte-Carlo confirmed the simple method is the most robust — a result that overturned the intuitive approach.</figcaption>
+      <figcaption>Real eLoran data, 50% random sample loss. <b>Top — coherent accumulation:</b> all four pulse groups clear the noise floor and TOA is recovered correctly. <b>Middle/bottom — time- &amp; frequency-domain compensation:</b> higher SNR but ringing shifts the peak, so TOA is wrong. Higher SNR is not the objective; a correct arrival time is. 1000-run Monte-Carlo settled which method holds.</figcaption>
     </figure>
   </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Publications &amp; talks</h2>
+  <p class="sub">First author on one international short paper and one domestic conference proceeding.</p>
+  <ol class="pubs">
+    <li><b>Juhyeok Park</b>. &ldquo;An LLM Wiki System for High-Consequence Domain Knowledge Organization: Initial Feasibility for Space Operations and Nuclear Engineering.&rdquo; <b>3rd IAA Conference on AI for Space</b>, Jeju, Korea, Aug 2026. <span class="pv">First author · 4-page paper + oral presentation</span></li>
+    <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;A VLM Robot Manipulation Pipeline for Mitigating Physical Hallucination&rdquo; (in Korean). <b>Korea Society of Industrial Information Systems</b>, Spring 2026. <span class="pv">First author · domestic conference, proceedings + oral (in Korean)</span></li>
+  </ol>
 </div></section>
 
 <section><div class="wrap">
