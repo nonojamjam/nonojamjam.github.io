@@ -84,6 +84,41 @@
   <p class="sub">Three projects I led end-to-end — problem, my role, technique, result.</p>
 
   <div class="feat">
+    <div class="top"><h3>eLoran Coherent Accumulation under Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – present</span></div>
+    <p class="one">Recovering time-of-arrival estimation when random samples are dropped at the receiver.</p>
+    <ul>
+      <li>BPF + valid-sample filtering, recursive noise suppression, reference-based interpolation + cross-correlation, S-Transform/FFT smart filtering.</li>
+      <li>Hybrid hard/soft-decision sub-sample PPM demodulation.</li>
+      <li>Evaluated every variant against a <b>1000-run Monte-Carlo</b> baseline rather than a single trial — which is what showed the compensation schemes were overfitting.</li>
+    </ul>
+    <p class="res">Results: <b>~7 dB</b> output gain at SNR −20 dB · PPM BER <b>×1.67</b> better · 5→3 accumulations → <b>1.5 dB</b> SNR.</p>
+    <div class="tags"><span class="tag">DSP</span><span class="tag">S-Transform / FFT</span><span class="tag">TOA</span><span class="tag">MATLAB</span></div>
+    <figure class="demo-fig">
+      <img src="assets/eloran_accumulation.png" alt="eLoran pulse groups recovered by coherent accumulation under 50% sample loss" loading="lazy">
+      <figcaption>Real eLoran data, 50% random sample loss. <b>Top — coherent accumulation:</b> all four pulse groups clear the noise floor and TOA is recovered correctly. <b>Middle/bottom — time- &amp; frequency-domain compensation:</b> higher SNR but ringing shifts the peak, so TOA is wrong. Higher SNR is not the objective; a correct arrival time is. 1000-run Monte-Carlo settled which method holds.</figcaption>
+    </figure>
+  </div>
+  <div class="feat">
+    <div class="top"><h3>Imagination Learning — Finding &amp; Verifying Where LLM/VLM Robot Control Breaks (KAERI)</h3><span class="when">2026 · ~6 mo intern</span></div>
+    <p class="one">Pinpointing the failure modes of zero/few-shot LLM-VLM control — and building ways to check for them.</p>
+    <ul>
+      <li>Designed controlled ablations (DOF 1→2→5; hints No-hint / CoT / joint-info / image feedback; VLM read-vs-generate) to isolate <i>where</i> spatial reasoning fails.</li>
+      <li>Surfaced concrete failure signals: joint-info hints <i>hurt</i> (165.7mm → 276.9mm), a Verifier ceiling at 5-DOF, and same-family self-verification bias.</li>
+      <li>Ran the full research loop solo — experiment design, data collection, visualization, and the report submitted to the lab.</li>
+    </ul>
+    <p class="res">What it establishes: a model checking <i>itself</i> is not enough. <b>Oral presentation + proceedings</b>, Korea Society of Industrial Information Systems 2026. The project closed in 2026; that negative result is what moved me toward <b>independent, physically-grounded checks</b>.</p>
+    <div class="tags"><span class="tag">GPT-4o / VLM</span><span class="tag">ablation design</span><span class="tag">failure analysis</span><span class="tag">runtime verification</span></div>
+    <figure class="demo-fig">
+      <img src="assets/ive_robot_fail.png" alt="Image-generation model fails on robot kinematics: predicted arm ~18cm off the true pose" loading="lazy">
+      <figcaption><b>The failure, made concrete:</b> generation/VLM models trained on human poses can't represent robot kinematics. Asked to place the arm, the model's prediction (red) lands <b>~18 cm</b> off the true pose (dashed) — keypoint similarity collapses from <b>0.95+</b> (human) to <b>~0.24</b> (robot). The structure itself breaks, not just the endpoint.</figcaption>
+    </figure>
+    <figure class="demo-fig">
+      <img src="assets/ive_verification_demo.gif" alt="Imagination + step-wise verification loop on a robot pick task" loading="lazy">
+      <figcaption>…so I built a step-wise verification loop (render / IK+FK / collision / semantic+workspace / image-text checks with a cube-error readout) to catch exactly where the plan breaks.</figcaption>
+    </figure>
+  </div>
+
+  <div class="feat">
     <div class="top"><h3>FedV9 — Noise-Robust Object Detection via Heterogeneous Relational KD</h3><span class="when">2025.11 – present · team lead</span></div>
     <p class="one">Keeping a lightweight detector accurate under satellite sensor noise by distilling a foundation model's relational structure.</p>
     <ul>
@@ -107,41 +142,6 @@
     <a class="cta ghost" href="https://github.com/nonojamjam/noise-robust-detection-rkd">Code &amp; deep-dive</a>
   </div>
 
-  <div class="feat">
-    <div class="top"><h3>Imagination Learning — Finding &amp; Verifying Where LLM/VLM Robot Control Breaks (KAERI)</h3><span class="when">2026 · ~6 mo intern</span></div>
-    <p class="one">Pinpointing the failure modes of zero/few-shot LLM-VLM control — and building ways to check for them.</p>
-    <ul>
-      <li>Designed controlled ablations (DOF 1→2→5; hints No-hint / CoT / joint-info / image feedback; VLM read-vs-generate) to isolate <i>where</i> spatial reasoning fails.</li>
-      <li>Surfaced concrete failure signals: joint-info hints <i>hurt</i> (165.7mm → 276.9mm), a Verifier ceiling at 5-DOF, and same-family self-verification bias.</li>
-      <li>Ran the full research loop solo — experiment design, data collection, visualization, and the report submitted to the lab.</li>
-    </ul>
-    <p class="res">What it establishes: a model checking <i>itself</i> is not enough. <b>Oral presentation + proceedings</b>, Korea Society of Industrial Information Systems 2026. The project closed in 2026; that negative result is what moved me toward <b>independent, physically-grounded checks</b>.</p>
-    <div class="tags"><span class="tag">GPT-4o / VLM</span><span class="tag">ablation design</span><span class="tag">failure analysis</span><span class="tag">runtime verification</span></div>
-    <figure class="demo-fig">
-      <img src="assets/ive_robot_fail.png" alt="Image-generation model fails on robot kinematics: predicted arm ~18cm off the true pose" loading="lazy">
-      <figcaption><b>The failure, made concrete:</b> generation/VLM models trained on human poses can't represent robot kinematics. Asked to place the arm, the model's prediction (red) lands <b>~18 cm</b> off the true pose (dashed) — keypoint similarity collapses from <b>0.95+</b> (human) to <b>~0.24</b> (robot). The structure itself breaks, not just the endpoint.</figcaption>
-    </figure>
-    <figure class="demo-fig">
-      <img src="assets/ive_verification_demo.gif" alt="Imagination + step-wise verification loop on a robot pick task" loading="lazy">
-      <figcaption>…so I built a step-wise verification loop (render / IK+FK / collision / semantic+workspace / image-text checks with a cube-error readout) to catch exactly where the plan breaks.</figcaption>
-    </figure>
-  </div>
-
-  <div class="feat">
-    <div class="top"><h3>eLoran Coherent Accumulation under Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – present</span></div>
-    <p class="one">Recovering time-of-arrival estimation when random samples are dropped at the receiver.</p>
-    <ul>
-      <li>BPF + valid-sample filtering, recursive noise suppression, reference-based interpolation + cross-correlation, S-Transform/FFT smart filtering.</li>
-      <li>Hybrid hard/soft-decision sub-sample PPM demodulation.</li>
-      <li>Evaluated every variant against a <b>1000-run Monte-Carlo</b> baseline rather than a single trial — which is what showed the compensation schemes were overfitting.</li>
-    </ul>
-    <p class="res">Results: <b>~7 dB</b> output gain at SNR −20 dB · PPM BER <b>×1.67</b> better · 5→3 accumulations → <b>1.5 dB</b> SNR.</p>
-    <div class="tags"><span class="tag">DSP</span><span class="tag">S-Transform / FFT</span><span class="tag">TOA</span><span class="tag">MATLAB</span></div>
-    <figure class="demo-fig">
-      <img src="assets/eloran_accumulation.png" alt="eLoran pulse groups recovered by coherent accumulation under 50% sample loss" loading="lazy">
-      <figcaption>Real eLoran data, 50% random sample loss. <b>Top — coherent accumulation:</b> all four pulse groups clear the noise floor and TOA is recovered correctly. <b>Middle/bottom — time- &amp; frequency-domain compensation:</b> higher SNR but ringing shifts the peak, so TOA is wrong. Higher SNR is not the objective; a correct arrival time is. 1000-run Monte-Carlo settled which method holds.</figcaption>
-    </figure>
-  </div>
 </div></section>
 
 <section><div class="wrap">
