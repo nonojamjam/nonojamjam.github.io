@@ -81,10 +81,26 @@
 
 <section><div class="wrap">
   <h2>Featured work</h2>
-  <p class="sub">Three projects, and what each one measured. My role is stated per project.</p>
+  <p class="sub">Ordered by how much of it is mine. Each card says what I did and what the measurement showed.</p>
 
   <div class="feat">
-    <div class="top"><h3>FedV9 — Noise-Robust Object Detection via Heterogeneous Relational KD</h3><span class="when">2025.11 – present · team lead</span></div>
+    <div class="top"><h3>Gating VLM Robot Commands on Forward Kinematics (KAERI)</h3><span class="when">2026 · KAERI internship · first-author paper</span></div>
+    <p class="one">A VLM proposes where the arm should go; forward kinematics decides whether that pose is reachable before anything moves. First-author paper, and the result was negative in a useful way.</p>
+    <ul>
+      <li>Designed controlled ablations (DOF 1→2→5; hints No-hint / CoT / joint-info / image feedback; VLM read-vs-generate) to isolate <i>where</i> spatial reasoning fails.</li>
+      <li>Surfaced concrete failure signals: joint-info hints <i>hurt</i> (165.7mm → 276.9mm), a Verifier ceiling at 5-DOF, and same-family self-verification bias.</li>
+      <li>Ran the full research loop solo — experiment design, data collection, visualization, and the report submitted to the lab.</li>
+    </ul>
+    <p class="res">What it establishes: a model checking <i>itself</i> is not enough. <b>Oral presentation + proceedings</b>, Korea Society of Industrial Information Systems 2026. The project was discontinued in July 2026; this negative result is what it produced.</p>
+    <div class="tags"><span class="tag">GPT-4o / VLM</span><span class="tag">ablation design</span><span class="tag">failure analysis</span><span class="tag">runtime verification</span></div>
+    <figure class="demo-fig">
+      <img src="assets/ive_verification_demo.gif" alt="Imagination + step-wise verification loop on a robot pick task" loading="lazy">
+      <figcaption>The step-wise verification loop I built (render / IK+FK / collision / semantic+workspace / image-text checks with a cube-error readout) to catch exactly where the plan breaks.</figcaption>
+    </figure>
+  </div>
+
+  <div class="feat">
+    <div class="top"><h3>FedV9 — Noise-Robust Object Detection via Heterogeneous Relational KD</h3><span class="when">2025.11 – present · capstone · team lead, sole ML/code</span></div>
     <p class="one">Keeping a lightweight detector accurate under satellite sensor noise by distilling a foundation model's relational structure.</p>
     <ul>
       <li>Distill DINOv2 (ViT) → YOLOv8s-seg (CNN) across a <b>heterogeneous</b> gap via distance-wise relational KD + 50:50 mixed-noise training.</li>
@@ -108,23 +124,7 @@
   </div>
 
   <div class="feat">
-    <div class="top"><h3>Gating VLM Robot Commands on Forward Kinematics (KAERI)</h3><span class="when">2026 · ~6 mo intern</span></div>
-    <p class="one">A VLM proposes where the arm should go; forward kinematics decides whether that pose is reachable before anything moves. First-author paper, and the result was negative in a useful way.</p>
-    <ul>
-      <li>Designed controlled ablations (DOF 1→2→5; hints No-hint / CoT / joint-info / image feedback; VLM read-vs-generate) to isolate <i>where</i> spatial reasoning fails.</li>
-      <li>Surfaced concrete failure signals: joint-info hints <i>hurt</i> (165.7mm → 276.9mm), a Verifier ceiling at 5-DOF, and same-family self-verification bias.</li>
-      <li>Ran the full research loop solo — experiment design, data collection, visualization, and the report submitted to the lab.</li>
-    </ul>
-    <p class="res">What it establishes: a model checking <i>itself</i> is not enough. <b>Oral presentation + proceedings</b>, Korea Society of Industrial Information Systems 2026. The project was discontinued in July 2026; this negative result is what it produced.</p>
-    <div class="tags"><span class="tag">GPT-4o / VLM</span><span class="tag">ablation design</span><span class="tag">failure analysis</span><span class="tag">runtime verification</span></div>
-    <figure class="demo-fig">
-      <img src="assets/ive_verification_demo.gif" alt="Imagination + step-wise verification loop on a robot pick task" loading="lazy">
-      <figcaption>The step-wise verification loop I built (render / IK+FK / collision / semantic+workspace / image-text checks with a cube-error readout) to catch exactly where the plan breaks.</figcaption>
-    </figure>
-  </div>
-
-  <div class="feat">
-    <div class="top"><h3>eLoran Coherent Accumulation under Random Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – present · undergraduate researcher</span></div>
+    <div class="top"><h3>eLoran Coherent Accumulation under Random Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – present · lab project · evaluation and analysis were mine</span></div>
     <p class="one">A lab project on recovering time-of-arrival when a receiver randomly drops samples. Two compensation schemes existed — one time-domain, one frequency-domain — and my part was to find out whether either of them actually worked.</p>
     <ul>
       <li>Ran the evaluation at 50% random sample loss over <b>1,000 Monte-Carlo runs</b>, reporting error CDFs, running-mean bias convergence, and per-station jitter histograms rather than a single favourable trial.</li>
