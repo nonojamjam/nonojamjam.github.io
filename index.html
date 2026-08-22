@@ -111,12 +111,8 @@
     <p class="res">What it establishes: a model checking <i>itself</i> is not enough. <b>Oral presentation + proceedings</b>, Korea Society of Industrial Information Systems 2026. The project closed in 2026; that negative result is what moved me toward <b>independent, physically-grounded checks</b>.</p>
     <div class="tags"><span class="tag">GPT-4o / VLM</span><span class="tag">ablation design</span><span class="tag">failure analysis</span><span class="tag">runtime verification</span></div>
     <figure class="demo-fig">
-      <img src="assets/ive_robot_fail.png" alt="Image-generation model fails on robot kinematics: predicted arm ~18cm off the true pose" loading="lazy">
-      <figcaption><b>The failure, made concrete:</b> generation/VLM models trained on human poses can't represent robot kinematics. Asked to place the arm, the model's prediction (red) lands <b>~18 cm</b> off the true pose (dashed) — keypoint similarity collapses from <b>0.95+</b> (human) to <b>~0.24</b> (robot). The structure itself breaks, not just the endpoint.</figcaption>
-    </figure>
-    <figure class="demo-fig">
       <img src="assets/ive_verification_demo.gif" alt="Imagination + step-wise verification loop on a robot pick task" loading="lazy">
-      <figcaption>…so I built a step-wise verification loop (render / IK+FK / collision / semantic+workspace / image-text checks with a cube-error readout) to catch exactly where the plan breaks.</figcaption>
+      <figcaption>The step-wise verification loop I built (render / IK+FK / collision / semantic+workspace / image-text checks with a cube-error readout) to catch exactly where the plan breaks.</figcaption>
     </figure>
   </div>
 
