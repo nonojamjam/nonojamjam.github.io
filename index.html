@@ -84,20 +84,22 @@
   <p class="sub">Three projects I led end-to-end — problem, my role, technique, result.</p>
 
   <div class="feat">
-    <div class="top"><h3>eLoran Coherent Accumulation under Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – present</span></div>
-    <p class="one">Recovering time-of-arrival estimation when random samples are dropped at the receiver.</p>
+    <div class="top"><h3>eLoran Coherent Accumulation under Random Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – present</span></div>
+    <p class="one">Designed two compensation algorithms to rescue time-of-arrival estimation when a receiver randomly drops samples — then showed with a 1,000-run Monte-Carlo that neither one beats doing nothing.</p>
     <ul>
-      <li>BPF + valid-sample filtering, recursive noise suppression, reference-based interpolation + cross-correlation, S-Transform/FFT smart filtering.</li>
-      <li>Hybrid hard/soft-decision sub-sample PPM demodulation.</li>
-      <li>Evaluated every variant against a <b>1000-run Monte-Carlo</b> baseline rather than a single trial — which is what showed the compensation schemes were overfitting.</li>
+      <li>Separated the two loss mechanisms and modelled them as statistically independent: <b>zero-substitution</b> from protective blanking, which costs energy, and <b>sample concatenation</b> from DMA overrun, which silently shortens the time axis and injects <b>timing jitter</b> — the fatal one, since a single dropped sample rotates the phase of everything after it.</li>
+      <li><b>Time domain (G18):</b> six-stage pipeline — BPF and validity masking, cross-correlation lag estimation, a PSR-based quality gate that locks out unrecoverable frames, <code>circshift</code> jitter cancellation, IIR recursive accumulation, and reliability-weighted (p³) regeneration against a reference template.</li>
+      <li><b>Frequency domain (G21):</b> started on the S-Transform and abandoned it — when the time index itself is corrupted, a transform that folds that index into its window amplifies the phase error instead of preserving it. Rebuilt on FFT: Wiener + Gaussian amplitude masks, a phase-coherence mask, and an accumulation weight driven by a per-frame quality factor.</li>
+      <li>Evaluated at 50% random sample loss over <b>1,000 Monte-Carlo runs</b> — error CDFs, running-mean bias convergence, and jitter histograms per station, rather than a single favourable trial.</li>
     </ul>
-    <p class="res">Results: <b>~7 dB</b> output gain at SNR −20 dB · PPM BER <b>×1.67</b> better · 5→3 accumulations → <b>1.5 dB</b> SNR.</p>
-    <div class="tags"><span class="tag">DSP</span><span class="tag">S-Transform / FFT</span><span class="tag">TOA</span><span class="tag">MATLAB</span></div>
+    <p class="res">Result: G21 bought <b>+6.78 dB</b> of SNR and paid for it with a permanent <b>+1.497 µs</b> TOA bias and cycle slips at the secondary stations — error variance worsened by <b>146–219%</b>. G18 overfitted, substituting one pulse out of nine, and landed TOA <b>1.35 ms</b> from truth; it was excluded from the statistical run. <b>Plain accumulation won.</b> Higher SNR is not the objective — a correct arrival time is, and reconstructing samples that were never received corrupts the 100 kHz carrier phase permanently.</p>
+    <div class="tags"><span class="tag">DSP</span><span class="tag">TOA estimation</span><span class="tag">FFT / S-Transform</span><span class="tag">Monte-Carlo</span><span class="tag">MATLAB</span></div>
     <figure class="demo-fig">
-      <img src="assets/eloran_accumulation.png" alt="eLoran pulse groups recovered by coherent accumulation under 50% sample loss" loading="lazy">
-      <figcaption>Real eLoran data, 50% random sample loss. <b>Top — coherent accumulation:</b> all four pulse groups clear the noise floor and TOA is recovered correctly. <b>Middle/bottom — time- &amp; frequency-domain compensation:</b> higher SNR but ringing shifts the peak, so TOA is wrong. Higher SNR is not the objective; a correct arrival time is. 1000-run Monte-Carlo settled which method holds.</figcaption>
+      <img src="assets/eloran_accumulation.png" alt="eLoran pulse groups under 50% random sample loss: plain accumulation recovers all four groups, the proposed compensation does not" loading="lazy">
+      <figcaption>Real eLoran data, 50% random sample loss. <b>Top — plain accumulation:</b> all four pulse groups clear the noise floor and TOA is recovered. <b>Middle — time-domain compensation:</b> SNR reads absurdly high because a single pulse was substituted wholesale, and TOA has left the building. <b>Bottom — frequency-domain compensation:</b> ringing appears in the gaps between pulses, where no signal should exist at all — Gibbs artifacts from forcing a template phase onto a transient. This figure is why the negative result held up.</figcaption>
     </figure>
   </div>
+
   <div class="feat">
     <div class="top"><h3>Imagination Learning — Finding &amp; Verifying Where LLM/VLM Robot Control Breaks (KAERI)</h3><span class="when">2026 · ~6 mo intern</span></div>
     <p class="one">Pinpointing the failure modes of zero/few-shot LLM-VLM control — and building ways to check for them.</p>
