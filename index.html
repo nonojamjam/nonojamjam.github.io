@@ -69,8 +69,8 @@
 
 <header><div class="wrap">
   <h1>Juhyeok Park <span style="color:var(--mut);font-size:1.3rem;font-weight:400">박주혁</span></h1>
-  <p class="role">Electronic Engineering · Signal Processing &amp; AI</p>
-  <p class="lead">Undergraduate research on <b style="color:var(--txt)">eLoran receivers</b> — estimating time-of-arrival when samples are randomly dropped. At KAERI I built a check that tests a VLM's robot-manipulation commands against forward kinematics before they run. I want to keep working on <b style="color:var(--txt)">navigation &amp; positioning (PNT) signal processing</b>.</p>
+  <p class="role">Electronic Engineering · Verification &amp; Signal Processing</p>
+  <p class="lead">My work keeps landing on the same question: <b style="color:var(--txt)">how do you check a model's output against something that is not another model?</b> At KAERI I gated a VLM's robot-manipulation commands on forward kinematics, and a hint meant to help made the error worse. In a wiki system I built there, supplying the correct source document still left hallucinations. On an eLoran receiver, a scheme that improved SNR moved the arrival time it was supposed to measure. Different systems, same lesson — the check has to come from outside, and it has to be measured.</p>
   <div class="links">
     <a href="https://github.com/nonojamjam">GitHub</a>
     <a href="mailto:2021076023@chungbuk.ac.kr">Email</a>
@@ -81,7 +81,7 @@
 
 <section><div class="wrap">
   <h2>Featured work</h2>
-  <p class="sub">Three projects I led end-to-end — problem, my role, technique, result.</p>
+  <p class="sub">Three projects, and what each one measured. My role is stated per project.</p>
 
   <div class="feat">
     <div class="top"><h3>FedV9 — Noise-Robust Object Detection via Heterogeneous Relational KD</h3><span class="when">2025.11 – present · team lead</span></div>
@@ -108,8 +108,8 @@
   </div>
 
   <div class="feat">
-    <div class="top"><h3>Imagination Learning — Finding &amp; Verifying Where LLM/VLM Robot Control Breaks (KAERI)</h3><span class="when">2026 · ~6 mo intern</span></div>
-    <p class="one">Pinpointing the failure modes of zero/few-shot LLM-VLM control — and building ways to check for them.</p>
+    <div class="top"><h3>Gating VLM Robot Commands on Forward Kinematics (KAERI)</h3><span class="when">2026 · ~6 mo intern</span></div>
+    <p class="one">A VLM proposes where the arm should go; forward kinematics decides whether that pose is reachable before anything moves. First-author paper, and the result was negative in a useful way.</p>
     <ul>
       <li>Designed controlled ablations (DOF 1→2→5; hints No-hint / CoT / joint-info / image feedback; VLM read-vs-generate) to isolate <i>where</i> spatial reasoning fails.</li>
       <li>Surfaced concrete failure signals: joint-info hints <i>hurt</i> (165.7mm → 276.9mm), a Verifier ceiling at 5-DOF, and same-family self-verification bias.</li>
