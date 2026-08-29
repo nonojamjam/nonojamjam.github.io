@@ -70,7 +70,7 @@
 <header><div class="wrap">
   <h1>Juhyeok Park <span style="color:var(--mut);font-size:1.3rem;font-weight:400">박주혁</span></h1>
   <p class="role">Electronic Engineering · Verification &amp; Signal Processing</p>
-  <p class="lead">Electronic engineering undergraduate. I work on checks that sit outside a model and decide whether its output can be trusted: a forward-kinematics gate on VLM-generated robot poses, detection accuracy under sensor noise, and time-of-arrival estimation on an eLoran receiver. Two first-author conference papers came out of this; both reported what did not work and why. The work also shipped: I built the noise-robust detector into a live demo, and I set up an internal LLM wiki on a closed network at a national research institute and handed it over.</p>
+  <p class="lead">Electronic engineering undergraduate. I work on the same question in different places: given a noisy observation, do you accept what it tells you? I have answered it for arrival time on an eLoran receiver, for a detector under sensor noise, and most recently for a vision-language model's robot commands, which a forward-kinematics check rejects before anything is executed. Two first-author conference papers came out of this; both reported what did not work and why. The work also shipped: I built the noise-robust detector into a live demo, and I set up an internal LLM wiki on a closed network at a national research institute and handed it over.</p>
   <div class="links">
     <a href="https://github.com/nonojamjam">GitHub</a>
     <a href="mailto:2021076023@chungbuk.ac.kr">Email</a>
@@ -124,12 +124,13 @@
   </div>
 
   <div class="feat">
-    <div class="top"><h3>eLoran Coherent Accumulation under Random Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – present · lab project · evaluation and analysis were mine</span></div>
-    <p class="one">A lab project on recovering time-of-arrival when a receiver randomly drops samples. Two compensation schemes existed — one time-domain, one frequency-domain — and my part was to find out whether either of them actually worked.</p>
+    <div class="top"><h3>eLoran Coherent Accumulation under Random Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – present · NAVIS Lab · algorithm design, evaluation, and report were mine</span></div>
+    <p class="one">Recovering time-of-arrival when a receiver randomly drops samples. I designed two compensation schemes — one in the time domain, one in the frequency domain — and then ran the study that decided whether either of them was worth keeping.</p>
+    <p class="one">The two loss mechanisms are not the same problem, so I modelled them separately: samples zeroed out lose energy, while samples spliced together shorten the time axis and inject timing jitter. The time-domain scheme keeps only valid samples, gates out intervals whose delay estimate is not trustworthy, aligns the jitter, and accumulates recursively. The frequency-domain scheme weights components by amplitude and phase reliability instead. I started the second one on a time-frequency transform and dropped it: once the time axis is broken, that transform pulls corrupted indices straight into the computation and amplifies the phase collapse it was supposed to fix.</p>
     <ul>
       <li>Ran the evaluation at 50% random sample loss over <b>1,000 Monte-Carlo runs</b>, reporting error CDFs, running-mean bias convergence, and per-station jitter histograms rather than a single favourable trial.</li>
       <li>Traced why the frequency-domain scheme fails despite looking better: the SNR it gains comes from reshaping the spectrum, and that reshaping shifts the correlation peak. Three independent readings agree — the bias line never converges to zero, the error CDF sits to the right of baseline, and the jitter spreads past one carrier period, which is a cycle slip.</li>
-      <li>Wrote the 20-page report the lab uses for this result.</li>
+      <li>Wrote the 20-page report the lab uses for this result. The implementation itself stays with the lab; I can walk through the parameter-level details in person.</li>
     </ul>
     <p class="res">Finding: the frequency-domain scheme bought <b>+6.78 dB</b> and paid a permanent <b>+1.497 µs</b> TOA bias with error variance <b>146–219% worse</b>; the time-domain one overfitted onto a single pulse and was excluded from the statistical run. <b>Plain accumulation won.</b> For a system that needs microsecond arrival times, higher SNR is the wrong thing to optimise — reconstructing samples that were never received corrupts the 100 kHz carrier phase for good.</p>
     <div class="tags"><span class="tag">TOA estimation</span><span class="tag">Monte-Carlo evaluation</span><span class="tag">failure analysis</span><span class="tag">MATLAB</span></div>
@@ -167,7 +168,7 @@
   <div class="skills">
     <div><span class="b">Languages</span> · <span class="v">Python (main), C/C++, MATLAB</span></div>
     <div><span class="b">AI/ML</span> · <span class="v">PyTorch, YOLOv8/Ultralytics, DINOv2, ResNet, Knowledge Distillation</span></div>
-    <div><span class="b">Signal processing</span> · <span class="v">DSP, S-Transform, FFT, BPF, coherent accumulation, TOA</span></div>
+    <div><span class="b">Signal processing</span> · <span class="v">DSP, FFT, BPF, coherent accumulation, TOA</span></div>
     <div><span class="b">Embedded / Comms</span> · <span class="v">ARM Cortex-M3, Raspberry Pi, USART, TCP/IP, PPM</span></div>
   </div>
 </div></section>
@@ -175,7 +176,8 @@
 <section><div class="wrap">
   <h2>Education</h2>
   <p class="edu"><b>B.S. Electronic Engineering</b>, Chungbuk National University — GPA 3.91 / 4.5 · expected Feb 2027<br>
-  <span style="color:var(--mut);font-size:.9rem">Signals &amp; systems, digital communication, DSP · Electronic circuits, digital/SoC design, computer architecture · AI systems, AI semiconductor design, automatic control</span></p>
+  <b style="font-size:.95rem">A+ and ranked first in every course this work rests on:</b> <span style="font-size:.95rem">probability &amp; statistics, random processes, communication theory, digital communication, digital signal processing, signals &amp; systems, information &amp; communication engineering.</span><br>
+  <span style="color:var(--mut);font-size:.9rem">Also: electronic circuits, digital/SoC design, computer architecture, AI systems, AI semiconductor design, automatic control.</span></p>
 </div></section>
 
 <footer><div class="wrap">
