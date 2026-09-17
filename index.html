@@ -63,52 +63,112 @@
   .pubs .pv{display:block;color:var(--mut);font-size:.86rem;margin-top:2px}
   .edu{font-size:.95rem} .edu b{color:var(--txt)}
   footer{padding:34px 0 60px;color:var(--mut);font-size:.88rem}
+
+  /* ── 2026-09-17 restructure: scan-first layout ── */
+  .thesis{font-size:1.55rem;line-height:1.35;font-weight:600;max-width:760px;margin:0 0 10px;text-wrap:balance}
+  .thesis em{color:var(--accent);font-style:normal}
+  .thesis-ko{color:var(--mut);font-size:.98rem;max-width:720px;margin:0 0 20px}
+  .facts{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px}
+  .facts span{font-size:.82rem;background:var(--card);border:1px solid var(--line);padding:5px 11px;border-radius:20px;color:var(--txt)}
+  .facts span b{color:var(--green);font-weight:600}
+  .glance{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:6px}
+  .g{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:8px}
+  .g .n{font-size:.72rem;color:var(--mut);font-family:var(--mono);letter-spacing:.04em}
+  .g h3{margin:0;font-size:1.05rem;line-height:1.3}
+  .g .num{font-size:1.7rem;font-weight:700;color:var(--green);line-height:1.1;font-variant-numeric:tabular-nums}
+  .g .num small{font-size:.8rem;color:var(--mut);font-weight:400;display:block;margin-top:2px}
+  .g p{margin:0;font-size:.9rem;color:var(--mut)}
+  .g .go{margin-top:auto;font-size:.86rem}
+  .g .go a{margin-right:12px}
+  .why{background:linear-gradient(180deg,rgba(110,168,254,.08),transparent);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:18px;font-size:.95rem}
+  .why b{color:var(--txt)}
+  .fk{position:relative;max-width:460px;margin:14px auto 0}
+  .fk canvas{width:100%;height:auto;display:block;border-radius:10px;border:1px solid var(--line);background:#0b0d12;touch-action:none;cursor:crosshair}
+  .fk .verdict{margin:10px 0 0;text-align:center;font-family:var(--mono);font-size:.86rem;min-height:1.4em}
+  .fk .verdict.ok{color:var(--green)} .fk .verdict.no{color:#ff8a8a}
+  .fk .hint{font-size:.8rem;color:var(--mut);text-align:center;margin:6px 0 0}
+  .decomp{display:grid;grid-template-columns:auto 1fr auto;gap:6px 12px;align-items:center;font-size:.86rem;margin:12px 0 0;max-width:460px}
+  .decomp .bar{height:10px;border-radius:5px;background:#0b0d12;border:1px solid var(--line);overflow:hidden;display:flex}
+  .decomp .bar i{display:block;height:100%;background:var(--green)}
+  .decomp .bar i.kd{background:var(--accent)}
+  .decomp .v{font-family:var(--mono);color:var(--txt);text-align:right;white-space:nowrap}
+  .decomp .k{color:var(--mut);white-space:nowrap}
 </style>
 </head>
 <body>
 
 <header><div class="wrap">
   <h1>Juhyeok Park <span style="color:var(--mut);font-size:1.3rem;font-weight:400">박주혁</span></h1>
-  <p class="role">Electronic Engineering · Verification &amp; Signal Processing</p>
-  <p class="lead">Electronic engineering undergraduate. I work on the same question in different places: given a noisy observation, do you accept what it tells you? I have answered it for arrival time on an eLoran receiver, for a detector under sensor noise, and most recently for a vision-language model's robot commands, which a forward-kinematics check rejects before anything is executed. Two first-author conference papers came out of this; both reported what did not work and why. The work also shipped: I built the noise-robust detector into a live demo, and I set up an internal LLM wiki on a closed network at a national research institute and handed it over.</p>
+  <p class="role">Electronic Engineering · Physical AI &amp; Multimodal Grounding</p>
+  <p class="thesis">LLMs can <em>talk about</em> the world but have never <em>touched</em> it. I tried three ways to make language models act in the physical world, hit the same wall each time, and now want to close that gap with signals that language does not carry.</p>
+  <p class="thesis-ko">LLM은 세상에 대해 말할 수는 있지만 겪어본 적은 없습니다. 세 번의 시도에서 같은 벽을 만났고, 그 간극을 언어가 아닌 물리·멀티모달 신호로 메우는 연구를 하려 합니다.</p>
+  <div class="facts">
+    <span><b>2</b> first-author papers (IAA international · KSIIS domestic)</span>
+    <span><b>1</b> KCI journal paper (co-author)</span>
+    <span><b>1</b> patent pending (co-inventor)</span>
+    <span>KAERI research intern · 6 mo</span>
+    <span>B.S. EE · Feb 2027 · GPA 3.91/4.5 (major 3.97)</span>
+  </div>
   <div class="links">
     <a href="https://github.com/nonojamjam">GitHub</a>
     <a href="mailto:2021076023@chungbuk.ac.kr">Email</a>
-    <a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">FedV9 live demo</a>
+    <a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">IAA paper (PDF)</a>
+    <a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">Live demo</a>
   </div>
-  <p class="meta">B.S. Electronic Engineering, Chungbuk National University (GPA 3.91/4.5, expected Feb 2027) · Research intern @ KAERI · Undergrad researcher @ NAVIS Lab</p>
 </div></header>
 
 <section><div class="wrap">
-  <h2>Featured work</h2>
-  <p class="sub">Ordered by how much of it is mine. Each card says what I did and what the measurement showed.</p>
-
-  <div class="feat">
-    <div class="top"><h3>Gating VLM Robot Commands on Forward Kinematics (KAERI)</h3><span class="when">2026 · KAERI internship · first-author paper</span></div>
-    <p class="one">A VLM proposes where the arm should go; forward kinematics decides whether that pose is reachable before anything moves. First-author paper, and the result was negative in a useful way.</p>
-    <ul>
-      <li>Designed controlled ablations (DOF 1→2→5; hints No-hint / CoT / joint-info / image feedback; VLM read-vs-generate) to isolate <i>where</i> spatial reasoning fails.</li>
-      <li>Surfaced concrete failure signals: joint-info hints <i>hurt</i> (165.7mm → 276.9mm), a Verifier ceiling at 5-DOF, and same-family self-verification bias.</li>
-      <li>Ran the full research loop solo — experiment design, data collection, visualization, and the report submitted to the lab.</li>
-    </ul>
-    <p class="res">What it establishes: a model checking <i>itself</i> is not enough. <b>Oral presentation + proceedings</b>, Korea Society of Industrial Information Systems 2026. The project was discontinued in July 2026; this negative result is what it produced.</p>
-    <div class="tags"><span class="tag">GPT-4o / VLM</span><span class="tag">ablation design</span><span class="tag">failure analysis</span><span class="tag">runtime verification</span></div>
-    <figure class="demo-fig">
-      <img src="assets/ive_verification_demo.gif" alt="Imagination + step-wise verification loop on a robot pick task" loading="lazy">
-      <figcaption>The step-wise verification loop I built (render / IK+FK / collision / semantic+workspace / image-text checks with a cube-error readout) to catch exactly where the plan breaks.</figcaption>
-    </figure>
+  <h2>Three experiments, one wall</h2>
+  <p class="sub">Each card is one study: what I measured, what it showed, and where you can try it yourself. Ordered by relevance to what I want to do next.</p>
+  <div class="glance">
+    <div class="g">
+      <div class="n">01 · CAPSTONE · 2025.11 – 2026.09 · team lead, sole ML/code</div>
+      <h3>Noise-robust satellite object detection</h3>
+      <div class="num">+0.163<small>noisy mAP50 recovered (σ=0.3, iSAID, 10 ep, 2 seeds)</small></div>
+      <p>Heterogeneous ViT→CNN distillation + noise-augmented training. Decomposed the effect: <b>97% came from training on noise</b>; distillation added a small but consistent +0.005.</p>
+      <div class="go"><a href="#capstone">Drag the slider ↓</a><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">Full demo →</a></div>
+    </div>
+    <div class="g">
+      <div class="n">02 · KAERI · 2026 · IAA 2026 first author · deployed in-house</div>
+      <h3>An LLM that writes and reads its own wiki</h3>
+      <div class="num">94%<small>blind agreement between two cross-family graders</small></div>
+      <p>Ambient context injection beat a hybrid-retrieval baseline. The finding that mattered: <b>even with the correct node injected, hallucinations remained.</b> Knowledge access was not the bottleneck.</p>
+      <div class="go"><a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">4-page paper (PDF)</a><a href="#wiki">Details ↓</a></div>
+    </div>
+    <div class="g">
+      <div class="n">03 · KAERI · 2026 · KSIIS first author · negative result</div>
+      <h3>VLM robot commands, gated by forward kinematics</h3>
+      <div class="num">165.7 → 276.9 mm<small>position error when the VLM was <i>given</i> joint angles as a hint</small></div>
+      <p>More language did not help; it hurt. A VLM cannot extract absolute angles or rigid rotations from text, so the physical check had to sit <b>outside</b> the model.</p>
+      <div class="go"><a href="#fk">Try the gate ↓</a></div>
+    </div>
   </div>
+  <div class="why">
+    <b>Why this points at Physical AI.</b> The wiki study says giving an LLM the right knowledge is not enough. The manipulation study says giving it the right numbers is not enough either. The detection study says a model gets robust by being <i>trained on the corrupted signal itself</i>, not by being told about it. Put together: the missing ingredient is contact with the physical signal — proprioception, sensing, execution feedback — and that is what I want to work on in graduate school.
+  </div>
+</div></section>
 
-  <div class="feat">
-    <div class="top"><h3>FedV9 — Noise-Robust Object Detection via Heterogeneous Relational KD</h3><span class="when">2025.11 – present · capstone · team lead, sole ML/code</span></div>
-    <p class="one">Keeping a lightweight detector accurate under satellite sensor noise by distilling a foundation model's relational structure.</p>
-    <ul>
-      <li>Distill DINOv2 (ViT) → YOLOv8s-seg (CNN) across a <b>heterogeneous</b> gap via distance-wise relational KD + 50:50 mixed-noise training.</li>
-      <li>Built the full ML pipeline solo: RKD loss, custom Ultralytics trainer (SPPF hook + adapter + mixed noise), and 3 framework-level bug fixes.</li>
-      <li>Teacher &amp; adapter detached at inference → zero added cost.</li>
+
+<section><div class="wrap">
+  <h2>The studies in detail</h2>
+  <p class="sub">Same three, with method and limitations. Numbers are from the re-measured runs (Sept 2026); recovery ratios were dropped because they did not survive a seed change.</p>
+
+  <div class="feat" id="capstone">
+    <div class="top"><h3>01 · Noise-Robust Object Detection via Heterogeneous Relational KD (capstone)</h3><span class="when">2025.11 – 2026.09 · team lead, sole ML/code</span></div>
+    <p class="one">Keep a lightweight detector working under satellite sensor noise. DINOv2 (ViT) → YOLOv8s-seg (CNN) distance-wise relational distillation, plus 50:50 mixed-noise training; teacher and adapter are removed at inference, so the deployed model is unchanged (11.8M / 22MB).</p>
+    <p class="res" style="margin-top:4px">Re-measured Sept 2026 — Kaggle T4, 10 epochs, σ=0.3, box mAP50, seeds 0 and 1:</p>
+    <div class="decomp">
+      <span class="k">Baseline (clean-only)</span><div class="bar"><i style="width:8%"></i></div><span class="v">0.015 noisy · 0.284 clean</span>
+      <span class="k">+ noise training</span><div class="bar"><i style="width:96%"></i></div><span class="v">0.178 noisy · 0.225 clean</span>
+      <span class="k">+ distillation (proposed)</span><div class="bar"><i style="width:96%"></i><i class="kd" style="width:2.5%"></i></div><span class="v">0.182 noisy · 0.231 clean</span>
+    </div>
+    <ul style="margin-top:12px">
+      <li><b>Noisy gain +0.163</b> is stable across seeds (±0.0005). Of it, <b>+0.163 is noise training and +0.005 is distillation</b> — small, but positive in all four comparisons.</li>
+      <li>It costs clean accuracy: <b>−0.053</b> on clean tiles, also seed-stable. That trade is the honest headline; the recovery ratio I used to quote moved from 12 to 15 on a seed change, so it is gone.</li>
+      <li>Found and corrected a baseline that had silently trained for 2 epochs instead of 10 — the reason the earlier ratios looked better than they were.</li>
+      <li>Built the pipeline solo: RKD loss, custom Ultralytics trainer (SPPF hook + adapter + mixed noise), 3 framework-level bug fixes.</li>
     </ul>
-    <p class="res">Result (σ=0.3, iSAID): noisy mAP50 <b>0.009 → 0.196</b>, clean <b>0.278 → 0.426</b>; deployed model 11.8M / 22MB.</p>
-    <div class="tags"><span class="tag">PyTorch</span><span class="tag">DINOv2</span><span class="tag">YOLOv8</span><span class="tag">Knowledge Distillation</span><span class="tag">Ultralytics</span></div>
+    <div class="tags"><span class="tag">PyTorch</span><span class="tag">DINOv2</span><span class="tag">YOLOv8</span><span class="tag">Knowledge Distillation</span><span class="tag">ablation · seed check</span></div>
     <div class="ba" id="ba">
       <img class="ba-base" src="assets/n1.png" alt="Proposed model detects the aircraft under noise">
       <img class="ba-top" id="baTop" src="assets/bl0.png" alt="Baseline fails under noise">
@@ -118,36 +178,77 @@
       <span class="ba-tag r">Proposed · detects ✓</span>
     </div>
     <input type="range" id="wipe" class="ba-wipe" min="0" max="100" value="55" aria-label="compare baseline and proposed">
-    <p class="ba-cap">Drag — same noisy tile (σ=0.3): baseline finds nothing, the distilled model keeps the lock.</p>
+    <p class="ba-cap">Drag — same noisy iSAID tile (P1130 aircraft, σ=0.3): the clean-only baseline finds nothing, the noise-trained model keeps the lock. Qualitative tile; the numbers above are the measurement.</p>
     <a class="cta" href="https://nonojamjam.github.io/noise-robust-detection-rkd/">Open interactive demo →</a>
     <a class="cta ghost" href="https://github.com/nonojamjam/noise-robust-detection-rkd">Code &amp; deep-dive</a>
   </div>
 
-  <div class="feat">
-    <div class="top"><h3>eLoran Coherent Accumulation under Random Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – present · NAVIS Lab · algorithm design, evaluation, and report were mine</span></div>
-    <p class="one">Recovering time-of-arrival when a receiver randomly drops samples. I designed two compensation schemes — one in the time domain, one in the frequency domain — and then ran the study that decided whether either of them was worth keeping.</p>
-    <p class="one">The two loss mechanisms are not the same problem, so I modelled them separately: samples zeroed out lose energy, while samples spliced together shorten the time axis and inject timing jitter. The time-domain scheme keeps only valid samples, gates out intervals whose delay estimate is not trustworthy, aligns the jitter, and accumulates recursively. The frequency-domain scheme weights components by amplitude and phase reliability instead. I started the second one on a time-frequency transform and dropped it: once the time axis is broken, that transform pulls corrupted indices straight into the computation and amplifies the phase collapse it was supposed to fix.</p>
+  <div class="feat" id="wiki">
+    <div class="top"><h3>02 · An LLM Wiki System for High-Consequence Domains (KAERI · IAA 2026)</h3><span class="when">2026 · KAERI internship · first author · oral</span></div>
+    <p class="one">The model writes wiki nodes as it works and reads them back through <b>ambient context injection</b> — a hook picks relevant nodes before every generation, no manual retrieval. Built for space-operations and nuclear knowledge, where a wrong answer is expensive; set up on the institute’s closed network and handed over as an internal service.</p>
     <ul>
-      <li>Ran the evaluation at 50% random sample loss over <b>1,000 Monte-Carlo runs</b>, reporting error CDFs, running-mean bias convergence, and per-station jitter histograms rather than a single favourable trial.</li>
-      <li>Traced why the frequency-domain scheme fails despite looking better: the SNR it gains comes from reshaping the spectrum, and that reshaping shifts the correlation peak. Three independent readings agree — the bias line never converges to zero, the error CDF sits to the right of baseline, and the jitter spreads past one carrier period, which is a cycle slip.</li>
-      <li>Wrote the 20-page report the lab uses for this result. The implementation itself stays with the lab; I can walk through the parameter-level details in person.</li>
+      <li>Evaluation: answers from one frontier model, graded blind by <b>two frontier models from different families</b>, retrieval condition hidden from the graders, gold-span rubric. <b>94% raw agreement.</b></li>
+      <li>Ambient injection recovered the answer-bearing node more often than a hybrid-retrieval baseline, and the gap widened as the question’s wording drifted from the source text. Accuracy up, refusals down.</li>
+      <li><b>Two negative findings the paper reports on itself:</b> graph-level interventions did not help, and <b>injecting the correct node directly still left substantial hallucination</b> — so independent verification is needed, not more retrieval.</li>
+      <li>Limitations stated: pipeline-level comparison (not component-attributable), single-turn benchmark, no human raters yet.</li>
     </ul>
-    <p class="res">Finding: the frequency-domain scheme bought <b>+6.78 dB</b> and paid a permanent <b>+1.497 µs</b> TOA bias with error variance <b>146–219% worse</b>; the time-domain one overfitted onto a single pulse and was excluded from the statistical run. <b>Plain accumulation won.</b> For a system that needs microsecond arrival times, higher SNR is the wrong thing to optimise — reconstructing samples that were never received corrupts the 100 kHz carrier phase for good.</p>
-    <div class="tags"><span class="tag">TOA estimation</span><span class="tag">Monte-Carlo evaluation</span><span class="tag">failure analysis</span><span class="tag">MATLAB</span></div>
+    <p class="res">What it establishes: <b>knowledge access is not the bottleneck.</b> A model with the right fact in front of it still answers wrong often enough to matter.</p>
+    <div class="tags"><span class="tag">LLM systems</span><span class="tag">RAG / context injection</span><span class="tag">cross-family evaluation</span><span class="tag">deployed on-prem</span></div>
+    <a class="cta ghost" style="margin-left:0" href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">Read the 4-page paper (PDF)</a>
+  </div>
+
+  <div class="feat" id="fk">
+    <div class="top"><h3>03 · VLM Robot Commands Gated by Forward Kinematics (KAERI · KSIIS 2026)</h3><span class="when">2026 · KAERI internship · first author · negative result</span></div>
+    <p class="one">A vision-language model proposes where the arm should go; forward kinematics decides whether that pose is reachable before anything moves. The pipeline worked as a filter. The interesting result was what happened when I tried to make the VLM <i>better</i> at the physics by telling it more.</p>
+    <ul>
+      <li>Controlled ablations — DOF 1→2→5; hints none / chain-of-thought / joint angles / image feedback; VLM reading vs. generating — to isolate <i>where</i> spatial reasoning fails.</li>
+      <li><b>Giving the VLM joint angles made it worse: 165.7 mm → 276.9 mm</b> position error, task success 0/5 either way. It cannot extract absolute angles or rigid-body rotation from text, so more text just gave it more to get wrong.</li>
+      <li>A verifier from the same model family shares the model’s blind spots — self-checking is not checking.</li>
+      <li>Ran the loop solo: experiment design, data collection, visualization, report. Project discontinued July 2026; this negative result is what it produced.</li>
+    </ul>
+    <p class="res">What it establishes: <b>language does not carry the physical quantities the task needs.</b> The check has to come from outside the model — kinematics here; sensing and execution feedback in general.</p>
+    <div class="tags"><span class="tag">VLM (GPT-4o)</span><span class="tag">forward kinematics</span><span class="tag">ablation design</span><span class="tag">runtime verification</span></div>
+
+    <div class="fk">
+      <canvas id="fkc" width="460" height="300" aria-label="Interactive 2-link arm: click a target to see whether forward kinematics accepts or rejects it"></canvas>
+      <p class="verdict" id="fkv">Click or drag anywhere: pretend the dot is where a VLM told the arm to go.</p>
+      <p class="hint">Conceptual toy (planar 2-link arm), not the experiment. The point it makes is the paper’s point: the model proposes, the physics decides.</p>
+    </div>
+
     <figure class="demo-fig">
-      <img src="assets/eloran_accumulation.png" alt="eLoran pulse groups under 50% random sample loss: plain accumulation recovers all four groups, the compensated versions do not" loading="lazy">
-      <figcaption>Real eLoran data, 50% random sample loss. <b>Top — plain accumulation:</b> all four pulse groups clear the noise floor and TOA is recovered. <b>Middle — time-domain compensation:</b> SNR reads absurdly high because a single pulse was substituted wholesale, and TOA has left the building. <b>Bottom — frequency-domain compensation:</b> ringing appears in the gaps between pulses, where no signal should exist at all. This figure is why the negative result held up.</figcaption>
+      <img src="assets/ive_verification_demo.gif" alt="Step-wise verification loop on a robot pick task" loading="lazy">
+      <figcaption>The actual verification loop from the study — render / IK+FK / collision / semantic+workspace / image-text checks with a cube-error readout — catching where the plan breaks.</figcaption>
     </figure>
   </div>
+
+  <div class="feat">
+    <div class="top"><h3>Earlier · eLoran Time-of-Arrival under Random Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – 2026.02 · undergraduate researcher · algorithm design, evaluation, report</span></div>
+    <p class="one">Where the signal-processing side of this comes from. I designed two compensation schemes for a receiver that randomly drops samples — one time-domain, one frequency-domain — and ran the 1,000-run Monte-Carlo study that decided whether to keep them. <b>Neither survived; plain accumulation won.</b></p>
+    <ul>
+      <li>Frequency-domain scheme gained <b>+6.78 dB</b> SNR and paid for it with a permanent <b>+1.497 µs</b> TOA bias and 146–219% worse error variance — a cycle slip. Higher SNR was the wrong thing to optimise.</li>
+      <li>The lesson carried forward: reconstructing a signal you never received corrupts the quantity you actually need. Same shape as the VLM result above.</li>
+      <li>Implementation stays with the lab; parameter-level details in person.</li>
+    </ul>
+    <div class="tags"><span class="tag">TOA estimation</span><span class="tag">Monte-Carlo</span><span class="tag">MATLAB</span></div>
+    <figure class="demo-fig">
+      <img src="assets/eloran_accumulation.png" alt="eLoran pulse groups under 50% random sample loss" loading="lazy">
+      <figcaption>Real eLoran data, 50% sample loss. Top: plain accumulation recovers all four pulse groups. Middle/bottom: both compensation schemes break the TOA in different ways.</figcaption>
+    </figure>
+  </div>
+
+
+
 
 </div></section>
 
 <section><div class="wrap">
   <h2>Publications &amp; talks</h2>
-  <p class="sub">First author on one international short paper and one domestic conference proceeding.</p>
+  <p class="sub">First author on one international short paper and one domestic proceeding; co-author on one KCI journal paper; one patent pending.</p>
   <ol class="pubs">
     <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;An LLM Wiki System for High-Consequence Domain Knowledge Organization: Initial Feasibility for Space Operations and Nuclear Engineering.&rdquo; <b>3rd IAA Conference on AI for Space</b>, Jeju, Korea, Aug 2026. <span class="pv">First author · oral presentation · <a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">manuscript (PDF)</a></span></li>
     <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;A VLM Robot Manipulation Pipeline for Mitigating Physical Hallucination&rdquo; (in Korean). <b>Korea Society of Industrial Information Systems</b>, Spring 2026. <span class="pv">First author · domestic conference, proceedings + oral (in Korean)</span></li>
+    <li>KCI-indexed journal paper, <b>co-author</b> — LLM-driven evolutionary search over algorithm space (AlphaEvolve-style loop). <span class="pv">Corresponding author: Hogeon Seo (KAERI) · 2026</span></li>
+    <li>Patent pending, <b>co-inventor</b> — direction control in LLM embedding space with a human-in-the-loop. <span class="pv">Korean application · 2026</span></li>
   </ol>
 </div></section>
 
@@ -175,7 +276,7 @@
 
 <section><div class="wrap">
   <h2>Education</h2>
-  <p class="edu"><b>B.S. Electronic Engineering</b>, Chungbuk National University — GPA 3.91 / 4.5 · expected Feb 2027<br>
+  <p class="edu"><b>B.S. Electronic Engineering</b>, Chungbuk National University — GPA 3.91 / 4.5 (major 3.97) · expected Feb 2027<br>
   <b style="font-size:.95rem">A+ and ranked first in every course this work rests on:</b> <span style="font-size:.95rem">probability &amp; statistics, random processes, communication theory, digital communication, digital signal processing, signals &amp; systems, information &amp; communication engineering.</span><br>
   <span style="color:var(--mut);font-size:.9rem">Also: electronic circuits, digital/SoC design, computer architecture, AI systems, AI semiconductor design, automatic control.</span></p>
 </div></section>
@@ -210,6 +311,51 @@
     window.addEventListener('pointermove', e => { if (dragging) fromEvent(e); });
     window.addEventListener('pointerup', () => { dragging = false; });
     setWipe(55);
+  })();
+</script>
+
+<script>
+  (function(){
+    const c = document.getElementById('fkc'); if(!c) return;
+    const ctx = c.getContext('2d'), v = document.getElementById('fkv');
+    const W=c.width, H=c.height, base={x:W/2, y:H-40}, L1=110, L2=90;
+    let tgt = {x: W/2+70, y: H-150};
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+      ctx.beginPath(); ctx.arc(base.x,base.y,L1+L2,0,Math.PI*2); ctx.strokeStyle='rgba(110,168,254,.35)'; ctx.setLineDash([4,5]); ctx.lineWidth=1; ctx.stroke();
+      ctx.beginPath(); ctx.arc(base.x,base.y,Math.abs(L1-L2),0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle='rgba(154,163,178,.7)'; ctx.font='11px ui-monospace,Menlo,monospace';
+      ctx.fillText('reachable band (FK)', base.x+L1+L2-118, base.y-6);
+      const dx=tgt.x-base.x, dy=tgt.y-base.y, d=Math.hypot(dx,dy);
+      const ok = d<=L1+L2 && d>=Math.abs(L1-L2);
+      let a1,a2;
+      if(ok){
+        const cos2=(d*d-L1*L1-L2*L2)/(2*L1*L2);
+        a2=Math.acos(Math.max(-1,Math.min(1,cos2)));
+        a1=Math.atan2(dy,dx)-Math.atan2(L2*Math.sin(a2),L1+L2*Math.cos(a2));
+      } else { a1=Math.atan2(dy,dx); a2=0; }
+      const e={x:base.x+L1*Math.cos(a1), y:base.y+L1*Math.sin(a1)};
+      const t={x:e.x+L2*Math.cos(a1+a2), y:e.y+L2*Math.sin(a1+a2)};
+      ctx.strokeStyle='#262b36'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(20,base.y+18); ctx.lineTo(W-20,base.y+18); ctx.stroke();
+      ctx.lineCap='round'; ctx.lineWidth=9; ctx.strokeStyle= ok ? '#39d98a' : '#ff8a8a';
+      ctx.beginPath(); ctx.moveTo(base.x,base.y); ctx.lineTo(e.x,e.y); ctx.lineTo(t.x,t.y); ctx.stroke();
+      for(const p of [base,e,t]){ ctx.beginPath(); ctx.arc(p.x,p.y,6,0,Math.PI*2); ctx.fillStyle='#e6e9ef'; ctx.fill(); }
+      ctx.beginPath(); ctx.arc(tgt.x,tgt.y,7,0,Math.PI*2); ctx.fillStyle= ok ? '#39d98a' : '#ff5c5c'; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='rgba(230,233,239,.85)'; ctx.font='11px ui-monospace,Menlo,monospace';
+      ctx.fillText('VLM: "go here"', tgt.x+11, tgt.y+4);
+      if(!ok){ ctx.strokeStyle='rgba(255,92,92,.6)'; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.moveTo(t.x,t.y); ctx.lineTo(tgt.x,tgt.y); ctx.stroke(); ctx.setLineDash([]); }
+      const mm=Math.round(d/(L1+L2)*400);
+      if(ok){ v.className='verdict ok'; v.textContent=`PASS — FK residual 0 mm · target ${mm} mm from base, inside the reachable band · executed`; }
+      else if(d>L1+L2){ v.className='verdict no'; v.textContent=`REJECTED — target ${mm} mm from base, arm reaches 400 mm · residual ${mm-400} mm · nothing moves`; }
+      else { v.className='verdict no'; v.textContent=`REJECTED — target too close to the base for this arm · nothing moves`; }
+    }
+    function pos(ev){ const r=c.getBoundingClientRect(); const s=W/r.width; return {x:(ev.clientX-r.left)*s, y:(ev.clientY-r.top)*s}; }
+    let down=false;
+    c.addEventListener('pointerdown',ev=>{down=true; tgt=pos(ev); draw();});
+    c.addEventListener('pointermove',ev=>{ if(down){ tgt=pos(ev); draw(); }});
+    window.addEventListener('pointerup',()=>down=false);
+    draw();
   })();
 </script>
 </body>
