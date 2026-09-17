@@ -134,14 +134,14 @@
       <h3>An LLM that writes and reads its own wiki</h3>
       <div class="num">94%<small>blind agreement between two cross-family graders</small></div>
       <p>Ambient context injection beat a hybrid-retrieval baseline. The finding that mattered: <b>even with the correct node injected, hallucinations remained.</b> Knowledge access was not the bottleneck.</p>
-      <div class="go"><a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">4-page paper (PDF)</a><a href="#wiki">Details ↓</a></div>
+      <div class="go"><a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">4-page paper</a><a href="assets/talks/IAA2026_Park_talk_slides.pdf">Talk slides</a><a href="#wiki">Details ↓</a></div>
     </div>
     <div class="g">
       <div class="n">03 · KAERI · 2026 · KSIIS first author · negative result</div>
       <h3>VLM robot commands, gated by forward kinematics</h3>
       <div class="num">165.7 → 276.9 mm<small>position error when the VLM was <i>given</i> joint angles as a hint</small></div>
       <p>More language did not help; it hurt. A VLM cannot extract absolute angles or rigid rotations from text, so the physical check had to sit <b>outside</b> the model.</p>
-      <div class="go"><a href="#fk">Try the gate ↓</a></div>
+      <div class="go"><a href="#fk">Try the gate ↓</a><a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">Talk slides (Korean)</a></div>
     </div>
   </div>
   <div class="why">
@@ -196,6 +196,7 @@
     <p class="res">What it establishes: <b>knowledge access is not the bottleneck.</b> A model with the right fact in front of it still answers wrong often enough to matter.</p>
     <div class="tags"><span class="tag">LLM systems</span><span class="tag">RAG / context injection</span><span class="tag">cross-family evaluation</span><span class="tag">deployed on-prem</span></div>
     <a class="cta ghost" style="margin-left:0" href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">Read the 4-page paper (PDF)</a>
+    <a class="cta ghost" href="assets/talks/IAA2026_Park_talk_slides.pdf">Talk slides as presented, 19 + 21 backup (PDF)</a>
   </div>
 
   <div class="feat" id="fk">
@@ -209,6 +210,7 @@
     </ul>
     <p class="res">What it establishes: <b>language does not carry the physical quantities the task needs.</b> The check has to come from outside the model — kinematics here; sensing and execution feedback in general.</p>
     <div class="tags"><span class="tag">VLM (GPT-4o)</span><span class="tag">forward kinematics</span><span class="tag">ablation design</span><span class="tag">runtime verification</span></div>
+    <a class="cta ghost" style="margin-left:0" href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">Talk slides as presented, May 2026 (PDF, Korean)</a>
 
     <div class="fk">
       <canvas id="fkc" width="460" height="300" aria-label="Interactive 2-link arm: click a target to see whether forward kinematics accepts or rejects it"></canvas>
@@ -246,8 +248,8 @@
   <h2>Publications &amp; talks</h2>
   <p class="sub">First author on one international short paper and one domestic proceeding; co-author on one KCI journal paper; one patent pending.</p>
   <ol class="pubs">
-    <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;An LLM Wiki System for High-Consequence Domain Knowledge Organization: Initial Feasibility for Space Operations and Nuclear Engineering.&rdquo; <b>3rd IAA Conference on AI for Space</b>, Jeju, Korea, Aug 2026. <span class="pv">First author · oral presentation · <a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">manuscript (PDF)</a></span></li>
-    <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;A VLM Robot Manipulation Pipeline for Mitigating Physical Hallucination&rdquo; (in Korean). <b>Korea Society of Industrial Information Systems</b>, Spring 2026. <span class="pv">First author · domestic conference, proceedings + oral (in Korean)</span></li>
+    <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;An LLM Wiki System for High-Consequence Domain Knowledge Organization: Initial Feasibility for Space Operations and Nuclear Engineering.&rdquo; <b>3rd IAA Conference on AI for Space</b>, Jeju, Korea, Aug 2026. <span class="pv">First author · oral presentation · <a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">manuscript (PDF)</a> · <a href="assets/talks/IAA2026_Park_talk_slides.pdf">slides (PDF)</a></span></li>
+    <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;A VLM Robot Manipulation Pipeline for Mitigating Physical Hallucination&rdquo; (in Korean). <b>Korea Society of Industrial Information Systems</b>, Spring 2026. <span class="pv">First author · domestic conference, proceedings + oral (in Korean) · <a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">slides (PDF)</a></span></li>
     <li>KCI-indexed journal paper, <b>co-author</b> — LLM-driven evolutionary search over algorithm space (AlphaEvolve-style loop). <span class="pv">Corresponding author: Hogeon Seo (KAERI) · 2026</span></li>
     <li>Patent pending, <b>co-inventor</b> — direction control in LLM embedding space with a human-in-the-loop. <span class="pv">Korean application · 2026</span></li>
   </ol>
