@@ -100,8 +100,8 @@
 <header><div class="wrap">
   <h1>Juhyeok Park <span style="color:var(--mut);font-size:1.3rem;font-weight:400">박주혁</span></h1>
   <p class="role">Electronic Engineering · Physical AI &amp; Multimodal Grounding</p>
-  <p class="thesis">LLMs can <em>talk about</em> the world but have never <em>touched</em> it. I tried three ways to make language models act in the physical world, hit the same wall each time, and now want to close that gap with signals that language does not carry.</p>
-  <p class="thesis-ko">LLM은 세상에 대해 말할 수는 있지만 겪어본 적은 없습니다. 세 번의 시도에서 같은 벽을 만났고, 그 간극을 언어가 아닌 물리·멀티모달 신호로 메우는 연구를 하려 합니다.</p>
+  <p class="thesis">Language models encode <em>descriptions</em> of the physical world but no <em>experience</em> of it. Three undergraduate studies — a knowledge system, a manipulation pipeline, and a noise-robust detector — each reached the same limitation from a different side. The proposed direction is to close that gap with physical and multimodal signals rather than with more language.</p>
+  <p class="thesis-ko">언어 모델은 물리 세계에 대한 기술은 갖지만 경험은 갖지 않는다. 지식 시스템·조작 파이프라인·노이즈 강건 탐지기 세 연구가 각기 다른 방향에서 같은 한계에 도달했다. 이 간극을 언어가 아닌 물리·멀티모달 신호로 메우는 것을 연구 방향으로 삼는다.</p>
   <div class="facts">
     <span><b>2</b> first-author papers (IAA international · KSIIS domestic)</span>
     <span><b>1</b> KCI journal paper (co-author)</span>
@@ -119,40 +119,40 @@
 </div></header>
 
 <section><div class="wrap">
-  <h2>Three experiments, one wall</h2>
-  <p class="sub">Each card is one study: what I measured, what it showed, and where you can try it yourself. Ordered by relevance to what I want to do next.</p>
+  <h2>Three studies, one limitation</h2>
+  <p class="sub">One measurement and one finding per study, ordered by relevance to the proposed direction. Interactive material is provided where the data permit.</p>
   <div class="glance">
     <div class="g">
       <div class="n">01 · CAPSTONE · 2025.11 – 2026.09 · team lead, sole ML/code</div>
       <h3>Noise-robust satellite object detection</h3>
       <div class="num">+0.163<small>noisy mAP50 recovered (σ=0.3, iSAID, 10 ep, 2 seeds)</small></div>
-      <p>Heterogeneous ViT→CNN distillation + noise-augmented training. Decomposed the effect: <b>97% came from training on noise</b>; distillation added a small but consistent +0.005.</p>
+      <p>Heterogeneous ViT→CNN distillation combined with noise-augmented training. Effect decomposition attributes <b>97% of the gain to noise training</b>; distillation contributes a small, consistently positive +0.005.</p>
       <div class="go"><a href="#capstone">Drag the slider ↓</a><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">Full demo →</a></div>
     </div>
     <div class="g">
       <div class="n">02 · KAERI · 2026 · IAA 2026 first author · deployed in-house</div>
       <h3>An LLM that writes and reads its own wiki</h3>
       <div class="num">94%<small>blind agreement between two cross-family graders</small></div>
-      <p>Ambient context injection beat a hybrid-retrieval baseline. The finding that mattered: <b>even with the correct node injected, hallucinations remained.</b> Knowledge access was not the bottleneck.</p>
+      <p>Ambient context injection outperformed a hybrid-retrieval baseline. <b>Hallucination persisted even when the correct node was injected directly</b>, indicating that knowledge access is not the limiting factor.</p>
       <div class="go"><a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">4-page paper</a><a href="assets/talks/IAA2026_Park_talk_slides.pdf">Talk slides</a><a href="#wiki">Details ↓</a></div>
     </div>
     <div class="g">
       <div class="n">03 · KAERI · 2026 · KSIIS first author · negative result</div>
       <h3>VLM robot commands, gated by forward kinematics</h3>
       <div class="num">165.7 → 276.9 mm<small>position error when the VLM was <i>given</i> joint angles as a hint</small></div>
-      <p>More language did not help; it hurt. A VLM cannot extract absolute angles or rigid rotations from text, so the physical check had to sit <b>outside</b> the model.</p>
+      <p>Supplying joint angles as text increased error. The VLM does not extract absolute angles or rigid-body rotation from language; the physical check must therefore be <b>external to the model</b>.</p>
       <div class="go"><a href="#fk">Try the gate ↓</a><a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">Talk slides (Korean)</a></div>
     </div>
   </div>
   <div class="why">
-    <b>Why this points at Physical AI.</b> The wiki study says giving an LLM the right knowledge is not enough. The manipulation study says giving it the right numbers is not enough either. The detection study says a model gets robust by being <i>trained on the corrupted signal itself</i>, not by being told about it. Put together: the missing ingredient is contact with the physical signal — proprioception, sensing, execution feedback — and that is what I want to work on in graduate school.
+    <b>Interpretation.</b> The wiki study shows that access to correct knowledge does not remove hallucination. The manipulation study shows that supplying correct physical quantities in text does not improve execution. The detection study shows that robustness arises from training on the corrupted signal itself. Taken together, the limiting factor is contact with the physical signal — proprioception, sensing, execution feedback — and this defines the intended graduate research.
   </div>
 </div></section>
 
 
 <section><div class="wrap">
-  <h2>The studies in detail</h2>
-  <p class="sub">Same three, with method and limitations. Numbers are from the re-measured runs (Sept 2026); recovery ratios were dropped because they did not survive a seed change.</p>
+  <h2>Studies</h2>
+  <p class="sub">Method, results and limitations. Numbers are from the re-measured runs (September 2026). Recovery ratios are not reported: they did not survive a seed change.</p>
 
   <div class="feat" id="capstone">
     <div class="top"><h3>01 · Noise-Robust Object Detection via Heterogeneous Relational KD (capstone)</h3><span class="when">2025.11 – 2026.09 · team lead, sole ML/code</span></div>
@@ -165,9 +165,9 @@
     </div>
     <ul style="margin-top:12px">
       <li><b>Noisy gain +0.163</b> is stable across seeds (±0.0005). Of it, <b>+0.163 is noise training and +0.005 is distillation</b> — small, but positive in all four comparisons.</li>
-      <li>It costs clean accuracy: <b>−0.053</b> on clean tiles, also seed-stable. That trade is the honest headline; the recovery ratio I used to quote moved from 12 to 15 on a seed change, so it is gone.</li>
-      <li>Found and corrected a baseline that had silently trained for 2 epochs instead of 10 — the reason the earlier ratios looked better than they were.</li>
-      <li>Built the pipeline solo: RKD loss, custom Ultralytics trainer (SPPF hook + adapter + mixed noise), 3 framework-level bug fixes.</li>
+      <li>Robustness costs clean accuracy: <b>−0.053</b> on clean tiles, also seed-stable. The recovery ratio reported earlier (×12) varied to ×15 under a seed change and is therefore not reported.</li>
+      <li>A baseline checkpoint recorded as 10 epochs was found to have trained for 2; all comparisons were re-run under matched settings.</li>
+      <li>Implementation (sole author of the ML code): RKD loss, custom Ultralytics trainer (SPPF hook, adapter, mixed noise), three framework-level bug fixes.</li>
     </ul>
     <div class="tags"><span class="tag">PyTorch</span><span class="tag">DINOv2</span><span class="tag">YOLOv8</span><span class="tag">Knowledge Distillation</span><span class="tag">ablation · seed check</span></div>
     <div class="ba" id="ba">
@@ -179,21 +179,21 @@
       <span class="ba-tag r">Proposed · detects ✓</span>
     </div>
     <input type="range" id="wipe" class="ba-wipe" min="0" max="100" value="55" aria-label="compare baseline and proposed">
-    <p class="ba-cap">Drag — same noisy iSAID tile (P1130 aircraft, σ=0.3): the clean-only baseline finds nothing, the noise-trained model keeps the lock. Qualitative tile; the numbers above are the measurement.</p>
+    <p class="ba-cap">Same noisy iSAID tile (P1130 aircraft, σ=0.3). The clean-only baseline produces no detections; the noise-trained model retains the target. Qualitative; the quantitative result is the table above.</p>
     <a class="cta" href="https://nonojamjam.github.io/noise-robust-detection-rkd/">Open interactive demo →</a>
     <a class="cta ghost" href="https://github.com/nonojamjam/noise-robust-detection-rkd">Code &amp; deep-dive</a>
   </div>
 
   <div class="feat" id="wiki">
     <div class="top"><h3>02 · An LLM Wiki System for High-Consequence Domains (KAERI · IAA 2026)</h3><span class="when">2026 · KAERI internship · first author · oral</span></div>
-    <p class="one">The model writes wiki nodes as it works and reads them back through <b>ambient context injection</b> — a hook picks relevant nodes before every generation, no manual retrieval. Built for space-operations and nuclear knowledge, where a wrong answer is expensive; set up on the institute’s closed network and handed over as an internal service.</p>
+    <p class="one">The model writes wiki nodes during operation and reads them back through <b>ambient context injection</b>: a hook selects relevant nodes before each generation without an explicit query. Built for space-operations and nuclear knowledge, where incorrect answers carry high cost; deployed on the institute’s closed network and handed over as an internal service.</p>
     <ul>
       <li>Evaluation: answers from one frontier model, graded blind by <b>two frontier models from different families</b>, retrieval condition hidden from the graders, gold-span rubric. <b>94% raw agreement.</b></li>
-      <li>Ambient injection recovered the answer-bearing node more often than a hybrid-retrieval baseline, and the gap widened as the question’s wording drifted from the source text. Accuracy up, refusals down.</li>
-      <li><b>Two negative findings the paper reports on itself:</b> graph-level interventions did not help, and <b>injecting the correct node directly still left substantial hallucination</b> — so independent verification is needed, not more retrieval.</li>
+      <li>Ambient injection recovered the answer-bearing node more often than a hybrid-retrieval baseline, with the margin increasing as question wording diverged from the source text. Accuracy increased and refusals decreased.</li>
+      <li><b>Two negative findings reported in the paper:</b> graph-level interventions gave no improvement, and <b>direct injection of the correct node still left substantial hallucination</b>, indicating that independent verification rather than further retrieval is required.</li>
       <li>Limitations stated: pipeline-level comparison (not component-attributable), single-turn benchmark, no human raters yet.</li>
     </ul>
-    <p class="res">What it establishes: <b>knowledge access is not the bottleneck.</b> A model with the right fact in front of it still answers wrong often enough to matter.</p>
+    <p class="res">Finding: <b>access to correct knowledge does not by itself remove hallucination.</b></p>
     <div class="tags"><span class="tag">LLM systems</span><span class="tag">RAG / context injection</span><span class="tag">cross-family evaluation</span><span class="tag">deployed on-prem</span></div>
     <a class="cta ghost" style="margin-left:0" href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">Read the 4-page paper (PDF)</a>
     <a class="cta ghost" href="assets/talks/IAA2026_Park_talk_slides.pdf">Talk slides as presented, 19 + 21 backup (PDF)</a>
@@ -201,41 +201,41 @@
 
   <div class="feat" id="fk">
     <div class="top"><h3>03 · VLM Robot Commands Gated by Forward Kinematics (KAERI · KSIIS 2026)</h3><span class="when">2026 · KAERI internship · first author · negative result</span></div>
-    <p class="one">A vision-language model proposes where the arm should go; forward kinematics decides whether that pose is reachable before anything moves. The pipeline worked as a filter. The interesting result was what happened when I tried to make the VLM <i>better</i> at the physics by telling it more.</p>
+    <p class="one">A vision-language model proposes an end-effector target; forward kinematics determines reachability before execution. The pipeline functioned as a filter. The reported result concerns what happened when the VLM was given additional physical information in text.</p>
     <ul>
       <li>Controlled ablations — DOF 1→2→5; hints none / chain-of-thought / joint angles / image feedback; VLM reading vs. generating — to isolate <i>where</i> spatial reasoning fails.</li>
-      <li><b>Giving the VLM joint angles made it worse: 165.7 mm → 276.9 mm</b> position error, task success 0/5 either way. It cannot extract absolute angles or rigid-body rotation from text, so more text just gave it more to get wrong.</li>
-      <li>A verifier from the same model family shares the model’s blind spots — self-checking is not checking.</li>
-      <li>Ran the loop solo: experiment design, data collection, visualization, report. Project discontinued July 2026; this negative result is what it produced.</li>
+      <li><b>Supplying joint angles increased position error from 165.7 mm to 276.9 mm</b>; task success was 0/5 in both conditions. The VLM does not extract absolute angles or rigid-body rotation from text.</li>
+      <li>A verifier from the same model family shares the model’s failure modes; self-verification is not independent verification.</li>
+      <li>Experiment design, data collection, visualization and report by the author. The project was discontinued in July 2026; the negative result is its output.</li>
     </ul>
-    <p class="res">What it establishes: <b>language does not carry the physical quantities the task needs.</b> The check has to come from outside the model — kinematics here; sensing and execution feedback in general.</p>
+    <p class="res">Finding: <b>language does not carry the physical quantities the task requires.</b> Verification must be external to the model — kinematics in this study; sensing and execution feedback in general.</p>
     <div class="tags"><span class="tag">VLM (GPT-4o)</span><span class="tag">forward kinematics</span><span class="tag">ablation design</span><span class="tag">runtime verification</span></div>
     <a class="cta ghost" style="margin-left:0" href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">Talk slides as presented, May 2026 (PDF, Korean)</a>
 
     <div class="fk">
       <canvas id="fkc" width="460" height="300" aria-label="Interactive 2-link arm: click a target to see whether forward kinematics accepts or rejects it"></canvas>
-      <p class="verdict" id="fkv">Click or drag anywhere: pretend the dot is where a VLM told the arm to go.</p>
-      <p class="hint">Conceptual toy (planar 2-link arm), not the experiment. The point it makes is the paper’s point: the model proposes, the physics decides.</p>
+      <p class="verdict" id="fkv">Click or drag: the marker is the target proposed by a VLM.</p>
+      <p class="hint">Conceptual illustration (planar 2-link arm), not the experiment. The model proposes; the kinematics decides.</p>
     </div>
 
     <figure class="demo-fig">
       <img src="assets/ive_verification_demo.gif" alt="Step-wise verification loop on a robot pick task" loading="lazy">
-      <figcaption>The actual verification loop from the study — render / IK+FK / collision / semantic+workspace / image-text checks with a cube-error readout — catching where the plan breaks.</figcaption>
+      <figcaption>Verification loop from the study: render / IK+FK / collision / semantic+workspace / image-text checks with a cube-error readout, locating the step at which the plan fails.</figcaption>
     </figure>
   </div>
 
   <div class="feat">
     <div class="top"><h3>Earlier · eLoran Time-of-Arrival under Random Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – 2026.02 · undergraduate researcher · algorithm design, evaluation, report</span></div>
-    <p class="one">Where the signal-processing side of this comes from. I designed two compensation schemes for a receiver that randomly drops samples — one time-domain, one frequency-domain — and ran the 1,000-run Monte-Carlo study that decided whether to keep them. <b>Neither survived; plain accumulation won.</b></p>
+    <p class="one">Origin of the signal-processing component. Two compensation schemes for a receiver with random sample loss — one time-domain, one frequency-domain — were designed and evaluated over 1,000 Monte-Carlo runs. <b>Neither outperformed plain accumulation.</b></p>
     <ul>
-      <li>Frequency-domain scheme gained <b>+6.78 dB</b> SNR and paid for it with a permanent <b>+1.497 µs</b> TOA bias and 146–219% worse error variance — a cycle slip. Higher SNR was the wrong thing to optimise.</li>
-      <li>The lesson carried forward: reconstructing a signal you never received corrupts the quantity you actually need. Same shape as the VLM result above.</li>
-      <li>Implementation stays with the lab; parameter-level details in person.</li>
+      <li>The frequency-domain scheme gained <b>+6.78 dB</b> SNR at the cost of a permanent <b>+1.497 µs</b> TOA bias and 146–219% higher error variance (cycle slip). SNR was the wrong objective.</li>
+      <li>Reconstructing samples that were never received corrupts the quantity of interest — the same structure as the VLM result above.</li>
+      <li>The implementation is laboratory property; parameter-level details are available on request.</li>
     </ul>
     <div class="tags"><span class="tag">TOA estimation</span><span class="tag">Monte-Carlo</span><span class="tag">MATLAB</span></div>
     <figure class="demo-fig">
       <img src="assets/eloran_accumulation.png" alt="eLoran pulse groups under 50% random sample loss" loading="lazy">
-      <figcaption>Real eLoran data, 50% sample loss. Top: plain accumulation recovers all four pulse groups. Middle/bottom: both compensation schemes break the TOA in different ways.</figcaption>
+      <figcaption>Measured eLoran data, 50% sample loss. Top: plain accumulation recovers all four pulse groups. Middle and bottom: the two compensation schemes corrupt the TOA in different ways.</figcaption>
     </figure>
   </div>
 
@@ -246,7 +246,7 @@
 
 <section><div class="wrap">
   <h2>Publications &amp; talks</h2>
-  <p class="sub">First author on one international short paper and one domestic proceeding; co-author on one KCI journal paper; one patent pending.</p>
+  <p class="sub">First author of one international short paper and one domestic proceeding; co-author of one KCI journal paper; one patent pending.</p>
   <ol class="pubs">
     <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;An LLM Wiki System for High-Consequence Domain Knowledge Organization: Initial Feasibility for Space Operations and Nuclear Engineering.&rdquo; <b>3rd IAA Conference on AI for Space</b>, Jeju, Korea, Aug 2026. <span class="pv">First author · oral presentation · <a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">manuscript (PDF)</a> · <a href="assets/talks/IAA2026_Park_talk_slides.pdf">slides (PDF)</a></span></li>
     <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;A VLM Robot Manipulation Pipeline for Mitigating Physical Hallucination&rdquo; (in Korean). <b>Korea Society of Industrial Information Systems</b>, Spring 2026. <span class="pv">First author · domestic conference, proceedings + oral (in Korean) · <a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">slides (PDF)</a></span></li>
@@ -256,8 +256,8 @@
 </div></section>
 
 <section><div class="wrap">
-  <h2>Things I built</h2>
-  <p class="sub">Coursework and side builds that ran on real hardware — AI/ML, embedded, communications, systems.</p>
+  <h2>Coursework implementations</h2>
+  <p class="sub">Course and independent implementations run on real hardware — AI/ML, embedded, communications, systems.</p>
   <div class="grid">
     <div class="mini"><h4>ResNet-18 KD + Ensemble</h4><p>4-model ensemble as a teacher; KL+MSE hybrid distillation. 29% → 69.66%.</p><div class="t">PyTorch · Mixup/CutMix · KD</div></div>
     <div class="mini"><h4>Raspberry-Pi Band-Assist System</h4><p>Real-time OpenCV + TTS, Teachable-Machine pitch monitoring, TCP/IP sockets, master–slave IoT sync.</p><div class="t">Linux · OpenCV · IoT</div></div>
