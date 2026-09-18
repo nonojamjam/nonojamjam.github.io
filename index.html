@@ -93,6 +93,15 @@
   .decomp .bar i.kd{background:var(--accent)}
   .decomp .v{font-family:var(--mono);color:var(--txt);text-align:right;white-space:nowrap}
   .decomp .k{color:var(--mut);white-space:nowrap}
+
+  details.kci{margin-top:6px}
+  details.kci summary{cursor:pointer;font-size:.92em;opacity:.8}
+  details.kci ul{margin:8px 0 0 1.1em;padding:0;font-size:.92em}
+  details.kci li{margin:3px 0}
+  .flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 4px;font-size:.85em}
+  .flow span{border:1px solid rgba(128,128,128,.6);border-radius:4px;padding:3px 8px;background:rgba(128,128,128,.10)}
+  .flow span.loop{border-style:dashed}
+  .flow i{font-style:normal;color:#888}
 </style>
 </head>
 <body>
@@ -248,7 +257,16 @@
   <ol class="pubs">
     <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;An LLM Wiki System for High-Consequence Domain Knowledge Organization: Initial Feasibility for Space Operations and Nuclear Engineering.&rdquo; <b>3rd IAA Conference on AI for Space</b>, Jeju, Korea, Aug 2026. <span class="pv">First author · oral presentation · <a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">manuscript (PDF)</a> · <a href="assets/talks/IAA2026_Park_talk_slides.pdf">slides (PDF)</a></span></li>
     <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;A VLM Robot Manipulation Pipeline for Mitigating Physical Hallucination&rdquo; (in Korean). <b>Korea Society of Industrial Information Systems</b>, Spring 2026. <span class="pv">First author · domestic conference, proceedings + oral (in Korean) · <a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">slides (PDF)</a></span></li>
-    <li>D. Choi, <b>J. Park</b>, H. Seo, “Development of an AI Agent Framework for Autonomous Improvement of an Ultrasonic Imaging Algorithm,” <i>Journal of the Korean Society for Nondestructive Testing</i>, 46(4):268–277, 2026 (KCI). <b>Co-author</b> — an LLM agent iteratively edits the SAFT imaging code and an evaluator scores each edit; contribution: benchmark task design and code documentation. <span class="pv">DOI 10.7779/JKSNT.2026.46.4.268</span></li>
+    <li>D. Choi, <b>J. Park</b>, H. Seo. &ldquo;Development of an AI Agent Framework for Autonomous Improvement of an Ultrasonic Imaging Algorithm.&rdquo; <i>Journal of the Korean Society for Nondestructive Testing</i>, 46(4):268&ndash;277, 2026 (KCI). <span class="pv">Co-author · contribution: benchmark task design and code documentation · <a href="https://doi.org/10.7779/JKSNT.2026.46.4.268">DOI</a></span>
+      <details class="kci"><summary>What the loop is and what it found</summary>
+        <div class="flow"><span>ultrasonic B-scan</span><i>→</i><span>baseline SAFT run + score</span><i>→</i><span class="loop">LLM edits the SAFT code → run → evaluator scores → accept / reject</span><i>→</i><span>best code + results</span></div>
+        <ul>
+          <li>Evaluated on six defect conditions (basic, shallow, deep, narrow, wide, multiple). Three design variables tested in sequence: scoring scheme, edits per iteration, edit history given to the LLM.</li>
+          <li>Per-item scores beat a single total score. <b>One edit per iteration beat several</b> — with more simultaneous edits the LLM could not attribute which change caused the score change.</li>
+          <li><b>Without edit history, the standard deviation over runs fell to 0</b> on several conditions: the LLM repeated the same edit and the search collapsed. Full history won on 4 of 6 conditions (ANOVA p&nbsp;&lt;&nbsp;0.001 vs. no history).</li>
+          <li>The narrow defect (1&nbsp;mm, below the 3.16&nbsp;mm wavelength) did not improve under any setting — a diffraction limit. Code optimisation cannot move a physical bound.</li>
+        </ul>
+      </details></li>
     <li>Patent pending, <b>co-inventor</b> — direction control in LLM embedding space with a human-in-the-loop. <span class="pv">Korean application · 2026</span></li>
   </ol>
 </div></section>
