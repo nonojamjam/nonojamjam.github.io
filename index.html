@@ -100,8 +100,8 @@
 <header><div class="wrap">
   <h1>Juhyeok Park <span style="color:var(--mut);font-size:1.3rem;font-weight:400">박주혁</span></h1>
   <p class="role">Electronic Engineering · Physical AI &amp; Multimodal Grounding</p>
-  <p class="thesis">Language models encode <em>descriptions</em> of the physical world but no <em>experience</em> of it. Three undergraduate studies — a knowledge system, a manipulation pipeline, and a noise-robust detector — each reached the same limitation from a different side. The proposed direction is to close that gap with physical and multimodal signals rather than with more language.</p>
-  <p class="thesis-ko">언어 모델은 물리 세계에 대한 기술은 갖지만 경험은 갖지 않는다. 지식 시스템·조작 파이프라인·노이즈 강건 탐지기 세 연구가 각기 다른 방향에서 같은 한계에 도달했다. 이 간극을 언어가 아닌 물리·멀티모달 신호로 메우는 것을 연구 방향으로 삼는다.</p>
+  <p class="thesis">Language models work from <em>descriptions</em> of physical tasks. Three undergraduate projects: an LLM wiki with ambient context injection, a VLM manipulation pipeline with forward-kinematics verification, a noise-robust detector with heterogeneous relational distillation. The LLM given the right document — hallucination. The VLM given the right joint angles — 277 mm position error. The detector trained on noisy images — robustness. Research goal: a model whose input includes <em>physical and multimodal measurements</em>.</p>
+  <p class="thesis-ko">언어 모델은 물리 작업의 기술을 입력으로 받는다. 학부 연구 세 건: ambient context injection 기반 LLM 위키, 순기구학 검증 VLM 조작 파이프라인, 이종 관계 지식증류 노이즈 강건 탐지기. 정답 문서를 받은 LLM 은 환각 발생, 관절 각도를 받은 VLM 은 277 mm 위치 오차, 노이즈 영상으로 학습한 탐지기는 강건성 확보. 연구 목표는 물리·멀티모달 계측값을 입력에 포함하는 모델.</p>
   <div class="facts">
     <span><b>2</b> first-author papers (IAA international · KSIIS domestic)</span>
     <span><b>1</b> KCI journal paper (co-author)</span>
@@ -140,12 +140,12 @@
       <div class="n">03 · KAERI · 2026 · KSIIS first author · negative result</div>
       <h3>VLM robot commands, gated by forward kinematics</h3>
       <div class="num">165.7 → 276.9 mm<small>position error when the VLM was <i>given</i> joint angles as a hint</small></div>
-      <p>Supplying joint angles as text increased error. The VLM does not extract absolute angles or rigid-body rotation from language; the physical check must therefore be <b>external to the model</b>.</p>
+      <p>Supplying joint angles as text increased error. The VLM does not extract absolute angles or rigid-body rotation from language; the physical check is placed <b>outside the model</b>.</p>
       <div class="go"><a href="#fk">Try the gate ↓</a><a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">Talk slides (Korean)</a></div>
     </div>
   </div>
   <div class="why">
-    <b>Interpretation.</b> The wiki study shows that access to correct knowledge does not remove hallucination. The manipulation study shows that supplying correct physical quantities in text does not improve execution. The detection study shows that robustness arises from training on the corrupted signal itself. Taken together, the limiting factor is contact with the physical signal — proprioception, sensing, execution feedback — and this defines the intended graduate research.
+    <b>Interpretation.</b> In all three cases the model had the correct information in text form and the physical step failed. The one change that improved the outcome was direct exposure to the signal — noisy images for the detector; proprioception, sensing and execution feedback for a robot. Graduate research is planned on that input side.
   </div>
 </div></section>
 
@@ -190,7 +190,7 @@
     <ul>
       <li>Evaluation: answers from one frontier model, graded blind by <b>two frontier models from different families</b>, retrieval condition hidden from the graders, gold-span rubric. <b>94% raw agreement.</b></li>
       <li>Ambient injection recovered the answer-bearing node more often than a hybrid-retrieval baseline, with the margin increasing as question wording diverged from the source text. Accuracy increased and refusals decreased.</li>
-      <li><b>Two negative findings reported in the paper:</b> graph-level interventions gave no improvement, and <b>direct injection of the correct node still left substantial hallucination</b>, indicating that independent verification rather than further retrieval is required.</li>
+      <li><b>Two negative findings reported in the paper:</b> graph-level interventions gave no improvement, and <b>direct injection of the correct node still left substantial hallucination</b>, indicating that independent verification is required.</li>
       <li>Limitations stated: pipeline-level comparison (not component-attributable), single-turn benchmark, no human raters yet.</li>
     </ul>
     <p class="res">Finding: <b>access to correct knowledge does not by itself remove hallucination.</b></p>
