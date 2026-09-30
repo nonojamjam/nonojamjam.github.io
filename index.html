@@ -65,9 +65,10 @@
   footer{padding:34px 0 60px;color:var(--mut);font-size:.88rem}
 
   /* ── 2026-09-17 restructure: scan-first layout ── */
-  .thesis{font-size:1.55rem;line-height:1.35;font-weight:600;max-width:760px;margin:0 0 10px;text-wrap:balance}
+  .thesis{color:var(--mut);font-size:.98rem;max-width:760px;margin:0 0 20px}
   .thesis em{color:var(--accent);font-style:normal}
-  .thesis-ko{color:var(--mut);font-size:.98rem;max-width:720px;margin:0 0 20px}
+  .thesis-ko{font-size:1.5rem;line-height:1.4;font-weight:600;max-width:760px;margin:0 0 10px;text-wrap:balance}
+  .thesis-ko em{color:var(--accent);font-style:normal}
   .facts{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px}
   .facts span{font-size:.82rem;background:var(--card);border:1px solid var(--line);padding:5px 11px;border-radius:20px;color:var(--txt)}
   .facts span b{color:var(--green);font-weight:600}
@@ -109,14 +110,14 @@
 <header><div class="wrap">
   <h1>Juhyeok Park <span style="color:var(--mut);font-size:1.3rem;font-weight:400">박주혁</span></h1>
   <p class="role">Electronic Engineering · Physical AI &amp; Multimodal Grounding</p>
-  <p class="thesis">Language models work from <em>descriptions</em> of physical tasks. Three undergraduate projects: an LLM wiki with ambient context injection, a VLM manipulation pipeline with forward-kinematics verification, a noise-robust detector with heterogeneous relational distillation. The LLM given the right document — hallucination. The VLM given the right joint angles — 277 mm position error. The detector trained on noisy images — robustness. Research goal: a model whose input includes <em>physical and multimodal measurements</em>.</p>
-  <p class="thesis-ko">언어 모델은 물리 작업의 기술을 입력으로 받는다. 학부 연구 세 건: ambient context injection 기반 LLM 위키, 순기구학 검증 VLM 조작 파이프라인, 이종 관계 지식증류 노이즈 강건 탐지기. 정답 문서를 받은 LLM 은 환각 발생, 관절 각도를 받은 VLM 은 277 mm 위치 오차, 노이즈 영상으로 학습한 탐지기는 강건성 확보. 연구 목표는 물리·멀티모달 계측값을 입력에 포함하는 모델.</p>
+  <p class="thesis-ko">AI가 인지한 것을 <em>실행 전에</em> 믿어도 되는가. 센서 신호로 AI의 판단을 실행 전에 검증하는 방법, 나아가 검증 경험을 기억해 비슷한 상황은 빠르게 판단하는 Physical AI를 연구하려 한다. 학부 연구: 순기구학으로 VLM 로봇 명령을 거르는 검증 게이트, 에이전트가 스스로 쓰고 읽는 기억 위키, 지식증류 노이즈 강건 탐지기, eLoran 신호 도달시각 추정.</p>
+  <p class="thesis">Can we trust what an AI perceives <em>before</em> it acts? I want to check an AI's decisions against sensor signals before execution — and, next, to remember what passed or failed so that similar cases can be cleared quickly. Undergraduate work: a forward-kinematics gate for VLM robot commands, an LLM wiki the agent writes and reads as its own memory, a noise-robust detector trained with knowledge distillation, and eLoran time-of-arrival estimation.</p>
   <div class="facts">
     <span><b>2</b> first-author papers (IAA international · KSIIS domestic)</span>
     <span><b>1</b> KCI journal paper (co-author)</span>
     <span><b>1</b> patent pending (co-inventor)</span>
     <span>KAERI research intern · 6 mo</span>
-    <span>B.S. EE · Feb 2027 · GPA 3.91/4.5</span>
+    <span>B.S. EE · Feb 2027 · GPA 3.80/4.5</span>
   </div>
   <div class="links">
     <a href="assets/cv/CV_JuhyeokPark_2026-09.pdf"><b>CV (PDF, Korean)</b></a>
@@ -126,27 +127,27 @@
 </div></header>
 
 <section><div class="wrap">
-  <h2>Three studies, one limitation</h2>
-  <p class="sub">One measurement and one finding per study, ordered by relevance to the proposed direction. Interactive material is provided where the data permit.</p>
+  <h2>세 연구, 하나의 한계 <span style="color:var(--mut);font-size:1rem;font-weight:400">Three studies, one limitation</span></h2>
+  <p class="sub">연구마다 계측값 하나와 발견 하나. 제안하는 연구 방향과 가까운 순서로 두었고, 데이터가 허락하는 곳에는 직접 만져 볼 수 있는 자료를 넣었습니다.</p>
   <div class="glance">
     <div class="g">
       <div class="n">01 · CAPSTONE · 2025.11 – 2026.09 · team lead, sole ML/code</div>
-      <h3>Noise-robust satellite object detection</h3>
-      <div class="num">+0.163<small>noisy mAP50 recovered (σ=0.3, iSAID, 10 ep, 2 seeds)</small></div>
+      <h3>노이즈에 강건한 위성 영상 객체 탐지</h3>
+      <div class="num">+0.163<small>노이즈 조건 mAP50 회복 (σ=0.3, iSAID, 10 ep, 2 seeds)</small></div>
       <p>Heterogeneous ViT→CNN distillation combined with noise-augmented training. Effect decomposition attributes <b>97% of the gain to noise training</b>; distillation contributes a small, consistently positive +0.005.</p>
       <div class="go"><a href="#capstone">Drag the slider ↓</a><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">Full demo →</a></div>
     </div>
     <div class="g">
       <div class="n">02 · KAERI · 2026 · IAA 2026 first author · deployed in-house</div>
-      <h3>An LLM that writes and reads its own wiki</h3>
-      <div class="num">94%<small>blind agreement between two cross-family graders</small></div>
+      <h3>스스로 위키를 쓰고 읽는 LLM</h3>
+      <div class="num">94%<small>채점자 간 일치도 — 서로 다른 계열 모델 2개, gold-span 기준</small></div>
       <p>Ambient context injection outperformed a hybrid-retrieval baseline. <b>Hallucination persisted even when the correct node was injected directly</b>, indicating that knowledge access is not the limiting factor.</p>
       <div class="go"><a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">4-page paper</a><a href="assets/talks/IAA2026_Park_talk_slides.pdf">Talk slides</a><a href="#wiki">Details ↓</a></div>
     </div>
     <div class="g">
       <div class="n">03 · KAERI · 2026 · KSIIS first author · negative result</div>
-      <h3>VLM robot commands, gated by forward kinematics</h3>
-      <div class="num">165.7 → 276.9 mm<small>position error when the VLM was <i>given</i> joint angles as a hint</small></div>
+      <h3>순기구학으로 걸러낸 VLM 로봇 명령</h3>
+      <div class="num">165.7 → 276.9 mm<small>관절 각도를 힌트로 <i>주었을 때</i>의 위치 오차</small></div>
       <p>Supplying joint angles as text increased error. The VLM does not extract absolute angles or rigid-body rotation from language; the physical check is placed <b>outside the model</b>.</p>
       <div class="go"><a href="#fk">Try the gate ↓</a><a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">Talk slides (Korean)</a></div>
     </div>
@@ -158,8 +159,8 @@
 
 
 <section><div class="wrap">
-  <h2>Studies</h2>
-  <p class="sub">Method, results and limitations. Numbers are from the re-measured runs (September 2026). Recovery ratios are not reported: they did not survive a seed change.</p>
+  <h2>연구 <span style="color:var(--mut);font-size:1rem;font-weight:400">Studies</span></h2>
+  <p class="sub">방법·결과·한계. 수치는 2026년 9월 재측정분입니다. 회복률은 시드를 바꾸면 유지되지 않아 싣지 않았습니다.</p>
 
   <div class="feat" id="capstone">
     <div class="top"><h3>01 · Noise-Robust Object Detection via Heterogeneous Relational KD (capstone)</h3><span class="when">2025.11 – 2026.09 · team lead, sole ML/code</span></div>
@@ -233,7 +234,7 @@
 
   <div class="feat">
     <div class="top"><h3>Earlier · eLoran Time-of-Arrival under Random Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – 2026.02 · undergraduate researcher · algorithm design, evaluation, report</span></div>
-    <p class="one">Origin of the signal-processing component. Two compensation schemes for a receiver with random sample loss — one time-domain, one frequency-domain — were designed and evaluated over 1,000 Monte-Carlo runs. <b>Neither outperformed plain accumulation.</b></p>
+    <p class="one">Origin of the signal-processing component. Two compensation schemes for a receiver with random sample loss — one time-domain, one frequency-domain — were implemented on top of a provided baseline and evaluated over 1,000 Monte-Carlo runs and on measured eLoran signals. <b>Neither outperformed plain accumulation.</b></p>
     <ul>
       <li>The frequency-domain scheme gained <b>+6.78 dB</b> SNR at the cost of a permanent <b>+1.497 µs</b> TOA bias and 146–219% higher error variance (cycle slip). SNR was the wrong objective.</li>
       <li>Reconstructing samples that were never received corrupts the quantity of interest — the same structure as the VLM result above.</li>
@@ -252,7 +253,7 @@
 </div></section>
 
 <section><div class="wrap">
-  <h2>Publications &amp; talks</h2>
+  <h2>논문·발표 <span style="color:var(--mut);font-size:1rem;font-weight:400">Publications &amp; talks</span></h2>
   <p class="sub">First author of one international short paper and one domestic proceeding; co-author of one KCI journal paper; one patent pending.</p>
   <ol class="pubs">
     <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;An LLM Wiki System for High-Consequence Domain Knowledge Organization: Initial Feasibility for Space Operations and Nuclear Engineering.&rdquo; <b>3rd IAA Conference on AI for Space</b>, Jeju, Korea, Aug 2026. <span class="pv">First author · oral presentation · <a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">manuscript (PDF)</a> · <a href="assets/talks/IAA2026_Park_talk_slides.pdf">slides (PDF)</a></span></li>
@@ -265,6 +266,7 @@
           <li>Per-item scores beat a single total score. <b>One edit per iteration beat several</b> — with more simultaneous edits the LLM could not attribute which change caused the score change.</li>
           <li><b>Without edit history, the standard deviation over runs fell to 0</b> on several conditions: the LLM repeated the same edit and the search collapsed. Full history won on 4 of 6 conditions (ANOVA p&nbsp;&lt;&nbsp;0.001 vs. no history).</li>
           <li>The narrow defect (1&nbsp;mm, below the 3.16&nbsp;mm wavelength) did not improve under any setting — a diffraction limit. Code optimisation cannot move a physical bound.</li>
+          <li><i>Why it matters to me:</i> the loop keeps or rejects every edit by a score, and without the edit history the search collapsed — a verifier and a memory, the two pieces I want to combine.</li>
         </ul>
       </details></li>
     <li>Patent pending, <b>co-inventor</b> — direction control in LLM embedding space with a human-in-the-loop. <span class="pv">Korean application · 2026</span></li>
@@ -272,7 +274,7 @@
 </div></section>
 
 <section><div class="wrap">
-  <h2>Coursework implementations</h2>
+  <h2>교과 구현 <span style="color:var(--mut);font-size:1rem;font-weight:400">Coursework implementations</span></h2>
   <p class="sub">Course and independent implementations run on real hardware — AI/ML, embedded, communications, systems.</p>
   <div class="grid">
     <div class="mini"><h4>ResNet-18 KD + Ensemble</h4><p>4-model ensemble as a teacher; KL+MSE hybrid distillation. 29% → 69.66%.</p><div class="t">PyTorch · Mixup/CutMix · KD</div></div>
@@ -284,7 +286,7 @@
 </div></section>
 
 <section><div class="wrap">
-  <h2>Skills</h2>
+  <h2>기술 <span style="color:var(--mut);font-size:1rem;font-weight:400">Skills</span></h2>
   <div class="skills">
     <div><span class="b">Languages</span> · <span class="v">Python (main), C/C++, MATLAB</span></div>
     <div><span class="b">AI/ML</span> · <span class="v">PyTorch, YOLOv8/Ultralytics, DINOv2, ResNet, Knowledge Distillation</span></div>
@@ -294,8 +296,8 @@
 </div></section>
 
 <section><div class="wrap">
-  <h2>Education</h2>
-  <p class="edu"><b>B.S. Electronic Engineering</b>, Chungbuk National University — GPA 3.91 / 4.5 · expected Feb 2027<br>
+  <h2>학력 <span style="color:var(--mut);font-size:1rem;font-weight:400">Education</span></h2>
+  <p class="edu"><b>B.S. Electronic Engineering</b>, Chungbuk National University — GPA 3.80 / 4.5 (major 3.84) · expected Feb 2027<br>
   <b style="font-size:.95rem">A+ and ranked first in every course this work rests on:</b> <span style="font-size:.95rem">probability &amp; statistics, random processes, communication theory, digital communication, digital signal processing, signals &amp; systems, information &amp; communication engineering.</span><br>
   <span style="color:var(--mut);font-size:.9rem">Also: electronic circuits, digital/SoC design, computer architecture, AI systems, AI semiconductor design, automatic control.</span></p>
 </div></section>
