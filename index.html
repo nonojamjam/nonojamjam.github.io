@@ -1,383 +1,102 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Juhyeok Park — Portfolio</title>
-<style>
-  :root{
-    --bg:#0f1115; --card:#171a21; --line:#262b36; --txt:#e6e9ef; --mut:#9aa3b2;
-    --accent:#6ea8fe; --green:#39d98a; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans KR",sans-serif;line-height:1.6}
-  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
-  .wrap{max-width:900px;margin:0 auto;padding:0 20px}
-  header{padding:72px 0 36px;border-bottom:1px solid var(--line)}
-  h1{font-size:2.3rem;margin:0 0 6px} .role{font-size:1.1rem;color:var(--accent);margin:0 0 14px}
-  .lead{font-size:1.08rem;color:var(--mut);max-width:680px;margin:0 0 18px}
-  .links{display:flex;gap:14px;flex-wrap:wrap;font-size:.92rem}
-  .links a{background:var(--card);border:1px solid var(--line);padding:7px 13px;border-radius:8px}
-  .meta{margin-top:16px;font-size:.88rem;color:var(--mut)}
-  section{padding:40px 0;border-bottom:1px solid var(--line)}
-  h2{font-size:1.4rem;margin:0 0 6px}
-  .sub{color:var(--mut);font-size:.9rem;margin:0 0 22px}
-  .feat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px;transition:transform .15s ease,border-color .15s ease}
-  .feat:hover{transform:translateY(-2px);border-color:#36425e}
-  .feat .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
-  .feat h3{margin:0;font-size:1.18rem}
-  .feat .when{color:var(--mut);font-size:.82rem;white-space:nowrap}
-  .feat .one{color:var(--accent);font-size:.95rem;margin:4px 0 12px}
-  .feat ul{margin:0;padding-left:18px} .feat li{margin:5px 0;font-size:.94rem}
-  .feat .res{margin-top:12px;font-size:.9rem}
-  .feat .res b{color:var(--green)}
-  .tags{margin-top:14px;display:flex;gap:7px;flex-wrap:wrap}
-  .tag{font-size:.74rem;color:var(--mut);background:#0b0d12;border:1px solid var(--line);padding:3px 9px;border-radius:20px;font-family:var(--mono)}
-  .cta{display:inline-block;margin-top:14px;background:var(--accent);color:#08101f;font-weight:600;padding:9px 15px;border-radius:8px;font-size:.9rem}
-  .cta:hover{text-decoration:none;opacity:.92}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
-  .mini{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:15px;transition:border-color .15s ease}
-  .mini:hover{border-color:#36425e}
-  .cta.ghost{background:transparent;border:1px solid var(--accent);color:var(--accent);margin-left:8px}
-  .cta.ghost:hover{background:rgba(110,168,254,.1)}
-  .prep{display:inline-block;margin-top:14px;font-size:.8rem;color:var(--mut);font-style:italic}
-  .demo-fig{margin:16px 0 0}
-  .demo-fig img{width:100%;border-radius:10px;border:1px solid var(--line);display:block}
-  .demo-fig figcaption{font-size:.82rem;color:var(--mut);margin-top:8px}
-  .ba{position:relative;width:100%;max-width:460px;margin:16px auto 0;border-radius:10px;overflow:hidden;user-select:none;aspect-ratio:1174/1090;background:#000}
-  .ba img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
-  .ba-top{clip-path:inset(0 45% 0 0)}
-  .ba-div{position:absolute;top:0;bottom:0;left:55%;width:2px;background:#fff;transform:translateX(-1px);pointer-events:none}
-  .ba-handle{position:absolute;top:50%;left:55%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-size:.9rem;box-shadow:0 2px 10px rgba(0,0,0,.5);pointer-events:none}
-  .ba-tag{position:absolute;bottom:9px;font-size:.72rem;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(8,10,16,.78)}
-  .ba-tag.l{left:9px;color:#ffb4b4} .ba-tag.r{right:9px;color:#9ff0c4}
-  .ba-wipe{width:100%;max-width:460px;margin:12px auto 0;display:block;accent-color:var(--accent)}
-  .ba-cap{font-size:.82rem;color:var(--mut);margin:8px 0 0;text-align:center}
-  .mini h4{margin:0 0 5px;font-size:1rem} .mini p{margin:0;font-size:.86rem;color:var(--mut)}
-  .mini .t{margin-top:9px;font-size:.72rem;color:var(--mut);font-family:var(--mono)}
-  .skills{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;font-size:.9rem}
-  .skills .b{font-weight:600;color:var(--txt)} .skills .v{color:var(--mut)}
-  .pubs{margin:0;padding-left:1.2em;font-size:.95rem;line-height:1.75}
-  .pubs li{margin-bottom:12px} .pubs b{color:var(--txt)}
-  .pubs .pv{display:block;color:var(--mut);font-size:.86rem;margin-top:2px}
-  .edu{font-size:.95rem} .edu b{color:var(--txt)}
-  footer{padding:34px 0 60px;color:var(--mut);font-size:.88rem}
-
-  /* ── 2026-09-17 restructure: scan-first layout ── */
-  .thesis{color:var(--mut);font-size:.98rem;max-width:760px;margin:0 0 20px}
-  .thesis em{color:var(--accent);font-style:normal}
-  .thesis-ko{font-size:1.5rem;line-height:1.4;font-weight:600;max-width:760px;margin:0 0 10px;text-wrap:balance}
-  .thesis-ko em{color:var(--accent);font-style:normal}
-  .facts{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px}
-  .facts span{font-size:.82rem;background:var(--card);border:1px solid var(--line);padding:5px 11px;border-radius:20px;color:var(--txt)}
-  .facts span b{color:var(--green);font-weight:600}
-  .glance{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:6px}
-  .g{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:8px}
-  .g .n{font-size:.72rem;color:var(--mut);font-family:var(--mono);letter-spacing:.04em}
-  .g h3{margin:0;font-size:1.05rem;line-height:1.3}
-  .g .num{font-size:1.7rem;font-weight:700;color:var(--green);line-height:1.1;font-variant-numeric:tabular-nums}
-  .g .num small{font-size:.8rem;color:var(--mut);font-weight:400;display:block;margin-top:2px}
-  .g p{margin:0;font-size:.9rem;color:var(--mut)}
-  .g .go{margin-top:auto;font-size:.86rem}
-  .g .go a{margin-right:12px}
-  .why{background:linear-gradient(180deg,rgba(110,168,254,.08),transparent);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:18px;font-size:.95rem}
-  .why b{color:var(--txt)}
-  .fk{position:relative;max-width:460px;margin:14px auto 0}
-  .fk canvas{width:100%;height:auto;display:block;border-radius:10px;border:1px solid var(--line);background:#0b0d12;touch-action:none;cursor:crosshair}
-  .fk .verdict{margin:10px 0 0;text-align:center;font-family:var(--mono);font-size:.86rem;min-height:1.4em}
-  .fk .verdict.ok{color:var(--green)} .fk .verdict.no{color:#ff8a8a}
-  .fk .hint{font-size:.8rem;color:var(--mut);text-align:center;margin:6px 0 0}
-  .decomp{display:grid;grid-template-columns:auto 1fr auto;gap:6px 12px;align-items:center;font-size:.86rem;margin:12px 0 0;max-width:460px}
-  .decomp .bar{height:10px;border-radius:5px;background:#0b0d12;border:1px solid var(--line);overflow:hidden;display:flex}
-  .decomp .bar i{display:block;height:100%;background:var(--green)}
-  .decomp .bar i.kd{background:var(--accent)}
-  .decomp .v{font-family:var(--mono);color:var(--txt);text-align:right;white-space:nowrap}
-  .decomp .k{color:var(--mut);white-space:nowrap}
-
-  details.kci{margin-top:6px}
-  details.kci summary{cursor:pointer;font-size:.92em;opacity:.8}
-  details.kci ul{margin:8px 0 0 1.1em;padding:0;font-size:.92em}
-  details.kci li{margin:3px 0}
-  .flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 4px;font-size:.85em}
-  .flow span{border:1px solid rgba(128,128,128,.6);border-radius:4px;padding:3px 8px;background:rgba(128,128,128,.10)}
-  .flow span.loop{border-style:dashed}
-  .flow i{font-style:normal;color:#888}
-</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Juhyeok Park</title>
+<link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
-
-<header><div class="wrap">
-  <h1>Juhyeok Park <span style="color:var(--mut);font-size:1.3rem;font-weight:400">박주혁</span></h1>
-  <p class="role">Electronic Engineering · Physical AI &amp; Multimodal Grounding</p>
-  <p class="thesis-ko">AI가 인지한 것을 <em>실행 전에</em> 믿어도 되는가. 센서 신호로 AI의 판단을 실행 전에 검증하는 방법, 나아가 검증 경험을 기억해 비슷한 상황은 빠르게 판단하는 Physical AI를 연구하려 한다. 학부 연구: 순기구학으로 VLM 로봇 명령을 거르는 검증 게이트, 에이전트가 스스로 쓰고 읽는 기억 위키, 지식증류 노이즈 강건 탐지기, eLoran 신호 도달시각 추정.</p>
-  <p class="thesis">Can we trust what an AI perceives <em>before</em> it acts? I want to check an AI's decisions against sensor signals before execution — and, next, to remember what passed or failed so that similar cases can be cleared quickly. Undergraduate work: a forward-kinematics gate for VLM robot commands, an LLM wiki the agent writes and reads as its own memory, a noise-robust detector trained with knowledge distillation, and eLoran time-of-arrival estimation.</p>
-  <div class="facts">
-    <span><b>2</b> first-author papers (IAA international · KSIIS domestic)</span>
-    <span><b>1</b> KCI journal paper (co-author)</span>
-    <span><b>1</b> patent pending (co-inventor)</span>
-    <span>KAERI research intern · 6 mo</span>
-    <span>B.S. EE · Feb 2027 · GPA 3.80/4.5</span>
-  </div>
-  <div class="links">
-    <a href="assets/cv/CV_JuhyeokPark_2026-09.pdf"><b>CV (PDF, Korean)</b></a>
-    <a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">IAA paper (PDF)</a>
-    <a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">Live demo</a>
+<header class="top"><div class="wrap">
+  <div>
+    <h1>Juhyeok Park <small>박주혁</small></h1>
+    <p class="role">B.S. Electronic Engineering, Chungbuk National University (Feb 2027) · Physical AI</p>
+    <p class="bio">I study <b>when a robot can trust what its AI perceives and plans — and how much it should re-check.</b>
+      At KAERI I built a forward-kinematics gate for VLM robot commands and an LLM wiki the agent writes and reads as its own memory.
+      I am now testing how verified experience can cut computation, and what happens when the robot's own state estimate is wrong.</p>
+    <p class="ko">로봇이 AI의 인지·계획을 언제 믿어도 되는지, 얼마나 다시 확인해야 하는지를 연구합니다.</p>
+    <div class="links">
+      <a href="cv.html">CV</a>
+      <a href="assets/cv/CV_JuhyeokPark_2026-09.pdf">CV (PDF, Korean)</a>
+      <a href="https://github.com/nonojamjam">GitHub</a>
+    </div>
   </div>
 </div></header>
 
-<section><div class="wrap">
-  <h2>세 연구, 하나의 한계 <span style="color:var(--mut);font-size:1rem;font-weight:400">Three studies, one limitation</span></h2>
-  <p class="sub">연구마다 계측값 하나와 발견 하나. 제안하는 연구 방향과 가까운 순서로 두었고, 데이터가 허락하는 곳에는 직접 만져 볼 수 있는 자료를 넣었습니다.</p>
-  <div class="glance">
-    <div class="g">
-      <div class="n">01 · CAPSTONE · 2025.11 – 2026.09 · team lead, sole ML/code</div>
-      <h3>노이즈에 강건한 위성 영상 객체 탐지</h3>
-      <div class="num">+0.163<small>노이즈 조건 mAP50 회복 (σ=0.3, iSAID, 10 ep, 2 seeds)</small></div>
-      <p>Heterogeneous ViT→CNN distillation combined with noise-augmented training. Effect decomposition attributes <b>97% of the gain to noise training</b>; distillation contributes a small, consistently positive +0.005.</p>
-      <div class="go"><a href="#capstone">Drag the slider ↓</a><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">Full demo →</a></div>
-    </div>
-    <div class="g">
-      <div class="n">02 · KAERI · 2026 · IAA 2026 first author · deployed in-house</div>
-      <h3>스스로 위키를 쓰고 읽는 LLM</h3>
-      <div class="num">94%<small>채점자 간 일치도 — 서로 다른 계열 모델 2개, gold-span 기준</small></div>
-      <p>Ambient context injection outperformed a hybrid-retrieval baseline. <b>Hallucination persisted even when the correct node was injected directly</b>, indicating that knowledge access is not the limiting factor.</p>
-      <div class="go"><a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">4-page paper</a><a href="assets/talks/IAA2026_Park_talk_slides.pdf">Talk slides</a><a href="#wiki">Details ↓</a></div>
-    </div>
-    <div class="g">
-      <div class="n">03 · KAERI · 2026 · KSIIS first author · negative result</div>
-      <h3>순기구학으로 걸러낸 VLM 로봇 명령</h3>
-      <div class="num">165.7 → 276.9 mm<small>관절 각도를 힌트로 <i>주었을 때</i>의 위치 오차</small></div>
-      <p>Supplying joint angles as text increased error. The VLM does not extract absolute angles or rigid-body rotation from language; the physical check is placed <b>outside the model</b>.</p>
-      <div class="go"><a href="#fk">Try the gate ↓</a><a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">Talk slides (Korean)</a></div>
+<main class="wrap">
+  <h2>News <span class="ko">소식</span></h2>
+  <ul class="news">
+    <li><span class="d">2026.10</span><span>Preliminary study: <a href="research/poc.html">verify, remember, and decide how much to compute</a> — camera, LLM planner, kinematic check, touch and memory in one loop.</span></li>
+    <li><span class="d">2026.08</span><span>First-author oral talk at the 3rd IAA Conference on AI for Space, Jeju.</span></li>
+    <li><span class="d">2026.05</span><span>First-author talk at the Korea Society of Industrial Information Systems (Spring 2026).</span></li>
+    <li><span class="d">2026</span><span>KCI journal paper (co-author) · patent pending (co-inventor) · KAERI research intern, 6 months.</span></li>
+  </ul>
+
+  <h2>Preliminary study <span class="ko">예비 연구</span></h2>
+
+  <div class="item">
+    <a class="thumb" href="demo/memory-gate-panda.html"><img src="assets/poc/panda_demo.png" alt="Live demo: 7-DOF Panda arm with memory replay and a kinematic gate"></a>
+    <div>
+      <h3><a href="research/poc.html">Verify, remember, and decide how much to compute</a></h3>
+      <p class="meta">2026.10 · self-initiated · simulated 3-joint arm · pre-registered</p>
+      <p>Verified memory removed most LLM calls on familiar scenes at the same success, and an independent touch check stopped wrong memories. When the robot's own state estimate was wrong, checks before and after planning were both fooled.</p>
+      <div class="btns"><a class="primary" href="demo/memory-gate-panda.html">▶ live demo · 7-DOF Panda</a><a href="research/poc.html">details</a></div>
     </div>
   </div>
-  <div class="why">
-    <b>Interpretation.</b> In all three cases the model had the correct information in text form and the physical step failed. The one change that improved the outcome was direct exposure to the signal — noisy images for the detector; proprioception, sensing and execution feedback for a robot. Graduate research is planned on that input side.
-  </div>
-</div></section>
 
+  <h2>Research <span class="ko">연구</span></h2>
 
-<section><div class="wrap">
-  <h2>연구 <span style="color:var(--mut);font-size:1rem;font-weight:400">Studies</span></h2>
-  <p class="sub">방법·결과·한계. 수치는 2026년 9월 재측정분입니다. 회복률은 시드를 바꾸면 유지되지 않아 싣지 않았습니다.</p>
-
-  <div class="feat" id="capstone">
-    <div class="top"><h3>01 · Noise-Robust Object Detection via Heterogeneous Relational KD (capstone)</h3><span class="when">2025.11 – 2026.09 · team lead, sole ML/code</span></div>
-    <p class="one">Keep a lightweight detector working under satellite sensor noise. DINOv2 (ViT) → YOLOv8s-seg (CNN) distance-wise relational distillation, plus 50:50 mixed-noise training; teacher and adapter are removed at inference, so the deployed model is unchanged (11.8M / 22MB).</p>
-    <p class="res" style="margin-top:4px">Re-measured Sept 2026 — Kaggle T4, 10 epochs, σ=0.3, box mAP50, seeds 0 and 1:</p>
-    <div class="decomp">
-      <span class="k">Baseline (clean-only)</span><div class="bar"><i style="width:8%"></i></div><span class="v">0.015 noisy · 0.284 clean</span>
-      <span class="k">+ noise training</span><div class="bar"><i style="width:96%"></i></div><span class="v">0.178 noisy · 0.225 clean</span>
-      <span class="k">+ distillation (proposed)</span><div class="bar"><i style="width:96%"></i><i class="kd" style="width:2.5%"></i></div><span class="v">0.182 noisy · 0.231 clean</span>
+  <div class="item">
+    <a class="thumb" href="research/fk-verifier.html"><img src="assets/ive_verification_demo.gif" alt="Verification loop for VLM robot commands"></a>
+    <div>
+      <h3><a href="research/fk-verifier.html">VLM robot commands gated by forward kinematics</a></h3>
+      <p class="meta"><b>J. Park</b>, H. Seo · KSIIS Spring 2026 · first author · KAERI</p>
+      <p>The model proposes; kinematics decides before execution. Giving the VLM joint angles as text raised position error from 165.7 to 276.9 mm.</p>
+      <div class="btns"><a href="research/fk-verifier.html">details</a><a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">slides (Korean)</a></div>
     </div>
-    <ul style="margin-top:12px">
-      <li><b>Noisy gain +0.163</b> is stable across seeds (±0.0005). Of it, <b>+0.163 is noise training and +0.005 is distillation</b> — small, but positive in all four comparisons.</li>
-      <li>Robustness costs clean accuracy: <b>−0.053</b> on clean tiles, also seed-stable. The recovery ratio reported earlier (×12) varied to ×15 under a seed change and is therefore not reported.</li>
-      <li>A baseline checkpoint recorded as 10 epochs was found to have trained for 2; all comparisons were re-run under matched settings.</li>
-      <li>Implementation (sole author of the ML code): RKD loss, custom Ultralytics trainer (SPPF hook, adapter, mixed noise), three framework-level bug fixes.</li>
-    </ul>
-    <div class="tags"><span class="tag">PyTorch</span><span class="tag">DINOv2</span><span class="tag">YOLOv8</span><span class="tag">Knowledge Distillation</span><span class="tag">ablation · seed check</span></div>
-    <div class="ba" id="ba">
-      <img class="ba-base" src="assets/n1.png" alt="Proposed model detects the aircraft under noise">
-      <img class="ba-top" id="baTop" src="assets/bl0.png" alt="Baseline fails under noise">
-      <div class="ba-div" id="baDiv"></div>
-      <div class="ba-handle" id="baHandle"><span>⟷</span></div>
-      <span class="ba-tag l">Baseline · 0 detections</span>
-      <span class="ba-tag r">Proposed · detects ✓</span>
+  </div>
+
+  <div class="item">
+    <a class="thumb" href="research/llm-wiki.html"><img src="assets/iaa/notice_fuse.gif" alt="IAA demo: an intent turn pulls matching wiki notes into the prompt without a query"></a>
+    <div>
+      <h3><a href="research/llm-wiki.html">An LLM wiki system for high-consequence domains</a></h3>
+      <p class="meta"><b>J. Park</b>, H. Seo · 3rd IAA Conference on AI for Space, 2026 · first author · oral · deployed at KAERI</p>
+      <p>Ambient context injection beat a hybrid-retrieval baseline, yet hallucination persisted even when the correct node was injected directly.</p>
+      <div class="btns"><a href="research/llm-wiki.html">details</a><a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">paper</a><a href="assets/talks/IAA2026_Park_talk_slides.pdf">slides</a></div>
     </div>
-    <input type="range" id="wipe" class="ba-wipe" min="0" max="100" value="55" aria-label="compare baseline and proposed">
-    <p class="ba-cap">Same noisy iSAID tile (P1130 aircraft, σ=0.3). The clean-only baseline produces no detections; the noise-trained model retains the target. Qualitative; the quantitative result is the table above.</p>
-    <a class="cta" href="https://nonojamjam.github.io/noise-robust-detection-rkd/">Open interactive demo →</a>
-    <a class="cta ghost" href="https://github.com/nonojamjam/noise-robust-detection-rkd">Code &amp; deep-dive</a>
   </div>
 
-  <div class="feat" id="wiki">
-    <div class="top"><h3>02 · An LLM Wiki System for High-Consequence Domains (KAERI · IAA 2026)</h3><span class="when">2026 · KAERI internship · first author · oral</span></div>
-    <p class="one">The model writes wiki nodes during operation and reads them back through <b>ambient context injection</b>: a hook selects relevant nodes before each generation without an explicit query. Built for space-operations and nuclear knowledge, where incorrect answers carry high cost; deployed on the institute’s closed network and handed over as an internal service.</p>
-    <ul>
-      <li>Evaluation: answers from one frontier model, graded blind by <b>two frontier models from different families</b>, retrieval condition hidden from the graders, gold-span rubric. <b>94% raw agreement.</b></li>
-      <li>Ambient injection recovered the answer-bearing node more often than a hybrid-retrieval baseline, with the margin increasing as question wording diverged from the source text. Accuracy increased and refusals decreased.</li>
-      <li><b>Two negative findings reported in the paper:</b> graph-level interventions gave no improvement, and <b>direct injection of the correct node still left substantial hallucination</b>, indicating that independent verification is required.</li>
-      <li>Limitations stated: pipeline-level comparison (not component-attributable), single-turn benchmark, no human raters yet.</li>
-    </ul>
-    <p class="res">Finding: <b>access to correct knowledge does not by itself remove hallucination.</b></p>
-    <div class="tags"><span class="tag">LLM systems</span><span class="tag">RAG / context injection</span><span class="tag">cross-family evaluation</span><span class="tag">deployed on-prem</span></div>
-    <a class="cta ghost" style="margin-left:0" href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">Read the 4-page paper (PDF)</a>
-    <a class="cta ghost" href="assets/talks/IAA2026_Park_talk_slides.pdf">Talk slides as presented, 19 + 21 backup (PDF)</a>
-  </div>
-
-  <div class="feat" id="fk">
-    <div class="top"><h3>03 · VLM Robot Commands Gated by Forward Kinematics (KAERI · KSIIS 2026)</h3><span class="when">2026 · KAERI internship · first author · negative result</span></div>
-    <p class="one">A vision-language model proposes an end-effector target; forward kinematics determines reachability before execution. The pipeline functioned as a filter. The reported result concerns what happened when the VLM was given additional physical information in text.</p>
-    <ul>
-      <li>Controlled ablations — DOF 1→2→5; hints none / chain-of-thought / joint angles / image feedback; VLM reading vs. generating — to isolate <i>where</i> spatial reasoning fails.</li>
-      <li><b>Supplying joint angles increased position error from 165.7 mm to 276.9 mm</b>; task success was 0/5 in both conditions. The VLM does not extract absolute angles or rigid-body rotation from text.</li>
-      <li>A verifier from the same model family shares the model’s failure modes; self-verification is not independent verification.</li>
-      <li>Experiment design, data collection, visualization and report by the author. The project was discontinued in July 2026; the negative result is its output.</li>
-    </ul>
-    <p class="res">Finding: <b>language does not carry the physical quantities the task requires.</b> Verification must be external to the model — kinematics in this study; sensing and execution feedback in general.</p>
-    <div class="tags"><span class="tag">VLM (GPT-4o)</span><span class="tag">forward kinematics</span><span class="tag">ablation design</span><span class="tag">runtime verification</span></div>
-    <a class="cta ghost" style="margin-left:0" href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">Talk slides as presented, May 2026 (PDF, Korean)</a>
-
-    <div class="fk">
-      <canvas id="fkc" width="460" height="300" aria-label="Interactive 2-link arm: click a target to see whether forward kinematics accepts or rejects it"></canvas>
-      <p class="verdict" id="fkv">Click or drag: the marker is the target proposed by a VLM.</p>
-      <p class="hint">Conceptual illustration (planar 2-link arm), not the experiment. The model proposes; the kinematics decides.</p>
+  <div class="item">
+    <a class="thumb" href="research/capstone.html"><img src="assets/profile/noise_slider.gif" alt="Baseline vs proposed detector on a noisy satellite tile"></a>
+    <div>
+      <h3><a href="research/capstone.html">Noise-robust object detection via heterogeneous relational KD</a></h3>
+      <p class="meta">Capstone · 2025.11 – 2026.09 · team lead, sole ML code</p>
+      <p>+0.163 mAP50 under satellite sensor noise with an unchanged 22 MB model; 97% of the gain comes from noise training, distillation adds a small, consistent +0.005.</p>
+      <div class="btns"><a href="research/capstone.html">details</a><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">demo</a></div>
     </div>
-
-    <figure class="demo-fig">
-      <img src="assets/ive_verification_demo.gif" alt="Step-wise verification loop on a robot pick task" loading="lazy">
-      <figcaption>Verification loop from the study: render / IK+FK / collision / semantic+workspace / image-text checks with a cube-error readout, locating the step at which the plan fails.</figcaption>
-    </figure>
   </div>
 
-  <div class="feat">
-    <div class="top"><h3>Earlier · eLoran Time-of-Arrival under Random Sample Loss (NAVIS Lab)</h3><span class="when">2025.12 – 2026.02 · undergraduate researcher · algorithm design, evaluation, report</span></div>
-    <p class="one">Origin of the signal-processing component. Two compensation schemes for a receiver with random sample loss — one time-domain, one frequency-domain — were implemented on top of a provided baseline and evaluated over 1,000 Monte-Carlo runs and on measured eLoran signals. <b>Neither outperformed plain accumulation.</b></p>
-    <ul>
-      <li>The frequency-domain scheme gained <b>+6.78 dB</b> SNR at the cost of a permanent <b>+1.497 µs</b> TOA bias and 146–219% higher error variance (cycle slip). SNR was the wrong objective.</li>
-      <li>Reconstructing samples that were never received corrupts the quantity of interest — the same structure as the VLM result above.</li>
-      <li>The implementation is laboratory property; parameter-level details are available on request.</li>
-    </ul>
-    <div class="tags"><span class="tag">TOA estimation</span><span class="tag">Monte-Carlo</span><span class="tag">MATLAB</span></div>
-    <figure class="demo-fig">
-      <img src="assets/eloran_accumulation.png" alt="eLoran pulse groups under 50% random sample loss" loading="lazy">
-      <figcaption>Measured eLoran data, 50% sample loss. Top: plain accumulation recovers all four pulse groups. Middle and bottom: the two compensation schemes corrupt the TOA in different ways.</figcaption>
-    </figure>
+  <div class="item">
+    <a class="thumb" href="research/eloran.html"><img src="assets/eloran_pulse.png" alt="eLoran pulse distorted by the sample-loss model"></a>
+    <div>
+      <h3><a href="research/eloran.html">eLoran time-of-arrival under random sample loss</a></h3>
+      <p class="meta">NAVIS Lab · 2025.12 – 2026.02 · undergraduate researcher</p>
+      <p>A frequency-domain compensation gained +6.78 dB SNR but added a permanent +1.497 µs TOA bias — SNR was the wrong objective.</p>
+      <div class="btns"><a href="research/eloran.html">details</a></div>
+    </div>
   </div>
 
-
-
-
-</div></section>
-
-<section><div class="wrap">
-  <h2>논문·발표 <span style="color:var(--mut);font-size:1rem;font-weight:400">Publications &amp; talks</span></h2>
-  <p class="sub">First author of one international short paper and one domestic proceeding; co-author of one KCI journal paper; one patent pending.</p>
-  <ol class="pubs">
-    <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;An LLM Wiki System for High-Consequence Domain Knowledge Organization: Initial Feasibility for Space Operations and Nuclear Engineering.&rdquo; <b>3rd IAA Conference on AI for Space</b>, Jeju, Korea, Aug 2026. <span class="pv">First author · oral presentation · <a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">manuscript (PDF)</a> · <a href="assets/talks/IAA2026_Park_talk_slides.pdf">slides (PDF)</a></span></li>
-    <li><b>Juhyeok Park</b>, Hogeon Seo. &ldquo;A VLM Robot Manipulation Pipeline for Mitigating Physical Hallucination&rdquo; (in Korean). <b>Korea Society of Industrial Information Systems</b>, Spring 2026. <span class="pv">First author · domestic conference, proceedings + oral (in Korean) · <a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">slides (PDF)</a></span></li>
-    <li>D. Choi, <b>J. Park</b>, H. Seo. &ldquo;Development of an AI Agent Framework for Autonomous Improvement of an Ultrasonic Imaging Algorithm.&rdquo; <i>Journal of the Korean Society for Nondestructive Testing</i>, 46(4):268&ndash;277, 2026 (KCI). <span class="pv">Co-author · contribution: benchmark task design and code documentation · <a href="https://doi.org/10.7779/JKSNT.2026.46.4.268">DOI</a></span>
-      <details class="kci"><summary>What the loop is and what it found</summary>
-        <div class="flow"><span>ultrasonic B-scan</span><i>→</i><span>baseline SAFT run + score</span><i>→</i><span class="loop">LLM edits the SAFT code → run → evaluator scores → accept / reject</span><i>→</i><span>best code + results</span></div>
-        <ul>
-          <li>Evaluated on six defect conditions (basic, shallow, deep, narrow, wide, multiple). Three design variables tested in sequence: scoring scheme, edits per iteration, edit history given to the LLM.</li>
-          <li>Per-item scores beat a single total score. <b>One edit per iteration beat several</b> — with more simultaneous edits the LLM could not attribute which change caused the score change.</li>
-          <li><b>Without edit history, the standard deviation over runs fell to 0</b> on several conditions: the LLM repeated the same edit and the search collapsed. Full history won on 4 of 6 conditions (ANOVA p&nbsp;&lt;&nbsp;0.001 vs. no history).</li>
-          <li>The narrow defect (1&nbsp;mm, below the 3.16&nbsp;mm wavelength) did not improve under any setting — a diffraction limit. Code optimisation cannot move a physical bound.</li>
-          <li><i>Why it matters to me:</i> the loop keeps or rejects every edit by a score, and without the edit history the search collapsed — a verifier and a memory, the two pieces I want to combine.</li>
-        </ul>
-      </details></li>
-    <li>Patent pending, <b>co-inventor</b> — direction control in LLM embedding space with a human-in-the-loop. <span class="pv">Korean application · 2026</span></li>
-  </ol>
-</div></section>
-
-<section><div class="wrap">
-  <h2>교과 구현 <span style="color:var(--mut);font-size:1rem;font-weight:400">Coursework implementations</span></h2>
-  <p class="sub">Course and independent implementations run on real hardware — AI/ML, embedded, communications, systems.</p>
-  <div class="grid">
-    <div class="mini"><h4>ResNet-18 KD + Ensemble</h4><p>4-model ensemble as a teacher; KL+MSE hybrid distillation. 29% → 69.66%.</p><div class="t">PyTorch · Mixup/CutMix · KD</div></div>
-    <div class="mini"><h4>Raspberry-Pi Band-Assist System</h4><p>Real-time OpenCV + TTS, Teachable-Machine pitch monitoring, TCP/IP sockets, master–slave IoT sync.</p><div class="t">Linux · OpenCV · IoT</div></div>
-    <div class="mini"><h4>Cortex-M3 SHA-256 OTP</h4><p>Hardware OTP with wired (USART) + wireless (BT) hybrid; solved 3.3V/5V level mismatch via common ground.</p><div class="t">ARM · embedded security</div></div>
-    <div class="mini"><h4>PPM System (MATLAB)</h4><p>Hard- vs soft-decision under AWGN; sub-sample hybrid demodulation for BER gains.</p><div class="t">MATLAB · comms</div></div>
-    <div class="mini"><h4>AES-128 + CBC (C++)</h4><p>Implemented from scratch (no libraries), including PKCS#7 padding.</p><div class="t">C++ · cryptography</div></div>
+  <div class="item">
+    <a class="thumb" href="cv.html#pubs"><img src="assets/kci/saft_bscan.png" alt="Raw B-scan and SAFT-processed image"></a>
+    <div>
+      <h3>AI agent framework for autonomous improvement of an ultrasonic imaging algorithm</h3>
+      <p class="meta">D. Choi, <b>J. Park</b>, H. Seo · J. Korean Soc. for Nondestructive Testing 46(4), 2026 (KCI) · co-author</p>
+      <p>One edit per iteration beat several, and without edit history the search collapsed — a verifier and a memory working together.</p>
+      <div class="btns"><a href="https://doi.org/10.7779/JKSNT.2026.46.4.268">paper (doi)</a><a href="cv.html#pubs">more</a></div>
+    </div>
   </div>
-</div></section>
+</main>
 
-<section><div class="wrap">
-  <h2>기술 <span style="color:var(--mut);font-size:1rem;font-weight:400">Skills</span></h2>
-  <div class="skills">
-    <div><span class="b">Languages</span> · <span class="v">Python (main), C/C++, MATLAB</span></div>
-    <div><span class="b">AI/ML</span> · <span class="v">PyTorch, YOLOv8/Ultralytics, DINOv2, ResNet, Knowledge Distillation</span></div>
-    <div><span class="b">Signal processing</span> · <span class="v">DSP, FFT, BPF, coherent accumulation, TOA</span></div>
-    <div><span class="b">Embedded / Comms</span> · <span class="v">ARM Cortex-M3, Raspberry Pi, USART, TCP/IP, PPM</span></div>
-  </div>
-</div></section>
-
-<section><div class="wrap">
-  <h2>학력 <span style="color:var(--mut);font-size:1rem;font-weight:400">Education</span></h2>
-  <p class="edu"><b>B.S. Electronic Engineering</b>, Chungbuk National University — GPA 3.80 / 4.5 (major 3.84) · expected Feb 2027<br>
-  <b style="font-size:.95rem">A+ and ranked first in every course this work rests on:</b> <span style="font-size:.95rem">probability &amp; statistics, random processes, communication theory, digital communication, digital signal processing, signals &amp; systems, information &amp; communication engineering.</span><br>
-  <span style="color:var(--mut);font-size:.9rem">Also: electronic circuits, digital/SoC design, computer architecture, AI systems, AI semiconductor design, automatic control.</span></p>
-</div></section>
-
-<footer><div class="wrap">
-  Juhyeok Park
-</div></footer>
-
-<script>
-  (function(){
-    const ba = document.getElementById('ba');
-    if(!ba) return;
-    const wipe = document.getElementById('wipe');
-    const baTop = document.getElementById('baTop');
-    const baDiv = document.getElementById('baDiv');
-    const baHnd = document.getElementById('baHandle');
-    function setWipe(v){
-      v = Math.max(0, Math.min(100, v));
-      baTop.style.clipPath = `inset(0 ${100 - v}% 0 0)`;
-      baDiv.style.left = v + '%';
-      baHnd.style.left = v + '%';
-      if (wipe.value != v) wipe.value = v;
-    }
-    wipe.addEventListener('input', e => setWipe(+e.target.value));
-    let dragging = false;
-    function fromEvent(e){
-      const r = ba.getBoundingClientRect();
-      const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-      setWipe(Math.round(x / r.width * 100));
-    }
-    ba.addEventListener('pointerdown', e => { dragging = true; fromEvent(e); });
-    window.addEventListener('pointermove', e => { if (dragging) fromEvent(e); });
-    window.addEventListener('pointerup', () => { dragging = false; });
-    setWipe(55);
-  })();
-</script>
-
-<script>
-  (function(){
-    const c = document.getElementById('fkc'); if(!c) return;
-    const ctx = c.getContext('2d'), v = document.getElementById('fkv');
-    const W=c.width, H=c.height, base={x:W/2, y:H-40}, L1=110, L2=90;
-    let tgt = {x: W/2+70, y: H-150};
-    function draw(){
-      ctx.clearRect(0,0,W,H);
-      ctx.beginPath(); ctx.arc(base.x,base.y,L1+L2,0,Math.PI*2); ctx.strokeStyle='rgba(110,168,254,.35)'; ctx.setLineDash([4,5]); ctx.lineWidth=1; ctx.stroke();
-      ctx.beginPath(); ctx.arc(base.x,base.y,Math.abs(L1-L2),0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle='rgba(154,163,178,.7)'; ctx.font='11px ui-monospace,Menlo,monospace';
-      ctx.fillText('reachable band (FK)', base.x+L1+L2-118, base.y-6);
-      const dx=tgt.x-base.x, dy=tgt.y-base.y, d=Math.hypot(dx,dy);
-      const ok = d<=L1+L2 && d>=Math.abs(L1-L2);
-      let a1,a2;
-      if(ok){
-        const cos2=(d*d-L1*L1-L2*L2)/(2*L1*L2);
-        a2=Math.acos(Math.max(-1,Math.min(1,cos2)));
-        a1=Math.atan2(dy,dx)-Math.atan2(L2*Math.sin(a2),L1+L2*Math.cos(a2));
-      } else { a1=Math.atan2(dy,dx); a2=0; }
-      const e={x:base.x+L1*Math.cos(a1), y:base.y+L1*Math.sin(a1)};
-      const t={x:e.x+L2*Math.cos(a1+a2), y:e.y+L2*Math.sin(a1+a2)};
-      ctx.strokeStyle='#262b36'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(20,base.y+18); ctx.lineTo(W-20,base.y+18); ctx.stroke();
-      ctx.lineCap='round'; ctx.lineWidth=9; ctx.strokeStyle= ok ? '#39d98a' : '#ff8a8a';
-      ctx.beginPath(); ctx.moveTo(base.x,base.y); ctx.lineTo(e.x,e.y); ctx.lineTo(t.x,t.y); ctx.stroke();
-      for(const p of [base,e,t]){ ctx.beginPath(); ctx.arc(p.x,p.y,6,0,Math.PI*2); ctx.fillStyle='#e6e9ef'; ctx.fill(); }
-      ctx.beginPath(); ctx.arc(tgt.x,tgt.y,7,0,Math.PI*2); ctx.fillStyle= ok ? '#39d98a' : '#ff5c5c'; ctx.fill();
-      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
-      ctx.fillStyle='rgba(230,233,239,.85)'; ctx.font='11px ui-monospace,Menlo,monospace';
-      ctx.fillText('VLM: "go here"', tgt.x+11, tgt.y+4);
-      if(!ok){ ctx.strokeStyle='rgba(255,92,92,.6)'; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.moveTo(t.x,t.y); ctx.lineTo(tgt.x,tgt.y); ctx.stroke(); ctx.setLineDash([]); }
-      const mm=Math.round(d/(L1+L2)*400);
-      if(ok){ v.className='verdict ok'; v.textContent=`PASS — FK residual 0 mm · target ${mm} mm from base, inside the reachable band · executed`; }
-      else if(d>L1+L2){ v.className='verdict no'; v.textContent=`REJECTED — target ${mm} mm from base, arm reaches 400 mm · residual ${mm-400} mm · nothing moves`; }
-      else { v.className='verdict no'; v.textContent=`REJECTED — target too close to the base for this arm · nothing moves`; }
-    }
-    function pos(ev){ const r=c.getBoundingClientRect(); const s=W/r.width; return {x:(ev.clientX-r.left)*s, y:(ev.clientY-r.top)*s}; }
-    let down=false;
-    c.addEventListener('pointerdown',ev=>{down=true; tgt=pos(ev); draw();});
-    c.addEventListener('pointermove',ev=>{ if(down){ tgt=pos(ev); draw(); }});
-    window.addEventListener('pointerup',()=>down=false);
-    draw();
-  })();
-</script>
+<footer class="wrap">Education, skills, coursework and patent: <a href="cv.html">CV page</a>. · Juhyeok Park</footer>
 </body>
 </html>

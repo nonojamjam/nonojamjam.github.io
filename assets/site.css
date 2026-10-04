@@ -1,0 +1,60 @@
+/* 공통 스타일 v2 (10/4) — 흰 배경 논문 톤 (10/4 밤 어두운 판 시도 후 흰색 확정, 어두운 판 = site_dark_20261004.css) */
+:root{--txt:#1d1d1f;--mut:#6b6b70;--line:#e3e3e6;--link:#1a5fb4;--soft:#f6f7f9;--accent:#c0392b;--w:880px}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--txt);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+a{color:var(--link);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:var(--w);margin:0 auto;padding:0 20px}
+header.top{padding:44px 0 18px}
+.hero{display:flex;gap:26px;align-items:flex-start}
+.photo{flex:0 0 132px;height:132px;border-radius:50%;background:var(--soft);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:2.2rem;color:var(--mut);overflow:hidden}
+.photo img{width:100%;height:100%;object-fit:cover}
+h1{font-size:1.9rem;margin:0 0 2px;font-weight:650;letter-spacing:-.01em}
+h1 small{font-size:1.05rem;color:var(--mut);font-weight:400;margin-left:6px}
+.role{color:var(--mut);margin:0 0 10px;font-size:.95rem}
+.bio{margin:0 0 6px}
+.ko{color:var(--mut);font-size:.92rem;margin:4px 0 10px}
+.links{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.93rem}
+h2{font-size:1.15rem;margin:34px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line);font-weight:650}
+h2 .ko{display:inline;margin-left:8px;font-weight:400}
+ul.news{list-style:none;padding:0;margin:0;font-size:.93rem}
+ul.news li{display:flex;gap:14px;padding:3px 0}
+ul.news .d{flex:0 0 70px;color:var(--mut);font-variant-numeric:tabular-nums}
+.item{display:flex;gap:20px;padding:16px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.thumb{flex:0 0 210px;height:132px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--soft);display:flex;align-items:center;justify-content:center}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb .t{font-size:.8rem;color:var(--mut);padding:10px;text-align:center}
+.item h3{margin:0 0 3px;font-size:1.02rem;font-weight:620}
+.item h3 a{color:var(--txt)} .item h3 a:hover{color:var(--link)}
+.meta{color:var(--mut);font-size:.86rem;margin:0 0 5px}
+.item p{margin:0 0 6px;font-size:.94rem}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.btns a{font-size:.8rem;border:1px solid var(--line);border-radius:4px;padding:1px 8px;color:var(--txt)}
+.btns a:hover{border-color:var(--link);color:var(--link);text-decoration:none}
+.tag{display:inline-block;font-size:.72rem;background:#fff4f2;color:var(--accent);border-radius:3px;padding:0 6px;margin-left:6px;vertical-align:2px}
+footer{color:var(--mut);font-size:.82rem;padding:30px 0 40px}
+/* 상세 페이지 */
+.crumb{font-size:.88rem;margin:26px 0 0} 
+.page h1{font-size:1.6rem;margin:10px 0 4px}
+.lead{font-size:1.04rem;margin:10px 0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--soft)}
+.kpi b{display:block;font-size:1.45rem;line-height:1.2;font-variant-numeric:tabular-nums}
+.kpi span{font-size:.84rem;color:var(--mut)}
+figure{margin:16px 0}
+figure img{width:100%;border:1px solid var(--line);border-radius:6px}
+figcaption{font-size:.85rem;color:var(--mut);margin-top:4px}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:12px 0;font-size:.85rem}
+.flow span{border:1px solid var(--line);border-radius:4px;padding:4px 9px;background:var(--soft)}
+.flow span.gate{border-color:#c9a227;background:#fffaea}
+.flow i{font-style:normal;color:var(--mut)}
+.box{border-left:3px solid var(--line);padding:6px 14px;margin:14px 0;color:#333;font-size:.94rem;background:var(--soft)}
+@media(max-width:640px){.hero{flex-direction:column}.item{flex-direction:column}.thumb{flex-basis:auto;width:100%;height:170px}}
+.duo{display:grid;grid-template-columns:1.6fr 1fr;gap:12px;align-items:start;margin:4px 0 14px}
+@media (max-width:600px){.duo{grid-template-columns:1fr}}
+.btns a.primary{background:var(--link);border-color:var(--link);color:#fff}
+table th,table td{border-bottom:1px solid var(--line)}
+.demo{display:block;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--soft);margin:16px 0}
+.demo img{width:100%;display:block}
+.demo div{padding:10px 14px;font-size:.9rem;color:var(--txt)} .demo div b{color:var(--link)}
+.demo:hover{border-color:var(--link);text-decoration:none}

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verify, remember, compute less — Juhyeok Park</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<main class="wrap page">
+  <p class="crumb"><a href="../index.html">← Juhyeok Park</a></p>
+  <h1>Verify, remember, and decide how much to compute</h1>
+  <p class="meta">Preliminary study · 2026.10 · self-initiated · simulated 3-joint arm · hypotheses and pass/fail criteria written before each run</p>
+  <p class="ko">검증된 경험을 기억해 계산을 줄이고, 기억이나 상태가 틀릴 때 무엇이 막는지를 본 예비 연구입니다.</p>
+
+  <p class="lead">An LLM can plan robot motions, but calling it for every step is slow and its plans must be checked before execution.
+    I asked three questions: <b>where should memory sit</b> to save computation, <b>what stops a wrong memory</b>, and
+    <b>where should verification sit</b> — before planning or after.</p>
+
+  <div class="kpis">
+    <div class="kpi"><b>117 → 34</b><span>LLM calls, same success (66–67 of 75 tasks), camera + touch + memory</span></div>
+    <div class="kpi"><b>30 / 30</b><span>revisits of familiar scenes solved with zero LLM calls and one camera frame</span></div>
+    <div class="kpi"><b>0 rejections</b><span>by the kinematic filter when the joint reading was off by 0.15 rad; the pre-planning check was fooled too</span></div>
+  </div>
+
+  <a class="demo" href="../demo/memory-gate-panda.html"><img src="../assets/poc/panda_demo.png" alt="Live demo: 7-DOF Franka Panda arm with memory replay and a forward-kinematics gate">
+    <div><b>▶ Try it live — 7-DOF Franka Panda</b> · toggle memory replay, the verification gate, a 0.15 rad joint misread and an independent fingertip sensor, and watch the counts change. Runs in your browser; the planner is a stand-in, not an LLM.</div></a>
+  <h2>System <span class="ko">구조</span></h2>
+  <div class="flow">
+    <span>camera (YOLOv8n)</span><i>→</i><span>tracker + calibrated decoder</span><i>→</i><span class="gate">perception gate</span><i>→</i>
+    <span>memory replay first</span><i>→</i><span>LLM planner (GPT-6.1 Pro)</span><i>→</i><span class="gate">forward-kinematics check</span><i>→</i>
+    <span>execute</span><i>→</i><span class="gate">touch check</span><i>→</i><span>remember</span>
+  </div>
+  <p>The planner receives one committed target; the gates receive the uncertainty. A wrong memory is dropped when perception disagrees with it.</p>
+
+  <h2>1 · Memory where the decision is made <span class="ko">기억은 결정하는 자리에</span></h2>
+  <p>Memory of verifier verdicts changed costs only when it sat at the decision or the action, not in the prompt.
+    On a 2-link arm, LLM calls fell 60 → 24 and on a 3D arm 33 → 12, with every task still solved (GPT-6.1 Pro, 30 tasks).</p>
+  <figure><img src="../assets/poc/fig7_two_link_and_3d.png" alt="2-link and 3D arms: LLM calls and tasks solved with and without verified memory"><figcaption>2-link and 3D arms: same success with 60–64% fewer LLM calls.</figcaption></figure>
+
+  <h2>2 · With a camera, touch and memory <span class="ko">카메라 · 촉각 · 기억을 한 고리로</span></h2>
+  <p>75 tasks × 7 conditions on the same frames. Familiar scenes became nearly free; unseen scenes reused actions verified elsewhere; when objects were swapped so that memory pointed at the wrong one, a touch-width check cut wrong transports 6 → 1, and a perception–memory conflict check removed the wrong grasps altogether (20 → 0) without extra LLM calls.</p>
+  <figure><img src="../assets/poc/fig10_integrated_headline_en.png" alt="LLM calls per task by visit for familiar, swapped and unseen-distractor scenes"><figcaption>LLM calls per task by visit (GPT-6.1 Pro). Labels mark wrong transports.</figcaption></figure>
+  <figure><img src="../assets/poc/anim7_integrated_demo_en.gif" alt="Example run"><figcaption>Example run: plan once, replay from memory, and a touch check catching a swapped object.</figcaption></figure>
+  <figure><img src="../assets/poc/fig13_compute_pareto_en.png" alt="Detection time per task for fixed 1 frame, adaptive and fixed 6 frames"><figcaption>Looking at six frames cost 6× detection time and prevented no error: the remaining errors came from objects that no available sense could tell apart.</figcaption></figure>
+
+  <h2>3 · Before or after planning? <span class="ko">계획 전 검증 vs 계획 후 검증</span></h2>
+  <p>I compared a HEART-style check before planning (expert agents answer feasibility questions that are injected into the planner) with my forward-kinematics filter after planning, and then broke the assumption both rely on: a shoulder reading off by +0.15 rad.
+    Both were fooled — the kinematic filter rejected nothing across two task sets — and an independent fingertip sensor restored 7–8 of 8 tasks with about a third of the LLM calls.</p>
+  <figure><img src="../assets/poc/fig14_prepost_error_state_en.png" alt="Success and fooled verifications under a wrong joint reading"><figcaption>Wrong joint reading: checks before and after planning share the same wrong state.</figcaption></figure>
+  <figure><img src="../assets/poc/fig16_prepost_trajectory_en.png" alt="Believed vs actual fingertip path"><figcaption>Believed (dashed) vs actual fingertip path for a task fixed before the run.</figcaption></figure>
+  <div class="box">My verification assumes the robot knows its own state. This study measured where that assumption breaks — and the next question is how a robot can tell that its own state estimate is wrong.</div>
+
+  <h2>Setup <span class="ko">설정</span></h2>
+  <p>Simulated arms; timings measured on an Apple M5 Pro laptop; one planner model per experiment. Pre-registered criteria and every run are kept with the code.</p>
+  <div class="btns"><a href="../demo/memory-gate-panda.html">live demo · 7-DOF Panda</a><a href="../demo/memory-gate-3d.html">3-joint arm</a><a href="../demo/memory-gate.html">2-link arm</a></div>
+</main>
+<footer class="wrap"><a href="../index.html">← back</a></footer>
+</body>
+</html>

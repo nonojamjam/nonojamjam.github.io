@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noise-robust object detection via heterogeneous relational KD — Juhyeok Park</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<main class="wrap page">
+  <p class="crumb"><a href="../index.html">← Juhyeok Park</a></p>
+  <h1>Noise-robust object detection via heterogeneous relational KD</h1>
+  <p class="meta">Capstone · 2025.11 – 2026.09 · team lead, sole ML code</p>
+  <p class="ko">위성 센서 노이즈 속에서도 가벼운 검출기가 동작하게 하는 연구입니다. 배포 모델은 그대로 두고 학습만 바꿨습니다.</p>
+  <p class="lead">Keep a lightweight detector working under satellite sensor noise. DINOv2 (ViT) → YOLOv8s-seg (CNN) distance-wise relational distillation, plus 50:50 mixed-noise training; teacher and adapter are removed at inference, so the deployed model is unchanged (11.8M parameters / 22 MB).</p>
+  <div class="kpis">
+    <div class="kpi"><b>+0.163</b><span>box mAP50 under noise (σ = 0.3), stable across seeds (±0.0005)</span></div>
+    <div class="kpi"><b>97%</b><span>of the gain from noise training; distillation adds +0.005</span></div>
+    <div class="kpi"><b>−0.053</b><span>cost on clean tiles, also seed-stable</span></div>
+  </div>
+  <h2>What I tried <span class="ko">시도한 것</span></h2>
+  <p>The target is a detector small enough for an on-board computer that still works when the image is noisy. The obvious route — distil a large, robust vision transformer into a small CNN — took four attempts.</p>
+  <table style="border-collapse:collapse;font-size:.9rem;margin:10px 0 14px;width:100%">
+<tr><th style="text-align:left;padding:6px 10px">attempt</th><th style="text-align:left;padding:6px 10px">idea</th><th style="text-align:left;padding:6px 10px">what happened</th><th style="text-align:left;padding:6px 10px">why it fell short</th></tr>
+<tr><td style="padding:6px 10px;vertical-align:top"><b>1 · Feature-matching KD</b></td><td style="padding:6px 10px;vertical-align:top">1×1 adapter, MSE between DINOv2 and YOLO features (small COCO subset)</td><td style="padding:6px 10px;vertical-align:top">mAP below the plain detector</td><td style="padding:6px 10px;vertical-align:top">adapter too shallow; no detection loss in the objective</td></tr>
+<tr><td style="padding:6px 10px;vertical-align:top"><b>2 · Adapter v1 → v9</b></td><td style="padding:6px 10px;vertical-align:top">residual adapter with GroupNorm, GELU, coordinate attention; MSE + RKD + cosine; PCGrad against gradient clash (COCO 40k)</td><td style="padding:6px 10px;vertical-align:top">clean mAP50 0.5423 → 0.5616, but at σ = 0.3 0.4171 → 0.4058</td><td style="padding:6px 10px;vertical-align:top">the distilled backbone fell <i>faster</i> under noise — clean-image knowledge did not transfer to noisy inputs</td></tr>
+<tr><td style="padding:6px 10px;vertical-align:top"><b>3 · Clean teacher, noisy student</b></td><td style="padding:6px 10px;vertical-align:top">teacher sees the clean tile, student the noisy one; align their statistics on iSAID</td><td style="padding:6px 10px;vertical-align:top">loss converged; no measured robustness gain</td><td style="padding:6px 10px;vertical-align:top">matching statistics of noisy features did not make detection robust</td></tr>
+<tr><td style="padding:6px 10px;vertical-align:top"><b>4 · RKD + mixed-noise training</b> (final)</td><td style="padding:6px 10px;vertical-align:top">distance-wise relational KD plus 50:50 clean/noisy training; teacher and adapter removed at inference</td><td style="padding:6px 10px;vertical-align:top">noisy mAP50 +0.163 at the same 22 MB model</td><td style="padding:6px 10px;vertical-align:top">—</td></tr>
+</table>
+  <h2>Results <span class="ko">결과</span></h2>
+  <p class="meta">Kaggle T4, 10 epochs, σ = 0.3, box mAP50, seed 0; the noise-training gain repeated with seed 1 (±0.0005)</p>
+  <table style="border-collapse:collapse;font-size:.92rem;margin:6px 0 12px">
+    <tr><th style="text-align:left;padding:4px 14px 4px 0">model</th><th style="padding:4px 14px">noisy</th><th style="padding:4px 14px">clean</th></tr>
+    <tr><td style="padding:3px 14px 3px 0">Baseline (clean-only)</td><td style="padding:3px 14px">0.015</td><td style="padding:3px 14px">0.284</td></tr>
+    <tr><td style="padding:3px 14px 3px 0">+ distillation only</td><td style="padding:3px 14px">0.018</td><td style="padding:3px 14px">0.297</td></tr>
+<tr><td style="padding:3px 14px 3px 0">+ noise training</td><td style="padding:3px 14px">0.178</td><td style="padding:3px 14px">0.225</td></tr>
+    <tr><td style="padding:3px 14px 3px 0"><b>+ distillation (proposed)</b></td><td style="padding:3px 14px"><b>0.182</b></td><td style="padding:3px 14px">0.231</td></tr>
+  </table>
+  <figure><img src="../assets/profile/noise_slider.gif" alt="Slider comparison on one noisy tile: baseline 0 detections, proposed detects the aircraft" style="max-width:440px;display:block;margin:0 auto"><figcaption>Slider from the interactive demo: baseline (left) finds nothing, proposed (right) detects the aircraft.</figcaption></figure>
+  <p class="meta">Qualitative; the quantitative result is the table above.</p>
+  <h2>What the 2 × 2 ablation says <span class="ko">2×2 분해</span></h2>
+  <p>Running all four combinations (with / without distillation × with / without noise training) separated the two effects. Noise training alone gives +0.163 noisy mAP50 — 97% of the gain; distillation adds +0.005, small but positive in all four comparisons. The two barely interact. Robustness is not free: clean mAP50 drops by about 0.06.</p>
+  <div class="box">The robustness came from what the model trained on, not from what it was taught by the teacher. The open question is whether the clean/noisy trade-off is fundamental or a side effect of sharing one set of weights and normalisation statistics.</div>
+  <h2>Implementation <span class="ko">구현</span></h2>
+  <p>Implementation (sole author of the ML code): RKD loss, custom Ultralytics trainer (SPPF hook, adapter, mixed noise), three framework-level bug fixes.</p>
+  <div class="btns"><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">interactive demo &amp; code</a></div>
+</main>
+<footer class="wrap"><a href="../index.html">← back</a></footer>
+</body>
+</html>

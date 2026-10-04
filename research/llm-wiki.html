@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An LLM wiki system for high-consequence domains — Juhyeok Park</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<main class="wrap page">
+  <p class="crumb"><a href="../index.html">← Juhyeok Park</a></p>
+  <h1>An LLM wiki system for high-consequence domains</h1>
+  <p class="meta"><b>J. Park</b>, H. Seo · 3rd IAA Conference on AI for Space, Jeju, Aug 2026 · first author · oral · KAERI internship</p>
+  <p class="ko">LLM 이 운영 중 스스로 위키를 쓰고, 답하기 전에 다시 읽게 한 시스템입니다. 원내 서비스로 인계했습니다.</p>
+  <p class="lead">The model writes wiki nodes during operation and reads them back through <b>ambient context injection</b>: a hook selects relevant nodes before each generation without an explicit query. Built for space-operations and nuclear knowledge, where incorrect answers carry high cost; deployed on the institute's closed network and handed over as an internal service.</p>
+  <div class="kpis">
+    <div class="kpi"><b>55% → 79%</b><span>retrieval recall@3, hybrid baseline vs ambient injection (~6,000-note wiki, 56 questions)</span></div>
+    <div class="kpi"><b>33% → 55%</b><span>answer correctness, same comparison</span></div>
+    <div class="kpi"><b>94%</b><span>raw agreement between two blind graders from different model families</span></div>
+  </div>
+
+  <h2>Idea <span class="ko">아이디어</span></h2>
+  <p>A traditional wiki is kept by people and goes stale; RAG keeps no pages and re-searches chunks at every query. In an LLM wiki the model compiles the notes once and keeps them up to date.</p>
+  <figure><img src="../assets/iaa/fig_wiki_vs_rag.png" alt="Traditional wiki vs RAG vs LLM wiki"><figcaption>From the IAA talk: who keeps the pages, and when the knowledge is compiled.</figcaption></figure>
+
+  <h2>System <span class="ko">구조</span></h2>
+  <p>The model writes each session into compact markdown notes. One branch organizes them offline under human review; the other reads them online — on the next turn a hook inserts relevant notes without a query.</p>
+  <figure><img src="../assets/iaa/fig_architecture.png" alt="Write, knowledge base, organize, read"><figcaption>Write → knowledge base → organize (offline, people review) / read (online, ambient injection).</figcaption></figure>
+
+  <h2>Demo <span class="ko">시연 (발표 녹화)</span></h2>
+  <p class="meta">Public demo on 155 public arXiv papers. Recorded for the talk.</p>
+  <figure><img src="../assets/iaa/organize.gif" alt="Organize: the wiki clusters itself by topic"><figcaption><b>1 · Organize</b> — notes are embedded, clustered by domain and linked by similarity; the user can re-arrange the map by their own axes.</figcaption></figure>
+  <figure><img src="../assets/iaa/notice_fuse.gif" alt="Notice: an intent turn retrieves wiki summaries without a query"><figcaption><b>2 · Notice</b> — a plan, not a question ("let us check the satellite power margin before the eclipse…") activates matching wiki notes, which are stitched into the prompt.</figcaption></figure>
+  <figure><img src="../assets/iaa/compass_steer.gif" alt="Idea Compass: pick anchors and steer toward a gap"><figcaption><b>3 · Idea Compass</b> — pick 2–3 anchor papers, steer a bearing toward an empty region, and the system proposes an idea in that direction. A bearing, not a coordinate. Patent pending (co-inventor).</figcaption></figure>
+
+  <h2>Results <span class="ko">결과</span></h2>
+  <figure><img src="../assets/iaa/fig_before_after.png" alt="Same question, same model, with and without wiki context"><figcaption>Same question, same model — only the context differs. With ambient wiki context the answer uses the noted operational constraints.</figcaption></figure>
+  <p>Answers from one frontier model were graded blind by two frontier models from different families, with the retrieval condition hidden and a gold-span rubric. Ambient injection recovered the answer-bearing node more often than the hybrid-retrieval baseline, with the margin increasing as question wording diverged from the source text.</p>
+  <p>Direct injection of the correct node still left substantial hallucination.</p>
+  <div class="box">Access to correct knowledge does not by itself remove hallucination — the answer still has to be checked.</div>
+
+  <div class="btns"><a href="../assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">4-page paper (PDF)</a><a href="../assets/talks/IAA2026_Park_talk_slides.pdf">talk slides (PDF)</a></div>
+</main>
+<footer class="wrap"><a href="../index.html">← back</a></footer>
+</body>
+</html>

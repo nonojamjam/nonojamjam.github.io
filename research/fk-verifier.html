@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VLM robot commands gated by forward kinematics — Juhyeok Park</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<main class="wrap page">
+  <p class="crumb"><a href="../index.html">← Juhyeok Park</a></p>
+  <h1>VLM robot commands gated by forward kinematics</h1>
+  <p class="meta"><b>J. Park</b>, H. Seo · Korea Society of Industrial Information Systems, Spring 2026 · first author · KAERI internship</p>
+  <p class="ko">VLM 이 낸 로봇 명령을 순기구학으로 실행 전에 거르고, 언어로 준 물리 정보가 왜 도움이 안 되는지 본 연구입니다.</p>
+  <p class="lead">A vision-language model proposes an end-effector target; forward kinematics determines reachability before execution. The pipeline functioned as a filter. The reported result concerns what happened when the VLM was given additional physical information in text.</p>
+  <div class="kpis">
+    <div class="kpi"><b>165.7 → 276.9 mm</b><span>position error when joint angles were given as text</span></div>
+    <div class="kpi"><b>F1 = 0.995</b><span>the verification cascade itself (N = 91)</span></div>
+  </div>
+  <figure><img src="../assets/ive_verification_demo.gif" alt="Verification loop"><figcaption>Verification loop from the study: render / IK+FK / collision / semantic + workspace / image–text checks with a cube-error readout, locating the step at which the plan fails.</figcaption></figure>
+  <h2>Pipeline <span class="ko">파이프라인 (발표 슬라이드)</span></h2>
+  <figure><img src="../assets/ksiis/framework.png" alt="Input, LLM planner, kinematics, imagine, pre-verify, execute, post-VLM with re-imagine and re-plan loops"><figcaption>From the KSIIS talk (Korean labels): LLM planner → kinematics (IK, FK skeleton) → imagined goal image → two-stage pre-verification → execute → post-execution check. A failed check re-imagines (up to 2×) or re-plans.</figcaption></figure>
+  <h2>What was tested <span class="ko">무엇을 시험했나</span></h2>
+  <p>The original idea was to let a VLM <i>imagine</i> the arm at its goal — edit the camera image — and execute toward that picture. Eight controlled experiments, mostly on a 2-DOF planar arm, located where this breaks.</p>
+  <table style="border-collapse:collapse;font-size:.9rem;margin:10px 0 14px;width:100%">
+<tr><th style="text-align:left;padding:6px 10px">experiment</th><th style="text-align:left;padding:6px 10px">what was varied</th><th style="text-align:left;padding:6px 10px">result</th><th style="text-align:left;padding:6px 10px">reading</th></tr>
+<tr><td style="padding:6px 10px;vertical-align:top">Hints for image generation</td><td style="padding:6px 10px;vertical-align:top">none / target coordinates / joint angles and link lengths / all information</td><td style="padding:6px 10px;vertical-align:top">joint angles <i>raised</i> end-effector error 165.7 → 276.9 mm; 0/5 in both</td><td style="padding:6px 10px;vertical-align:top">more information made it worse</td></tr>
+<tr><td style="padding:6px 10px;vertical-align:top">Reading vs generating</td><td style="padding:6px 10px;vertical-align:top">read angles from an image vs generate the moved arm</td><td style="padding:6px 10px;vertical-align:top">reading 14.5 mm (5/5 with a grid) vs generating 93.7 mm (0/5)</td><td style="padding:6px 10px;vertical-align:top">the VLM can read geometry but not draw it</td></tr>
+<tr><td style="padding:6px 10px;vertical-align:top">Prompt variants</td><td style="padding:6px 10px;vertical-align:top">four prompts, 15 paired runs</td><td style="padding:6px 10px;vertical-align:top">success 33% → 40%, not significant (all four tests p ≥ 0.05)</td><td style="padding:6px 10px;vertical-align:top">prompt engineering does not fix it</td></tr>
+<tr><td style="padding:6px 10px;vertical-align:top">Skeleton reference</td><td style="padding:6px 10px;vertical-align:top">show the target pose as a skeleton image</td><td style="padding:6px 10px;vertical-align:top">0/5 (215.8 vs 226.6 mm)</td><td style="padding:6px 10px;vertical-align:top">pixel editing ignores rigid-body constraints</td></tr>
+<tr><td style="padding:6px 10px;vertical-align:top">Oracle image</td><td style="padding:6px 10px;vertical-align:top">give a perfect target image, extract the motion</td><td style="padding:6px 10px;vertical-align:top">position 5/5 (20.1 mm); absolute angle 1/5; link length off by up to 75%</td><td style="padding:6px 10px;vertical-align:top">even a perfect picture does not yield full kinematics</td></tr>
+<tr><td style="padding:6px 10px;vertical-align:top">DOF scaling</td><td style="padding:6px 10px;vertical-align:top">1 → 5 links, with and without the verifier cascade</td><td style="padding:6px 10px;vertical-align:top">2-DOF 0% → 100% with verification; plateau at +20% from 4 links</td><td style="padding:6px 10px;vertical-align:top">the verifier rescues, but cannot supply spatial grounding</td></tr>
+<tr><td style="padding:6px 10px;vertical-align:top">Verifier itself</td><td style="padding:6px 10px;vertical-align:top">cascade of render, IK/FK, collision, workspace and image–text checks</td><td style="padding:6px 10px;vertical-align:top">F1 = 0.995 (N = 91); 0 false passes in 50 checks on a 3D shelf task</td><td style="padding:6px 10px;vertical-align:top">the check was reliable; the planner was the bottleneck</td></tr>
+</table>
+  <h2>Findings <span class="ko">발견</span></h2>
+  <p>Image editing manipulates pixels, not rigid bodies: link lengths and joint connectivity are not preserved, rotations fail more often than translations, and without a grid there is no pixel-to-metre scale. Language does not carry the missing quantities either — giving joint angles as text made the result worse.</p>
+  <p>The verification cascade, in contrast, was accurate. A verifier from the same model family as the planner shares its failure modes, so the checks that worked were the ones outside the model: kinematics, rendering and geometry.</p>
+  <div class="box">Use the VLM for reading and checking, not for drawing the future. Keep the geometry in computation and the verification outside the model.</div>
+  <h2>My role <span class="ko">역할</span></h2>
+  <p>Experiment design, data collection, visualization and report.</p>
+  <div class="btns"><a href="../assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">talk slides (Korean, May 2026)</a><a href="poc.html">follow-up: verify, remember, compute less</a></div>
+</main>
+<footer class="wrap"><a href="../index.html">← back</a></footer>
+</body>
+</html>

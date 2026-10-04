@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>eLoran time-of-arrival under random sample loss — Juhyeok Park</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<main class="wrap page">
+  <p class="crumb"><a href="../index.html">← Juhyeok Park</a></p>
+  <h1>eLoran time-of-arrival under random sample loss</h1>
+  <p class="meta">NAVIS Lab · winter internship 2026.01 – 02 (undergraduate researcher since 2025.12) · loss model, two algorithms, evaluation, 20-page report</p>
+  <p class="ko">샘플이 무작위로 빠지는 eLoran 수신기에서 도달 시각을 지키려 한 과제입니다. 보상 기법 두 가지를 설계했지만 둘 다 단순 누적을 넘지 못했고, 왜 실패했는지까지 정리했습니다.</p>
+  <p class="lead">eLoran receivers add many pulse repetitions coherently to lift a weak signal out of noise, then read the time of arrival (TOA) from the result. When the receiver drops samples, that addition breaks. I tried to repair the damage before adding. Each repair improved how clean the signal looked, and each made the timing worse.</p>
+  <div class="kpis">
+    <div class="kpi"><b>+6.78 dB</b><span>SNR gain of the frequency-domain scheme</span></div>
+    <div class="kpi"><b>+1.497 µs</b><span>Master TOA bias it introduced (1,000 Monte-Carlo runs)</span></div>
+    <div class="kpi"><b>146–219%</b><span>worse error variance across stations (cycle slip)</span></div>
+  </div>
+
+  <h2>The problem <span class="ko">문제</span></h2>
+  <p>An eLoran pulse is a 100 kHz carrier under an asymmetric envelope; a Master station sends groups of 9 pulses and each Secondary 8, repeating every group repetition interval. TOA is taken 30 µs into the pulse, before skywave arrives. Adding N repetitions raises SNR by 10·log₁₀N dB — but only if every repetition is aligned in time. A one-carrier-cycle mistake (10 µs) is a cycle slip, kilometres of range error.</p>
+
+  <h2>What I tried <span class="ko">시도한 것</span></h2>
+  <p><b>1 · A loss model.</b> Two independent kinds of loss: single samples dropped inside the receiver (interrupt delay, DMA overrun) and contiguous bursts from outside (lightning, interference) that can cross group boundaries. Each can be handled two ways: <i>blanking</i> keeps the index and zeroes the value — only energy is lost; <i>compression</i> deletes the gap and shifts everything after it — every later phase moves. Compression is the damaging case.</p>
+  <figure><img src="../assets/eloran_pulse.png" alt="Loss model on one simulated pulse: original and distorted by hybrid loss"><figcaption>The loss model on one simulated pulse. Blue samples stay in place, coloured samples are pulled earlier by compression (colour = shift in samples), black dots are zero-filled.</figcaption></figure>
+  <table style="border-collapse:collapse;font-size:.9rem;margin:10px 0 14px;width:100%">
+    <tr><th style="text-align:left;padding:6px 10px 6px 0;width:22%">attempt</th><th style="text-align:left;padding:6px 10px">idea</th><th style="text-align:left;padding:6px 10px">what happened</th><th style="text-align:left;padding:6px 0 6px 10px">why it failed</th></tr>
+    <tr><td style="padding:6px 10px 6px 0;vertical-align:top"><b>2 · Time-domain repair</b></td><td style="padding:6px 10px;vertical-align:top">band-pass, estimate each repetition's shift by cross-correlation, discard low-confidence ones, shift back, average recursively, refill gaps from a template</td><td style="padding:6px 10px;vertical-align:top">Master within 1.1 µs, but Secondaries off by thousands to tens of thousands of µs; on the recorded signal only one pulse survived</td><td style="padding:6px 0 6px 10px;vertical-align:top">the template refill overfit to one Master pulse, and nothing kept the rest of the chain in step</td></tr>
+    <tr><td style="padding:6px 10px 6px 0;vertical-align:top"><b>3a · S-transform</b></td><td style="padding:6px 10px;vertical-align:top">time–frequency soft decision on energy, phase and structure</td><td style="padding:6px 10px;vertical-align:top">phase collapse grew instead of shrinking</td><td style="padding:6px 0 6px 10px;vertical-align:top">its windows are placed by time index — the very thing that was broken. Replaced by an FFT design</td></tr>
+    <tr><td style="padding:6px 10px 6px 0;vertical-align:top"><b>3b · Frequency-domain refinement</b></td><td style="padding:6px 10px;vertical-align:top">quality gate, Wiener filter, Gaussian band mask around 100 kHz, phase-consistency mask, quality-weighted recursive average</td><td style="padding:6px 10px;vertical-align:top">SNR +6.78 dB, yet the Master TOA settled about 1.5 µs late and error variance grew; the second Secondary's jitter spread past ±10 µs</td><td style="padding:6px 0 6px 10px;vertical-align:top">masking and phase edits broke linear phase; the inverse FFT leaked energy into ringing between pulses and a fixed delay</td></tr>
+  </table>
+  <p><b>4 · Evaluation.</b> Single-run TOA tests in simulation, 1,000 Monte-Carlo runs for the frequency-domain scheme (the time-domain scheme had already failed), and one recorded eLoran signal checked by waveform.</p>
+  <figure><img src="../assets/eloran_accumulation.png" alt="Recorded eLoran signal: plain accumulation, time-domain repair and frequency-domain scheme" style="max-width:560px;display:block;margin:0 auto"><figcaption>Recorded eLoran signal. Plain accumulation (top): TOA 3716 µs. Time-domain repair (middle): a single pulse remains and the TOA jumps to 2366 µs. Frequency-domain scheme (bottom): same TOA, but ringing between pulses.</figcaption></figure>
+
+  <h2>What I took from it <span class="ko">배운 것</span></h2>
+  <div class="box">SNR measures how clean the waveform looks; navigation needs time. Rebuilding samples that were never received corrupts the quantity of interest — keep the time index intact and average what was actually received.</div>
+  <p class="meta">The baseline simulator (signal generation, coarse TOA) was provided by the lab; the loss model, both algorithms, the evaluation and the report are mine. The code is laboratory property and can be shown in person.</p>
+</main>
+<footer class="wrap"><a href="../index.html">← back</a></footer>
+</body>
+</html>
