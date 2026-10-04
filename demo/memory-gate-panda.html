@@ -3,58 +3,93 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Panda Arm Memory Gate</title>
+<title>Live demo · 7-DOF Panda — Juhyeok Park</title>
 <style>
   :root{
-    --bg:#0f1115; --card:#171a21; --line:#262b36; --txt:#e6e9ef; --mut:#9aa3b2;
-    --accent:#6ea8fe; --green:#39d98a; --red:#ff6b6b;
+    --bg:#fff; --card:#f6f7f9; --line:#e3e3e6; --txt:#1d1d1f; --mut:#6b6b70;
+    --accent:#1a5fb4; --green:#1e7d4f; --red:#c0392b;
     --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-  main{max-width:1040px;margin:0 auto;padding:28px 16px 48px}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+  main{max-width:1040px;margin:0 auto;padding:22px 16px 48px}
   a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
-  h1{font-size:1.6rem;margin:0 0 4px} .sub{color:var(--mut);margin:0 0 18px;max-width:760px}
-  .grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px}
-  @media (max-width:820px){.grid{grid-template-columns:1fr}}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
-  #view{width:100%;aspect-ratio:3/2;border-radius:8px;overflow:hidden;background:#0b0d11;position:relative}
+  .crumb{font-size:.88rem;margin:0 0 10px}
+  h1{font-size:1.6rem;margin:0 0 2px;font-weight:650} .meta{color:var(--mut);font-size:.88rem;margin:0 0 8px}
+  .ko{color:var(--mut);font-size:.92rem;margin:4px 0 8px}
+  .sub{margin:8px 0 16px;max-width:820px}
+  .nav{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
+  .nav a{font-size:.8rem;border:1px solid var(--line);border-radius:4px;padding:1px 8px;color:var(--txt)}
+  .nav a.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  h2{font-size:1.1rem;margin:28px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line);font-weight:650}
+  h2 span{color:var(--mut);font-weight:400;font-size:.9rem;margin-left:8px}
+  .grid{display:block}
+  .ctrl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+  @media (max-width:820px){.ctrl{grid-template-columns:1fr}}
+  .ctrl .stats{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:18px;align-items:start}
+  @media (max-width:820px){.ctrl .stats{grid-template-columns:1fr}}
+  #stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));column-gap:22px}
+  #stats tbody{display:contents} #stats tr{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line)} #stats td{border:0}
+  @media (max-width:560px){.ctrl{grid-template-columns:1fr}}
+  .ctrl .grp{margin-top:0} .ctrl .grp~.grp{margin-top:10px}
+  #view{aspect-ratio:16/8 !important}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
+  .grid>.card{align-self:start}
+  #view{width:100%;aspect-ratio:3/2;border-radius:6px;overflow:hidden;background:#fff;border:1px solid var(--line);position:relative}
   #view canvas{display:block;width:100%;height:100%}
   #hud{position:absolute;left:12px;top:10px;font-size:.85rem;pointer-events:none}
   .row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
-  button{background:var(--accent);color:#08101f;border:0;border-radius:8px;padding:8px 12px;font-weight:600;cursor:pointer;font-size:.9rem}
-  button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+  button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:7px 12px;font-weight:600;cursor:pointer;font-size:.88rem}
+  button.ghost{background:#fff;color:var(--accent);border:1px solid var(--accent)}
   button:disabled{opacity:.5;cursor:default}
-  label.tg{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  label.tg{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer}
   label.tg:last-of-type{border-bottom:0}
   label.tg small{display:block;color:var(--mut);font-size:.78rem}
-  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.82rem}
-  td{padding:4px 0;border-bottom:1px solid var(--line)} td:last-child{text-align:right}
+  .grp{font-size:.72rem;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 0}
+  table.st{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.8rem}
+  table.st td{padding:4px 0;border-bottom:1px solid var(--line)} table.st td:last-child{text-align:right}
   .legend{display:flex;flex-wrap:wrap;gap:14px;color:var(--mut);font-size:.8rem;margin-top:8px}
   .sw{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:6px;vertical-align:middle}
-  .note{color:var(--mut);font-size:.82rem;margin-top:14px;max-width:760px}
+  .note{color:var(--mut);font-size:.84rem;margin-top:14px;max-width:820px}
   h3{font-size:.95rem;margin:0 0 6px}
-  .big{font-size:1.25rem;font-weight:700;color:var(--green)}
-  .scenes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 14px}
+  .big{font-size:1.2rem;font-weight:700;color:var(--green);font-family:var(--mono)}
+  .scenes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 12px}
   @media (max-width:820px){.scenes{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  .scene{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:left;color:var(--txt);font-weight:400;cursor:pointer}
-  .scene b{display:block;color:var(--accent);font-size:.85rem;margin-bottom:2px}
-  .scene span{color:var(--mut);font-size:.8rem}
+  .scene{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 10px;text-align:left;color:var(--txt);font-weight:400;cursor:pointer}
+  .scene b{display:block;color:var(--accent);font-size:.84rem;margin-bottom:2px}
+  .scene span{color:var(--mut);font-size:.78rem}
   .scene:hover{border-color:var(--accent)}
-  #result{background:#121722;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 14px;font-size:.9rem;display:none}
-  .tag{display:inline-block;font-size:.7rem;color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:0 6px;margin-left:4px}
+  .scene.new b::after{content:"new";font-size:.66rem;color:var(--red);border:1px solid var(--red);border-radius:999px;padding:0 5px;margin-left:6px;vertical-align:1px}
+  #result{background:var(--card);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:10px 12px;margin:0 0 14px;font-size:.9rem;display:none}
+  .tag{display:inline-block;font-size:.68rem;color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:0 6px;margin-left:4px;background:#fff}
+  table.map{width:100%;border-collapse:collapse;font-size:.88rem}
+  table.map th,table.map td{text-align:left;padding:6px 10px 6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  table.map th{font-weight:600}
+  .kp{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:12px 0 0}
+  @media (max-width:820px){.kp{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  .kp div{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .kp b{display:block;font-family:var(--mono);font-size:1.35rem;line-height:1.2;color:var(--txt)}
+  .kp b.good{color:var(--green)} .kp b.bad{color:var(--red)}
+  .kp span{font-size:.74rem;color:var(--mut)}
 </style>
 </head>
 <body>
 <main>
-  <h1>Verify, remember, compute less — 7-DOF Franka Panda</h1>
-  <p class="sub">A 7-joint arm with the published kinematics of the Franka Emika Panda (simplified geometry) reaches clustered targets in 3D. Each move is proposed by a planner, checked by a forward-kinematics gate before execution, and remembered if it passed; similar situations replay the remembered move instead of calling the planner. Drag to rotate the view. Everything is computed live in your browser; the planner is a simple stand-in, not an LLM. <a href="memory-gate.html">2D</a> · <a href="memory-gate-3d.html">3-joint</a></p>
+  <p class="crumb"><a href="../research/poc.html">← Verify, remember, and decide how much to compute</a></p>
+  <h1>Live demo · 7-DOF Franka Panda</h1>
+  <p class="meta">Juhyeok Park · 2026.10 · runs in your browser · stand-in planner, not an LLM</p>
+  <div class="nav"><a href="../research/poc.html">study page</a><a class="on" href="memory-gate-panda.html">7-DOF Panda</a><a href="memory-gate-3d.html">3-joint arm</a><a href="memory-gate.html">2-link arm</a></div>
+  <p class="ko">계획기가 제안한 움직임을 실행 전에 검사하고, 통과한 것만 기억해 다시 씁니다. 장면 버튼을 누르면 같은 30개 과제로 두 설정을 비교합니다.</p>
+  <p class="sub">A 7-joint arm with the published kinematics of the Franka Emika Panda reaches targets in 3D. Each move is proposed by a planner, checked by a forward-kinematics gate before execution, and remembered if it passed; similar situations replay the remembered move instead of calling the planner. Scenes 5–7 add what the study added next: a look-alike object, a touch check, a camera that can disagree with memory, and a check placed before planning. Pick a scene, or set the switches yourself. Drag to rotate.</p>
 
   <div class="scenes">
     <button class="scene" data-s="1"><b>1 · Memory cuts planner calls</b><span>30 tasks without vs with replay</span></button>
     <button class="scene" data-s="2"><b>2 · Memory without a gate</b><span>what happens when nothing checks the move first</span></button>
-    <button class="scene" data-s="3"><b>3 · When perception is wrong</b><span>the gate checks the misread state and is fooled</span></button>
+    <button class="scene" data-s="3"><b>3 · When the joint reading is wrong</b><span>the gate checks the misread state and is fooled</span></button>
     <button class="scene" data-s="4"><b>4 · An independent sensor</b><span>check against the fingertip sensor instead</span></button>
+    <button class="scene new" data-s="5"><b>5 · Objects get swapped</b><span>memory points at the look-alike; a touch check catches it</span></button>
+    <button class="scene new" data-s="6"><b>6 · Memory vs camera</b><span>drop the memory when the camera disagrees</span></button>
+    <button class="scene new" data-s="7"><b>7 · Check before or after planning?</b><span>with a wrong joint reading, both are fooled</span></button>
   </div>
   <div id="result"></div>
 
@@ -62,12 +97,14 @@
     <div class="card">
       <div id="view"><div id="hud">press Run</div></div>
       <div class="legend">
-        <span><span class="sw" style="background:#8a8f99"></span>planner move (stand-in for an LLM)</span>
+        <span><span class="sw" style="background:#8a8f99"></span>planner move (stand-in)</span>
         <span><span class="sw" style="background:var(--accent)"></span>replayed from memory</span>
         <span><span class="sw" style="background:var(--red)"></span>unsafe move executed</span>
-        <span style="color:#ff6b6b">✕</span><span style="margin-left:-8px">&nbsp;proposal blocked by the gate</span>
-        <span><span class="sw" style="background:#4682b4;height:6px"></span>real arm</span>
+        <span style="color:var(--red)">✕</span><span style="margin-left:-8px">&nbsp;proposal blocked by the gate</span>
         <span><span class="sw" style="background:#9aa3b2;height:2px"></span>arm as the robot reads it</span>
+        <span><span class="sw" style="background:#e6a700;height:8px;width:8px;border-radius:50%"></span>target object</span>
+        <span><span class="sw" style="background:#8e44ad;height:8px;width:8px;border-radius:50%"></span>look-alike (wider)</span>
+        <span><span class="sw" style="background:var(--accent);height:6px;width:6px;border-radius:50%"></span>where the robot thinks the target is</span>
       </div>
       <div class="row">
         <button id="b1">Run 1 task</button>
@@ -75,25 +112,43 @@
         <button id="bFast" class="ghost">Run 30 fast</button>
         <button id="bReset" class="ghost">Reset memory &amp; stats</button>
       </div>
+      <div class="kp" id="kp"></div>
     </div>
-    <div>
-      <div class="card">
-        <h3>Switches</h3>
-        <label class="tg" style="cursor:default"><span>Planner reliability <span class="tag">stand-in</span><small>how often the planner proposes a wrong move</small></span><select id="rel" style="margin-left:auto;background:#0b0d11;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:3px"><option value="0.3">wrong 30%</option><option value="0.5" selected>wrong 50%</option><option value="0.7">wrong 70%</option></select></label>
-        <label class="tg"><input type="checkbox" id="tMem" checked><span>Memory replay <span class="tag">PoC 1, 4</span><small>reuse a move that already passed in a similar state</small></span></label>
-        <label class="tg"><input type="checkbox" id="tGate" checked><span>Verification gate <span class="tag">base loop</span><small>reject moves that break joint/step limits or do not get closer; with it off, memory also stores unchecked moves</small></span></label>
-        <label class="tg"><input type="checkbox" id="tBias"><span>Joint misread 0.15 rad <span class="tag">PoC 3</span><small>the robot reads its shoulder (joint 2) angle wrong</small></span></label>
-        <label class="tg"><input type="checkbox" id="tSensor"><span>Independent fingertip sensor <span class="tag">PoC 3</span><small>gate and planner use the measured fingertip position instead of the one computed from the joint readings</small></span></label>
-      </div>
-      <div class="card" style="margin-top:12px">
-        <h3>This session</h3>
-        <table id="stats"></table>
-        <div style="margin-top:10px;color:var(--mut);font-size:.8rem">Estimated on-device time if each planner call were a local LLM (not the time this page takes)<br><span class="big" id="dev">0.0 s</span><br>planner call 0.80 s (local gemma4:e2b, measured on Apple M5 Pro) · memory lookup + check 10 µs</div>
-      </div>
+  </div>
+  <div class="ctrl">
+    <div class="card"><p class="grp">Planner</p>
+      <label class="tg" style="cursor:default"><span>Planner reliability <span class="tag">stand-in</span><small>how often the stand-in proposes a wrong move</small></span><select id="rel" style="margin-left:auto;background:#fff;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:3px"><option value="0.3">wrong 30%</option><option value="0.5" selected>wrong 50%</option><option value="0.7">wrong 70%</option></select></label>
+      <p class="grp">Loop</p>
+      <label class="tg"><input type="checkbox" id="tMem" checked><span>Memory replay<small>reuse a move that passed in a similar state, and the last target position</small></span></label>
+      <label class="tg"><input type="checkbox" id="tGate" checked><span>Check after planning <span class="tag">FK gate</span><small>reject moves that break limits or do not get closer</small></span></label>
+      <label class="tg"><input type="checkbox" id="tPre"><span>Check before planning <span class="tag">HEART-style</span><small>brief the planner first; one extra call per step</small></span></label>
+    </div>
+    <div class="card"><p class="grp">World</p>
+      <label class="tg"><input type="checkbox" id="tBias"><span>Joint misread 0.15 rad<small>the shoulder (joint 2) is read 0.15 rad off</small></span></label>
+      <label class="tg"><input type="checkbox" id="tObj"><span>Look-alike object<small>a wider object 7 cm away; they trade places on visits 5–8; the camera confuses them 5% of the time</small></span></label>
+    </div>
+    <div class="card"><p class="grp">Independent checks</p>
+      <label class="tg"><input type="checkbox" id="tSensor"><span>Fingertip sensor<small>use the measured fingertip, not the one computed from joint readings</small></span></label>
+      <label class="tg"><input type="checkbox" id="tTouch"><span>Touch check<small>gripper width ≠ target width → let go and look again</small></span></label>
+      <label class="tg"><input type="checkbox" id="tConf"><span>Memory–camera conflict check<small>memory more than 2 cm from the camera → drop the memory</small></span></label>
+    </div>
+    <div class="card stats"><div><p class="grp">This session</p>
+      <table class="st" id="stats"></table></div>
+      <div style="margin-top:0;color:var(--mut);font-size:.8rem">Estimated on-device time if each planner or pre-planning call were a local LLM (not the time this page takes)<br><span class="big" id="dev">0.0 s</span><br>one call 0.80 s (local gemma4:e2b, measured on Apple M5 Pro) · memory lookup + check 10 µs</div>
     </div>
   </div>
 
-  <p class="note"><b>What this is and is not.</b> Kinematics follow Franka's published Denavit-Hartenberg parameters and Panda joint limits; links are drawn as cylinders, not the real meshes, and there is no dynamics or collision geometry. The planner is a damped-least-squares step toward the target with injected mistakes (30, 50 or 70% wrong) — a stand-in, not an LLM. No LLM run was made on this arm; the pre-registered LLM results (2-link 60 → 24 calls, 3-joint 33 → 12, both 30/30) are on the <a href="../research/poc.html">study page</a>. With seven joints a fingertip position cannot be turned back into one joint reading, so here the sensor is used directly: the error to the target and the gate's prediction start from the measured fingertip.</p>
+  <h2>How the scenes map to the study <span>실제 실험과의 연결</span></h2>
+  <table class="map">
+    <tr><th>scene</th><th>what the demo shows</th><th>measured in the study (LLM planner)</th></tr>
+    <tr><td>1</td><td>replaying verified moves removes most planner calls</td><td>2-link 60 → 24 calls, 3-joint 33 → 12, both 30/30 (GPT-6.1 Pro); with camera, touch and memory 117 → 34 calls at the same success</td></tr>
+    <tr><td>2</td><td>memory without a check stores and replays unsafe moves</td><td>the gate is what keeps unsafe moves at 0</td></tr>
+    <tr><td>3–4</td><td>a wrong joint reading fools the gate; an independent fingertip sensor restores it</td><td>2-link: 17/30 → 30/30 with the sensor</td></tr>
+    <tr><td>5</td><td>after a swap, memory sends the arm to the look-alike; the touch check catches it</td><td>swapped scenes: wrong transports 6 → 1</td></tr>
+    <tr><td>6</td><td>dropping memory when the camera disagrees removes wrong grasps without extra planner calls</td><td>wrong grasps 20 → 0, LLM calls 11 = 11</td></tr>
+    <tr><td>7</td><td>a check before planning and a check after planning share the same wrong state</td><td>shoulder +0.15 rad: after-planning filter 5/8 with 0 rejections, before-planning check 5/8, filter + sensor 8/8</td></tr>
+  </table>
+  <p class="note"><b>What this is and is not.</b> Kinematics follow Franka's published Denavit-Hartenberg parameters and Panda joint limits; links are drawn as cylinders, not the real meshes, and there is no dynamics or collision geometry. The planner is a damped-least-squares step toward the believed target with injected mistakes (30, 50 or 70% wrong) — a stand-in, not an LLM; the check before planning is modelled as lowering that mistake rate to a quarter, using the same believed state. The camera, the look-alike and the touch check are simple models (camera noise 3 mm, gripper-width noise 2 mm). Numbers on this page are illustrative; the measured results are on the <a href="../research/poc.html">study page</a>. With seven joints a fingertip position cannot be turned back into one joint reading, so here the sensor is used directly: the error to the target and the gate's prediction start from the measured fingertip.</p>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -106,6 +161,8 @@ const FLANGE = 0.107, HAND = 0.1034;
 const LIM = [[-2.8973, 2.8973], [-1.7628, 1.7628], [-2.8973, 2.8973], [-3.0718, -0.0698], [-2.8973, 2.8973], [-0.0175, 3.7525], [-2.8973, 2.8973]];
 const NJ = 7, JERK = 0.4, PROG = 0.005, SUCC = 0.025, MAX_STEPS = 10, MAX_REPLAN = 3;
 const BIAS = 0.15, BIAS_J = 1, SENSOR_SIGMA = 0.005, PLAN_S = 0.80, LOOKUP_S = 10e-6;
+// scenes 5–7: look-alike object, camera, touch, memory–camera conflict, check before planning
+const OFFSET = 0.07, W_T = 0.03, W_D = 0.06, CAM_SIGMA = 0.003, CAM_CONF = 0.05, TOUCH_SIGMA = 0.002, TOUCH_TOL = 0.01, CONFLICT = 0.02, PRE_FACTOR = 0.25;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function mul(A, B) { const C = []; for (let i = 0; i < 4; i++) { C.push([]); for (let j = 0; j < 4; j++) { let s = 0; for (let k = 0; k < 4; k++) s += A[i][k] * B[k][j]; C[i].push(s); } } return C; }
 function link(a, d, al, th) { const ca = Math.cos(al), sa = Math.sin(al), ct = Math.cos(th), st = Math.sin(th);
@@ -124,13 +181,16 @@ let seed = 1, P_BAD = 0.5;   // how often the stand-in planner proposes a wrong 
 function rand() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
 let tseed = 7;   // tasks come from their own stream, so every setting sees the same 30 tasks
 function trand() { tseed = (tseed * 1664525 + 1013904223) >>> 0; return tseed / 4294967296; }
+let cseed = 11;  // camera and touch noise have their own stream too, so switching them on does not change the planner's draws
+function crand() { cseed = (cseed * 1664525 + 1013904223) >>> 0; return cseed / 4294967296; }
 function gauss() { const u = Math.max(rand(), 1e-12), v = rand(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function cgauss() { const u = Math.max(crand(), 1e-12), v = crand(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 
 // what the robot believes: joint readings (possibly misread) and its fingertip (computed, or measured by the sensor)
-function perceive(real, target, sw) {
+function perceive(real, goal, sw) {
   const q = real.slice(); if (sw.bias) q[BIAS_J] += BIAS;
   const ee = sw.sensor ? fk(real).map(v => v + SENSOR_SIGMA * gauss()) : fk(q);
-  return { q, ee, target, off: sw.sensor ? fk(real).map((v, i) => v - fk(q)[i]) : [0, 0, 0] };
+  return { q, ee, target: goal };
 }
 // predicted fingertip after a move: model FK from the believed joints, shifted so it starts at the believed fingertip
 const predict = (s, a) => { const n = fk(s.q.map((v, i) => v + a[i])), c = fk(s.q); return n.map((v, i) => v - c[i] + s.ee[i]); };
@@ -141,13 +201,14 @@ function verify(s, a) {
   if (nxt >= cur - PROG) return cur < SUCC && a[NJ] === 1;
   return true;
 }
-function unsafeReal(real, target, a) {
+// unsafe = breaks a limit for the real arm, or moves the real fingertip away from the point it is heading for
+function unsafeReal(real, goal, a) {
   for (let i = 0; i < NJ; i++) if (Math.abs(a[i]) > JERK + 1e-9) return true;
   const n = real.map((v, i) => v + a[i]);
   for (let i = 0; i < NJ; i++) if (n[i] < LIM[i][0] - 1e-6 || n[i] > LIM[i][1] + 1e-6) return true;
-  const cur = dist(fk(real), target);
-  if (cur < SUCC && a[NJ] === 1) return false;   // grasping at the target, same exception as the gate
-  return dist(fk(clampQ(n)), target) > cur + 1e-9;
+  const cur = dist(fk(real), goal);
+  if (cur < SUCC && a[NJ] === 1) return false;   // grasping at the goal, same exception as the gate
+  return dist(fk(clampQ(n)), goal) > cur + 1e-9;
 }
 // stand-in planner: damped-least-squares step from the believed state, wrong P_BAD of the time
 function jacobian(q) { const e0 = fk(q), J = [[], [], []], h = 1e-4;
@@ -159,8 +220,11 @@ function solve3(M, b) {   // 3x3 linear solve
                [b1[0] * c[1] - b1[1] * c[0], a[1] * c[0] - a[0] * c[1], a[0] * b1[1] - a[1] * b1[0]]];
   return inv.map(r => (r[0] * b[0] + r[1] * b[1] + r[2] * b[2]) / det);
 }
-function plan(s) {
-  if (rand() < P_BAD) return Array.from({ length: NJ }, () => (rand() * 2 - 1) * 0.6).concat([0]);
+// the check before planning briefs the planner from the same believed state: fewer wrong proposals, one extra call
+function plan(s, sw, st) {
+  if (sw.pre) st.expert++;
+  const pBad = sw.pre ? P_BAD * PRE_FACTOR : P_BAD;
+  if (rand() < pBad) return Array.from({ length: NJ }, () => (rand() * 2 - 1) * 0.6).concat([0]);
   const e = s.target.map((v, i) => v - s.ee[i]), J = jacobian(s.q), lam2 = 0.01 ** 2;
   const JJt = [0, 1, 2].map(r => [0, 1, 2].map(c => J[r].reduce((acc, _, k) => acc + J[r][k] * J[c][k], 0) + (r === c ? lam2 : 0)));
   const y = solve3(JJt, e); let d = Array.from({ length: NJ }, (_, k) => J[0][k] * y[0] + J[1][k] * y[1] + J[2][k] * y[2]);
@@ -176,7 +240,8 @@ function ctxKey(s) { const e = s.ee, d = dist(e, s.target);
   return [sgn(s.target[0] - e[0], 0.01), sgn(s.target[1] - e[1], 0.01), sgn(s.target[2] - e[2], 0.01), bin(d, 0.05, 0.15),
           bin(s.q[0], -0.5, 0.5), bin(s.q[1], -0.3, 0.6), bin(s.q[3], -2.4, -1.4)].join(","); }
 const actKey = a => a.slice(0, NJ).map(v => sgn(v, 0.02) + ":" + (+(Math.abs(v) >= 0.2))).concat([a[NJ]]).join(",");
-let mem = new Map();
+let mem = new Map();        // action memory: context → verified move
+let sceneMem = new Map();   // scene memory: task cluster → target position at the last grasp the robot counted as a success
 function memUpdate(ck, a, ok) { const k = ck + "|" + actKey(a); const e = mem.get(k) || { ck, pass: 0, rej: 0, act: null };
   if (ok) { e.pass++; e.act = a; } else e.rej++; mem.set(k, e); }
 function memReplay(ck) { let best = null;
@@ -189,40 +254,72 @@ function makeTask(i) {
   const c = centers[i % 3], g = clampQ(c.map(v => v + (trand() * 2 - 1) * 0.06));
   const sgns = [[1, -1, 1, -1, 1, -1, 1], [-1, 1, -1, 1, -1, 1, -1], [1, 1, -1, -1, 1, 1, -1]][i % 3];
   const q0 = g.map((v, k) => clamp(v + sgns[k] * (0.25 + 0.15 * trand()), LIM[k][0] + 0.05, LIM[k][1] - 0.05));
-  return { target: fk(g), q0 };
+  const target = fk(g);
+  // objects (scenes 5–6) stay put in each cluster's scene; only the arm's start pose varies between visits
+  const home = fk(clampQ(c)), h = Math.hypot(home[0], home[1]) || 1;
+  const other = [home[0] - OFFSET * home[1] / h, home[1] + OFFSET * home[0] / h, home[2]];   // 7 cm sideways
+  const visit = Math.floor(i / 3), swapped = visit >= 4 && visit < 8;   // the two objects trade places on visit 5, and back on visit 9
+  const objs = [{ p: swapped ? other : home, w: W_T, isT: true }, { p: swapped ? home : other, w: W_D, isT: false }];
+  return { target, q0, c: i % 3, objs, swapped };
+}
+// camera: the target's position with 3 mm noise; 5% of the time it reports the look-alike instead
+function lookCamera(task) { const p = crand() < CAM_CONF ? task.objs[1].p : task.objs[0].p; return p.map(v => v + CAM_SIGMA * cgauss()); }
+function goalBelief(task, sw, st, noMem) {
+  if (!sw.obj) return task.target;   // scenes 1–4: the target position is known exactly
+  const cam = lookCamera(task);
+  if (sw.mem && !noMem && sceneMem.has(task.c)) {
+    const m = sceneMem.get(task.c);
+    if (!sw.conflict || dist(m, cam) < CONFLICT) { st.sceneReplays++; return m.slice(); }
+    st.dropped++;
+  }
+  return cam;
 }
 function episode(task, sw, st) {
-  const real = task.q0.slice(), trace = []; let success = false;
+  const real = task.q0.slice(), trace = []; let success = false, wrong = false, caught = 0, noMem = false;
+  let goal = goalBelief(task, sw, st, false);
   for (let step = 0; step < MAX_STEPS; step++) {
-    const s = perceive(real, task.target, sw), ck = ctxKey(s); let a = null, src = "plan"; const blocked = [];
+    const s = perceive(real, goal, sw), ck = ctxKey(s); let a = null, src = "plan"; const blocked = [];
     if (sw.mem) { const c = memReplay(ck);
       if (c) { st.lookups++; if (!sw.gate || verify(s, c)) { a = c; src = "mem"; st.replays++; } else { st.rejects++; memUpdate(ck, c, false); blocked.push(c); } } }
     if (!a) for (let k = 0; k <= MAX_REPLAN; k++) {
-      a = plan(s); st.calls++;
+      a = plan(s, sw, st); st.calls++;
       if (!sw.gate) { if (sw.mem) memUpdate(ck, a, true); break; }
       const ok = verify(s, a); if (sw.mem) memUpdate(ck, a, ok); if (ok) break;
       st.rejects++; blocked.push(a); if (k === MAX_REPLAN) a = new Array(NJ + 1).fill(0);
     }
-    const unsafe = unsafeReal(real, task.target, a); if (unsafe) st.unsafe++;
-    const before = dist(fk(real), task.target), from = { q: real.slice(), seen: s.q.slice() };
+    const unsafe = unsafeReal(real, goal, a); if (unsafe) st.unsafe++;
+    const before = dist(fk(real), goal), from = { q: real.slice(), seen: s.q.slice() };
     for (let i = 0; i < NJ; i++) real[i] = clamp(real[i] + clamp(a[i], -JERK, JERK), LIM[i][0], LIM[i][1]);
-    const after = dist(fk(real), task.target);
+    const tip = fk(real), after = dist(tip, goal);
     if (sw.mem && src === "mem" && after > before - 1e-9) memUpdate(ck, a, false);
-    trace.push({ from, to: real.slice(), src: unsafe ? "unsafe" : src, blocked });
+    trace.push({ from, to: real.slice(), src: unsafe ? "unsafe" : src, blocked, goal: goal.slice() });
     st.steps++; st.recent.push(src === "mem" ? 1 : 0); if (src === "mem") st.memMoves++;
-    if (after < SUCC && a[NJ] === 1) { success = true; break; }
+    if (a[NJ] !== 1) continue;
+    if (!sw.obj) { if (dist(tip, task.target) < SUCC) { success = true; break; } continue; }
+    // grasp: whichever object is under the fingertip
+    let got = null;
+    for (const o of task.objs) if (dist(tip, o.p) < SUCC && (!got || dist(tip, o.p) < dist(tip, got.p))) got = o;
+    if (!got) continue;
+    if (got.isT) { success = true; if (sw.mem) sceneMem.set(task.c, goal.slice()); break; }
+    if (sw.touch && Math.abs(got.w + TOUCH_SIGMA * cgauss() - W_T) > TOUCH_TOL) {   // width mismatch: let go, forget, look again
+      caught++; st.caught++; sceneMem.delete(task.c); noMem = true; goal = goalBelief(task, sw, st, noMem);
+      trace[trace.length - 1].caught = true; continue;
+    }
+    wrong = true; st.wrong++; if (sw.mem) sceneMem.set(task.c, goal.slice()); break;   // the robot believes it succeeded
   }
   st.tasks++; if (success) st.success++;
-  return { trace, success, target: task.target };
+  return { trace, success, wrong, caught, target: task.target, objs: sw.obj ? task.objs : null };
 }
-function newStats() { return { tasks: 0, success: 0, calls: 0, replays: 0, lookups: 0, rejects: 0, unsafe: 0, steps: 0, memMoves: 0, recent: [] }; }
+function newStats() { return { tasks: 0, success: 0, calls: 0, expert: 0, replays: 0, lookups: 0, rejects: 0, unsafe: 0, steps: 0, memMoves: 0,
+  wrong: 0, caught: 0, dropped: 0, sceneReplays: 0, recent: [] }; }
+const KEYS = ["tasks", "success", "calls", "expert", "unsafe", "steps", "memMoves", "rejects", "wrong", "caught", "dropped", "sceneReplays"];
 function simulate(cfg, n) {   // same tasks, mean over 3 planner seeds
-  const ss = seed, st0 = tseed, sm = mem, tot = {};
-  for (const ps of [1, 2, 3]) { seed = ps; tseed = 7; mem = new Map(); const s2 = newStats();
+  const ss = seed, st0 = tseed, sc0 = cseed, sm = mem, ssm = sceneMem, tot = {};
+  for (const ps of [1, 2, 3]) { seed = ps; tseed = 7; cseed = 10 + ps; mem = new Map(); sceneMem = new Map(); const s2 = newStats();
     for (let i = 0; i < n; i++) episode(makeTask(i), cfg, s2);
-    for (const k of ["tasks", "success", "calls", "unsafe", "steps", "memMoves"]) tot[k] = (tot[k] || 0) + s2[k] / 3; }
+    for (const k of KEYS) tot[k] = (tot[k] || 0) + s2[k] / 3; }
   for (const k in tot) tot[k] = Math.round(tot[k]);
-  seed = ss; tseed = st0; mem = sm; return tot; }
+  seed = ss; tseed = st0; cseed = sc0; mem = sm; sceneMem = ssm; return tot; }
 
 // ---------- 3D view (robot z-up mapped to three.js y-up) ----------
 const view = document.getElementById("view"), hud = document.getElementById("hud");
@@ -231,15 +328,15 @@ let renderer = null, scene, camera, dyn;
 try {
   renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   view.appendChild(renderer.domElement);
-  scene = new THREE.Scene(); scene.background = new THREE.Color(0x0b0d11);
+  scene = new THREE.Scene(); scene.background = new THREE.Color(0xffffff);
   camera = new THREE.PerspectiveCamera(40, 1.5, 0.01, 10);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6)); const dl = new THREE.DirectionalLight(0xffffff, 0.7); dl.position.set(1, 2, 1); scene.add(dl);
-  const grid = new THREE.GridHelper(1.6, 16, 0x262b36, 0x1a1e27); scene.add(grid);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.05, 24), new THREE.MeshStandardMaterial({ color: 0x4a4a4a }));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.65)); const dl = new THREE.DirectionalLight(0xffffff, 0.6); dl.position.set(1, 2, 1); scene.add(dl);
+  const grid = new THREE.GridHelper(1.6, 16, 0xc9ccd3, 0xe3e3e6); scene.add(grid);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.05, 24), new THREE.MeshStandardMaterial({ color: 0x6b6b70 }));
   base.position.y = 0.025; scene.add(base);
   dyn = new THREE.Group(); scene.add(dyn);
 } catch (e) { hud.textContent = "WebGL is not available in this browser — numbers below still work."; renderer = null; }
-let az = 0.9, el = 0.35, R = 2.1;
+let az = 0.9, el = 0.35, R = 1.7;
 function placeCamera() { camera.position.set(R * Math.cos(el) * Math.cos(az), R * Math.sin(el) + 0.05, R * Math.cos(el) * Math.sin(az)); camera.lookAt(0, 0.35, 0); }
 function resize() { if (!renderer) return; const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 if (renderer) {
@@ -251,7 +348,7 @@ if (renderer) {
   window.addEventListener("resize", () => { resize(); render(); });
   resize(); placeCamera();
 }
-const COL = { plan: 0x8a8f99, mem: 0x6ea8fe, unsafe: 0xff6b6b };
+const COL = { plan: 0x8a8f99, mem: 0x1a5fb4, unsafe: 0xc0392b };
 function line(pts, color, opacity, dashed) {
   const g = new THREE.BufferGeometry().setFromPoints(pts.map(V));
   const m = dashed ? new THREE.LineDashedMaterial({ color, dashSize: 0.012, gapSize: 0.01, transparent: true, opacity })
@@ -265,37 +362,58 @@ function link3(a, b, color, r) {
 }
 function ball(p, color, r) { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), new THREE.MeshStandardMaterial({ color })); m.position.copy(V(p)); dyn.add(m); }
 function render() { if (renderer) renderer.render(scene, camera); }
+function endText(ep) {
+  if (ep.success) return `<span style="color:#1e7d4f">${ep.objs ? "grasped the target" : "reached and grasped"}${ep.caught ? " — after the touch check caught the look-alike" : ""}</span>`;
+  if (ep.wrong) return `<span style="color:#c0392b">grasped the look-alike and did not notice</span>`;
+  return `<span style="color:#c0392b">not done in 10 steps${ep.caught ? " (touch check caught the look-alike)" : ""}</span>`;
+}
 function frame(ep, k, label) {
-  hud.innerHTML = (renderer ? "" : "WebGL is not available in this browser — the numbers still work.<br>") + label + (k >= ep.trace.length ? `<br><span style="color:${ep.success ? "#39d98a" : "#ff6b6b"}">${ep.success ? "reached and grasped" : "not reached in 10 steps"}</span>` : "");
+  hud.innerHTML = (renderer ? "" : "WebGL is not available in this browser — the numbers still work.<br>") + label + (k >= ep.trace.length ? "<br>" + endText(ep) : "");
   if (!renderer) return;
   while (dyn.children.length) { const c = dyn.children.pop(); c.geometry && c.geometry.dispose(); }
-  ball(ep.target, 0xe6a700, 0.025);
+  if (ep.objs) { ball(ep.objs[0].p, 0xe6a700, 0.022); ball(ep.objs[1].p, 0x8e44ad, 0.032); }
+  else ball(ep.target, 0xe6a700, 0.025);
+  const gk = ep.trace[Math.min(k, ep.trace.length - 1)].goal;
+  if (ep.objs && gk) ball(gk, 0x1a5fb4, 0.009);
   for (let i = 0; i < k && i < ep.trace.length; i++) line([fk(ep.trace[i].from.q), fk(ep.trace[i].to)], COL[ep.trace[i].src], 1, false);
   const cur = k === 0 ? ep.trace[0].from.q : ep.trace[Math.min(k, ep.trace.length) - 1].to;
   if (k < ep.trace.length) {
     const f = ep.trace[k].from;
-    for (const bl of ep.trace[k].blocked) { const n = f.q.map((v, i) => v + bl[i]); line(chain(n), 0xff6b6b, 0.45, true); ball(fk(n), 0xff6b6b, 0.012); }
+    for (const bl of ep.trace[k].blocked) { const n = f.q.map((v, i) => v + bl[i]); line(chain(n), 0xc0392b, 0.45, true); ball(fk(n), 0xc0392b, 0.012); }
     line(chain(f.seen), 0x9aa3b2, 0.9, true);
   }
-  const P = chain(cur); for (let i = 0; i < P.length - 1; i++) link3(P[i], P[i + 1], i === P.length - 2 ? 0xd0d4dc : 0x4682b4, i === P.length - 2 ? 0.012 : 0.03);
+  const P = chain(cur); for (let i = 0; i < P.length - 1; i++) link3(P[i], P[i + 1], i === P.length - 2 ? 0xb0b4bc : 0x4682b4, i === P.length - 2 ? 0.012 : 0.03);
   for (const p of P.slice(1, -1)) ball(p, 0x2b3240, 0.035); ball(P[P.length - 1], 0x111111, 0.015);
   render();
 }
 
 // ---------- UI ----------
-const sw = () => ({ mem: tMem.checked, gate: tGate.checked, bias: tBias.checked, sensor: tSensor.checked });
+const IDS = ["tMem", "tGate", "tPre", "tBias", "tObj", "tSensor", "tTouch", "tConf"];
+const sw = () => ({ mem: tMem.checked, gate: tGate.checked, pre: tPre.checked, bias: tBias.checked, obj: tObj.checked,
+  sensor: tSensor.checked, touch: tTouch.checked, conflict: tConf.checked });
 let st, taskIdx, busy = false;
 function renderStats() {
-  const rows = [["tasks", st.tasks], ["success", st.tasks ? `${st.success}/${st.tasks}` : "—"], ["planner calls", st.calls],
-    ["moves from memory", st.steps ? `${st.memMoves}/${st.steps} (${Math.round(100 * st.memMoves / st.steps)}%)` : "—"],
+  const o = tObj.checked, rows = [["tasks", st.tasks], ["success", st.tasks ? `${st.success}/${st.tasks}` : "—"], ["planner calls", st.calls]];
+  if (tPre.checked || st.expert) rows.push(["checks before planning", st.expert]);
+  rows.push(["moves from memory", st.steps ? `${st.memMoves}/${st.steps} (${Math.round(100 * st.memMoves / st.steps)}%)` : "—"],
     ["  in the last 30 moves", st.recent.length ? `${Math.round(100 * st.recent.slice(-30).reduce((x, y) => x + y, 0) / Math.min(30, st.recent.length))}%` : "—"],
-    ["proposals blocked by gate", st.rejects], ["unsafe moves executed", st.unsafe], ["memory entries", mem.size]];
+    ["proposals blocked by gate", st.rejects], ["unsafe moves executed", st.unsafe]);
+  if (o || st.wrong || st.caught) rows.push(["look-alike, unnoticed", st.wrong], ["caught by touch check", st.caught], ["memory dropped", st.dropped]);
+  rows.push(["memory entries", mem.size + (sceneMem.size ? ` + ${sceneMem.size} scenes` : "")]);
   stats.innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("");
-  dev.textContent = (st.calls * PLAN_S + st.lookups * LOOKUP_S).toFixed(1) + " s";
+  const tile = (v, l, c) => `<div><b class="${c || ""}">${v}</b><span>${l}</span></div>`;
+  kp.innerHTML = [tile(st.tasks ? `${st.success}/${st.tasks}` : "—", "tasks succeeded", st.tasks && st.success === st.tasks ? "good" : ""),
+    tile(st.calls + st.expert, "planner calls" + (st.expert ? " (incl. pre-planning)" : "")),
+    tile(st.steps ? Math.round(100 * st.memMoves / st.steps) + "%" : "—", "moves from memory", st.memMoves ? "good" : ""),
+    tile(st.unsafe, "unsafe moves executed", st.unsafe ? "bad" : "good"),
+    tile(st.wrong, "look-alike grasped, unnoticed", st.wrong ? "bad" : (tObj.checked ? "good" : "")),
+    tile(((st.calls + st.expert) * PLAN_S + st.lookups * LOOKUP_S).toFixed(1) + " s", "on-device time, est.")].join("");
+  dev.textContent = ((st.calls + st.expert) * PLAN_S + st.lookups * LOOKUP_S).toFixed(1) + " s";
 }
-function reset() { seed = 1; tseed = 7; mem = new Map(); taskIdx = 0; st = newStats(); renderStats();
-  const t = makeTask(0); tseed = 7; frame({ trace: [{ from: { q: t.q0, seen: t.q0 }, to: t.q0, src: "plan", blocked: [] }], target: t.target, success: false }, 0, "press Run"); }
-function setBusy(b) { busy = b; for (const id of ["b1", "b10", "bFast", "bReset", "tMem", "tGate", "tBias", "tSensor", "rel"]) document.getElementById(id).disabled = b; }
+function reset() { seed = 1; tseed = 7; cseed = 11; mem = new Map(); sceneMem = new Map(); taskIdx = 0; st = newStats(); renderStats();
+  const t = makeTask(0); tseed = 7;
+  frame({ trace: [{ from: { q: t.q0, seen: t.q0 }, to: t.q0, src: "plan", blocked: [], goal: t.target }], target: t.target, objs: tObj.checked ? t.objs : null, success: false }, 0, "press Run"); }
+function setBusy(b) { busy = b; for (const id of ["b1", "b10", "bFast", "bReset", "rel", ...IDS]) document.getElementById(id).disabled = b; }
 async function runTasks(n, animate) {
   if (busy) return; setBusy(true);
   for (let i = 0; i < n; i++) {
@@ -307,22 +425,34 @@ async function runTasks(n, animate) {
 }
 b1.onclick = () => runTasks(1, true); b10.onclick = () => runTasks(10, true); bFast.onclick = () => runTasks(30, false); bReset.onclick = reset;
 rel.onchange = () => { P_BAD = +rel.value; reset(); };
+tObj.onchange = reset;
+const BASE = { mem: true, gate: true, pre: false, bias: false, obj: false, sensor: false, touch: false, conflict: false };
+const cfg = o => Object.assign({}, BASE, o);
+const pct = (a, b) => a ? `${Math.round(100 * (b - a) / a)}%` : "—";
 const SCENES = {
-  1: { a: { mem: false, gate: true, bias: false, sensor: false }, b: { mem: true, gate: true, bias: false, sensor: false }, la: "without memory", lb: "with memory replay",
-       say: (A, B) => `Planner calls ${A.calls} → <b>${B.calls}</b> (${Math.round(100 * (B.calls - A.calls) / A.calls)}%), success ${A.success}/30 → ${B.success}/30. No LLM run on this arm; pre-registered LLM runs: 60 → 24 (2-link), 33 → 12 (3-joint) at 30/30.` },
-  2: { a: { mem: true, gate: true, bias: false, sensor: false }, b: { mem: true, gate: false, bias: false, sensor: false }, la: "memory + gate", lb: "memory, gate off",
-       say: (A, B) => `Unsafe moves executed ${A.unsafe} → <b>${B.unsafe}</b> (gate off without memory: ${simulate({ mem: false, gate: false, bias: false, sensor: false }, 30).unsafe}). Memory alone does not make moves safe: what keeps the count at 0 is the check before execution, and without it the memory also fills with unchecked moves.` },
-  3: { a: { mem: true, gate: true, bias: false, sensor: false }, b: { mem: true, gate: true, bias: true, sensor: false }, la: "correct joint reading", lb: "shoulder read 0.15 rad off",
-       say: (A, B) => `Success ${A.success}/30 → <b>${B.success}/30</b>, unsafe moves ${A.unsafe} → <b>${B.unsafe}</b>. The gate checks the move against the misread state, so it passes moves that are wrong for the real arm.` },
-  4: { a: { mem: true, gate: true, bias: true, sensor: false }, b: { mem: true, gate: true, bias: true, sensor: true }, la: "misread, same-state check", lb: "misread, fingertip-sensor check",
-       say: (A, B) => `Success ${A.success}/30 → <b>${B.success}/30</b>, unsafe moves ${A.unsafe} → <b>${B.unsafe}</b>.` },
+  1: { cfgs: [cfg({ mem: false }), cfg({})], labels: ["without memory", "with memory replay"],
+       say: ([A, B]) => `Planner calls ${A.calls} → <b>${B.calls}</b> (${pct(A.calls, B.calls)}), success ${A.success}/30 → ${B.success}/30. Study (LLM planner): 60 → 24 (2-link), 33 → 12 (3-joint) at 30/30.` },
+  2: { cfgs: [cfg({}), cfg({ gate: false })], labels: ["memory + gate", "memory, gate off"],
+       say: ([A, B]) => `Unsafe moves executed ${A.unsafe} → <b>${B.unsafe}</b> (gate off without memory: ${simulate(cfg({ mem: false, gate: false }), 30).unsafe}). Memory alone does not make moves safe: what keeps the count at 0 is the check before execution, and without it the memory also fills with unchecked moves.` },
+  3: { cfgs: [cfg({}), cfg({ bias: true })], labels: ["correct joint reading", "shoulder read 0.15 rad off"],
+       say: ([A, B]) => `Success ${A.success}/30 → <b>${B.success}/30</b>, unsafe moves ${A.unsafe} → <b>${B.unsafe}</b>. The gate checks the move against the misread state, so it passes moves that are wrong for the real arm.` },
+  4: { cfgs: [cfg({ bias: true }), cfg({ bias: true, sensor: true })], labels: ["misread, same-state check", "misread, fingertip-sensor check"],
+       say: ([A, B]) => `Success ${A.success}/30 → <b>${B.success}/30</b>, unsafe moves ${A.unsafe} → <b>${B.unsafe}</b>.` },
+  5: { cfgs: [cfg({ obj: true }), cfg({ obj: true, touch: true })], labels: ["memory, no touch check", "memory + touch check"],
+       say: ([A, B]) => `Look-alike grasped without noticing ${A.wrong} → <b>${B.wrong}</b> (caught by touch: ${B.caught}), success ${A.success}/30 → ${B.success}/30, planner calls ${A.calls} → ${B.calls}. The memory remembers <i>where</i> the target was; after a swap that place holds the look-alike, and only a check that touches the object can tell. Study: wrong transports 6 → 1 on swapped scenes.` },
+  6: { cfgs: [cfg({ obj: true }), cfg({ obj: true, conflict: true })], labels: ["memory trusted", "memory dropped when the camera disagrees"],
+       say: ([A, B]) => `Look-alike grasped ${A.wrong} → <b>${B.wrong}</b>, planner calls ${A.calls} → <b>${B.calls}</b>, memory dropped ${B.dropped} times. The camera is checked against the memory before the memory is used; the moves themselves still come from memory, so planner calls change little. Study: wrong grasps 20 → 0, LLM calls 11 = 11.` },
+  7: { cfgs: [cfg({ mem: false, bias: true }), cfg({ mem: false, bias: true, gate: false, pre: true }), cfg({ mem: false, bias: true, sensor: true })],
+       labels: ["check after planning", "check before planning", "after planning + fingertip sensor"],
+       say: ([A, B, C]) => `With the shoulder read 0.15 rad off — success: after ${A.success}/30, before <b>${B.success}/30</b>, after + sensor <b>${C.success}/30</b>; calls (planner + pre-planning): ${A.calls}, ${B.calls + B.expert}, ${C.calls}. In this model both checks reason from the same wrong state, so moving the check earlier does not help; an independent measurement does. Study (GPT-6.1 Pro, 8 tasks): 5/8 with 0 rejections, 5/8, 8/8.` },
 };
-function setSwitches(c) { tMem.checked = c.mem; tGate.checked = c.gate; tBias.checked = c.bias; tSensor.checked = c.sensor; }
+function setSwitches(c) { tMem.checked = c.mem; tGate.checked = c.gate; tPre.checked = c.pre; tBias.checked = c.bias; tObj.checked = c.obj;
+  tSensor.checked = c.sensor; tTouch.checked = c.touch; tConf.checked = c.conflict; }
 for (const btn of document.querySelectorAll(".scene")) btn.onclick = async () => {
-  if (busy) return; const sc = SCENES[btn.dataset.s], A = simulate(sc.a, 30), B = simulate(sc.b, 30);
+  if (busy) return; const sc = SCENES[btn.dataset.s], Rs = sc.cfgs.map(c => simulate(c, 30));
   result.style.display = "block";
-  result.innerHTML = `<b>${btn.querySelector("b").textContent}</b> — same 30 tasks, ${sc.la} vs ${sc.lb}, planner wrong ${Math.round(100 * P_BAD)}%<br>${sc.say(A, B)}<br><span style="color:var(--mut);font-size:.8rem">Mean of 3 planner seeds on the same tasks. On screen: the second setting, 26 tasks run fast to fill the memory, then the last 4 shown step by step. Stand-in planner; illustrative numbers.</span>`;
-  setSwitches(sc.b); reset(); await runTasks(26, false); await runTasks(4, true);   // fill memory first, then show the last 4 tasks
+  result.innerHTML = `<b>${btn.querySelector("b").textContent}</b> — same 30 tasks, ${sc.labels.join(" vs ")}, planner wrong ${Math.round(100 * P_BAD)}%<br>${sc.say(Rs)}<br><span style="color:var(--mut);font-size:.8rem">Mean of 3 planner seeds on the same tasks. On screen: the last setting, 26 tasks run fast to fill the memory, then the last 4 shown step by step. Stand-in planner; illustrative numbers.</span>`;
+  setSwitches(sc.cfgs[sc.cfgs.length - 1]); reset(); await runTasks(26, false); await runTasks(4, true);   // fill memory first, then show the last 4 tasks
 };
 reset();
 </script>

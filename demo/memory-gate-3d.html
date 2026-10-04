@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>3D Arm Memory Gate</title>
+<title>Live demo · 3-joint arm — Juhyeok Park</title>
 <style>
   :root{
-    --bg:#0f1115; --card:#171a21; --line:#262b36; --txt:#e6e9ef; --mut:#9aa3b2;
-    --accent:#6ea8fe; --green:#39d98a; --red:#ff6b6b;
+    --bg:#ffffff; --card:#f6f7f9; --line:#e3e3e6; --txt:#1d1d1f; --mut:#6b6b70;
+    --accent:#1a5fb4; --green:#1e7d4f; --red:#c0392b;
     --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
   }
   *{box-sizing:border-box}
@@ -18,11 +18,12 @@
   .grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px}
   @media (max-width:820px){.grid{grid-template-columns:1fr}}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
-  #view{width:100%;aspect-ratio:3/2;border-radius:8px;overflow:hidden;background:#0b0d11;position:relative}
+  .grid>.card{align-self:start}
+  #view{width:100%;aspect-ratio:3/2;border-radius:8px;overflow:hidden;background:#ffffff;position:relative}
   #view canvas{display:block;width:100%;height:100%}
   #hud{position:absolute;left:12px;top:10px;font-size:.85rem;pointer-events:none}
   .row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
-  button{background:var(--accent);color:#08101f;border:0;border-radius:8px;padding:8px 12px;font-weight:600;cursor:pointer;font-size:.9rem}
+  button{background:var(--accent);color:#ffffff;border:0;border-radius:8px;padding:8px 12px;font-weight:600;cursor:pointer;font-size:.9rem}
   button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
   button:disabled{opacity:.5;cursor:default}
   label.tg{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer}
@@ -41,13 +42,20 @@
   .scene b{display:block;color:var(--accent);font-size:.85rem;margin-bottom:2px}
   .scene span{color:var(--mut);font-size:.8rem}
   .scene:hover{border-color:var(--accent)}
-  #result{background:#121722;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 14px;font-size:.9rem;display:none}
+  #result{background:#f6f7f9;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 14px;font-size:.9rem;display:none}
   .tag{display:inline-block;font-size:.7rem;color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:0 6px;margin-left:4px}
+  .crumb{font-size:.88rem;margin:0 0 10px} .meta{color:var(--mut);font-size:.88rem;margin:0 0 8px}
+  .nav{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+  .nav a{font-size:.8rem;border:1px solid var(--line);border-radius:4px;padding:1px 8px;color:var(--txt)}
+  .nav a.on{background:var(--accent);border-color:var(--accent);color:#fff}
 </style>
 </head>
 <body>
 <main>
-  <h1>Verify, remember, compute less — 3D arm</h1>
+  <p class="crumb"><a href="../research/poc.html">← Verify, remember, and decide how much to compute</a></p>
+  <h1>Live demo · 3-joint arm</h1>
+  <p class="meta">Juhyeok Park · 2026.10 · runs in your browser · stand-in planner, not an LLM</p>
+  <div class="nav"><a href="../research/poc.html">study page</a><a href="memory-gate-panda.html">7-DOF Panda</a><a class="on" href="memory-gate-3d.html">3-joint arm</a><a href="memory-gate.html">2-link arm</a></div>
   <p class="sub">A 3-joint arm (base yaw, shoulder, elbow) reaches clustered targets in 3D. Each move is proposed by a planner, checked by a forward-kinematics gate before execution, and remembered if it passed; similar situations replay the remembered move instead of calling the planner. Drag to rotate the view. Everything is computed live in your browser; the planner is a simple stand-in, not an LLM. <a href="memory-gate.html">2D version</a> · <a href="memory-gate-panda.html">7-DOF Panda</a></p>
 
   <div class="scenes">
@@ -65,7 +73,7 @@
         <span><span class="sw" style="background:#8a8f99"></span>planner move (stand-in for an LLM)</span>
         <span><span class="sw" style="background:var(--accent)"></span>replayed from memory</span>
         <span><span class="sw" style="background:var(--red)"></span>unsafe move executed</span>
-        <span style="color:#ff6b6b">✕</span><span style="margin-left:-8px">&nbsp;proposal blocked by the gate</span>
+        <span style="color:#c0392b">✕</span><span style="margin-left:-8px">&nbsp;proposal blocked by the gate</span>
         <span><span class="sw" style="background:#4682b4;height:6px"></span>real arm</span>
         <span><span class="sw" style="background:#9aa3b2;height:2px"></span>arm as the robot reads it</span>
       </div>
@@ -79,7 +87,7 @@
     <div>
       <div class="card">
         <h3>Switches</h3>
-        <label class="tg" style="cursor:default"><span>Planner reliability <span class="tag">stand-in</span><small>how often the planner proposes a wrong move</small></span><select id="rel" style="margin-left:auto;background:#0b0d11;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:3px"><option value="0.3">wrong 30%</option><option value="0.5" selected>wrong 50%</option><option value="0.7">wrong 70%</option></select></label>
+        <label class="tg" style="cursor:default"><span>Planner reliability <span class="tag">stand-in</span><small>how often the planner proposes a wrong move</small></span><select id="rel" style="margin-left:auto;background:#ffffff;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:3px"><option value="0.3">wrong 30%</option><option value="0.5" selected>wrong 50%</option><option value="0.7">wrong 70%</option></select></label>
         <label class="tg"><input type="checkbox" id="tMem" checked><span>Memory replay <span class="tag">PoC 1, 4</span><small>reuse a move that already passed in a similar state</small></span></label>
         <label class="tg"><input type="checkbox" id="tGate" checked><span>Verification gate <span class="tag">base loop</span><small>reject moves that break joint/step limits or do not get closer; with it off, memory also stores unchecked moves</small></span></label>
         <label class="tg"><input type="checkbox" id="tBias"><span>Joint misread 0.15 rad <span class="tag">PoC 3</span><small>the robot reads its shoulder angle wrong</small></span></label>
@@ -93,7 +101,7 @@
     </div>
   </div>
 
-  <p class="note"><b>What this is and is not.</b> The planner here is a small analytic stand-in with injected mistakes (a wrong move 30, 50 or 70% of the time — the memory saves more when the planner is less reliable), not an LLM, so the numbers on this page are illustrative. The pre-registered 3D run with a real LLM planner (GPT-6.1 Pro) went from 33 to 12 planner calls at 30/30 success; it and its raw data are on the <a href="../index.html">main page</a>. The arm, gate, memory key and replay rule follow that run's definitions, with two differences made for clarity: after four rejected proposals the arm holds still, and with the gate off the memory stores moves without checking them.</p>
+  <p class="note"><b>What this is and is not.</b> The planner here is a small analytic stand-in with injected mistakes (a wrong move 30, 50 or 70% of the time — the memory saves more when the planner is less reliable), not an LLM, so the numbers on this page are illustrative. The pre-registered 3D run with a real LLM planner (GPT-6.1 Pro) went from 33 to 12 planner calls at 30/30 success; it and its raw data are on the <a href="../research/poc.html">study page</a>. The arm, gate, memory key and replay rule follow that run's definitions, with two differences made for clarity: after four rejected proposals the arm holds still, and with the gate off the memory stores moves without checking them.</p>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -209,11 +217,11 @@ let renderer = null, scene, camera, dyn;
 try {
   renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   view.appendChild(renderer.domElement);
-  scene = new THREE.Scene(); scene.background = new THREE.Color(0x0b0d11);
+  scene = new THREE.Scene(); scene.background = new THREE.Color(0xffffff);
   camera = new THREE.PerspectiveCamera(40, 1.5, 0.01, 10);
   scene.add(new THREE.AmbientLight(0xffffff, 0.6)); const dl = new THREE.DirectionalLight(0xffffff, 0.7); dl.position.set(1, 2, 1); scene.add(dl);
-  const grid = new THREE.GridHelper(0.8, 16, 0x262b36, 0x1a1e27); scene.add(grid);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.03, 24), new THREE.MeshStandardMaterial({ color: 0x4a4a4a }));
+  const grid = new THREE.GridHelper(0.8, 16, 0xc9ccd3, 0xe3e3e6); scene.add(grid);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.03, 24), new THREE.MeshStandardMaterial({ color: 0x6b6b70 }));
   base.position.y = 0.015; scene.add(base);
   dyn = new THREE.Group(); scene.add(dyn);
 } catch (e) { hud.textContent = "WebGL is not available in this browser — numbers below still work."; renderer = null; }
@@ -229,7 +237,7 @@ if (renderer) {
   window.addEventListener("resize", () => { resize(); render(); });
   resize(); placeCamera();
 }
-const COL = { plan: 0x8a8f99, mem: 0x6ea8fe, unsafe: 0xff6b6b };
+const COL = { plan: 0x8a8f99, mem: 0x1a5fb4, unsafe: 0xc0392b };
 function line(pts, color, opacity, dashed) {
   const g = new THREE.BufferGeometry().setFromPoints(pts.map(V));
   const m = dashed ? new THREE.LineDashedMaterial({ color, dashSize: 0.012, gapSize: 0.01, transparent: true, opacity })
@@ -244,7 +252,7 @@ function link(a, b, color, r) {
 function ball(p, color, r) { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), new THREE.MeshStandardMaterial({ color })); m.position.copy(V(p)); dyn.add(m); }
 function render() { if (renderer) renderer.render(scene, camera); }
 function frame(ep, k, label) {
-  hud.innerHTML = (renderer ? "" : "WebGL is not available in this browser — the numbers still work.<br>") + label + (k >= ep.trace.length ? `<br><span style="color:${ep.success ? "#39d98a" : "#ff6b6b"}">${ep.success ? "reached and grasped" : "not reached in 10 steps"}</span>` : "");
+  hud.innerHTML = (renderer ? "" : "WebGL is not available in this browser — the numbers still work.<br>") + label + (k >= ep.trace.length ? `<br><span style="color:${ep.success ? "#1e7d4f" : "#c0392b"}">${ep.success ? "reached and grasped" : "not reached in 10 steps"}</span>` : "");
   if (!renderer) return;
   while (dyn.children.length) { const c = dyn.children.pop(); c.geometry && c.geometry.dispose(); }
   ball(ep.target, 0xe6a700, 0.012);
@@ -252,7 +260,7 @@ function frame(ep, k, label) {
   const cur = k === 0 ? ep.trace[0].from.q : ep.trace[Math.min(k, ep.trace.length) - 1].to;
   if (k < ep.trace.length) {
     const f = ep.trace[k].from;
-    for (const b of ep.trace[k].blocked) { const n = f.q.map((v, i) => v + b[i]); line([[0, 0, 0.03], elbow(n), fk(n)], 0xff6b6b, 0.45, true); ball(fk(n), 0xff6b6b, 0.006); }
+    for (const b of ep.trace[k].blocked) { const n = f.q.map((v, i) => v + b[i]); line([[0, 0, 0.03], elbow(n), fk(n)], 0xc0392b, 0.45, true); ball(fk(n), 0xc0392b, 0.006); }
     line([[0, 0, 0.03], elbow(f.seen), fk(f.seen)], 0x9aa3b2, 0.9, true);
   }
   link([0, 0, 0.03], elbow(cur), 0x4682b4, 0.012); link(elbow(cur), fk(cur), 0x4682b4, 0.010); ball(fk(cur), 0x111111, 0.010);

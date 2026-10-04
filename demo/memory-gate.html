@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Verify, Remember, Compute Less</title>
+<title>Live demo · 2-link arm — Juhyeok Park</title>
 <style>
   :root{
-    --bg:#0f1115; --card:#171a21; --line:#262b36; --txt:#e6e9ef; --mut:#9aa3b2;
-    --accent:#6ea8fe; --green:#39d98a; --red:#ff6b6b; --amber:#f0ad4e;
+    --bg:#ffffff; --card:#f6f7f9; --line:#e3e3e6; --txt:#1d1d1f; --mut:#6b6b70;
+    --accent:#1a5fb4; --green:#1e7d4f; --red:#c0392b; --amber:#f0ad4e;
     --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
   }
   *{box-sizing:border-box}
@@ -18,9 +18,10 @@
   .grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px}
   @media (max-width:820px){.grid{grid-template-columns:1fr}}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
-  canvas{width:100%;height:auto;display:block;background:#0b0d11;border-radius:8px}
+  .grid>.card{align-self:start}
+  canvas{width:100%;height:auto;display:block;background:#ffffff;border-radius:8px}
   .row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
-  button{background:var(--accent);color:#08101f;border:0;border-radius:8px;padding:8px 12px;font-weight:600;cursor:pointer;font-size:.9rem}
+  button{background:var(--accent);color:#ffffff;border:0;border-radius:8px;padding:8px 12px;font-weight:600;cursor:pointer;font-size:.9rem}
   button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
   button:disabled{opacity:.5;cursor:default}
   label.tg{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer}
@@ -39,13 +40,20 @@
   .scene b{display:block;color:var(--accent);font-size:.85rem;margin-bottom:2px}
   .scene span{color:var(--mut);font-size:.8rem}
   .scene:hover{border-color:var(--accent)}
-  #result{background:#121722;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 14px;font-size:.9rem;display:none}
+  #result{background:#f6f7f9;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 14px;font-size:.9rem;display:none}
   .tag{display:inline-block;font-size:.7rem;color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:0 6px;margin-left:4px}
+  .crumb{font-size:.88rem;margin:0 0 10px} .meta{color:var(--mut);font-size:.88rem;margin:0 0 8px}
+  .nav{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+  .nav a{font-size:.8rem;border:1px solid var(--line);border-radius:4px;padding:1px 8px;color:var(--txt)}
+  .nav a.on{background:var(--accent);border-color:var(--accent);color:#fff}
 </style>
 </head>
 <body>
 <main>
-  <h1>Verify, remember, compute less</h1>
+  <p class="crumb"><a href="../research/poc.html">← Verify, remember, and decide how much to compute</a></p>
+  <h1>Live demo · 2-link arm</h1>
+  <p class="meta">Juhyeok Park · 2026.10 · runs in your browser · stand-in planner, not an LLM</p>
+  <div class="nav"><a href="../research/poc.html">study page</a><a href="memory-gate-panda.html">7-DOF Panda</a><a href="memory-gate-3d.html">3-joint arm</a><a class="on" href="memory-gate.html">2-link arm</a></div>
   <p class="sub">A 2-link arm reaches clustered targets. A planner proposes each move; a forward-kinematics gate checks it before execution; moves that passed are remembered and replayed in similar situations instead of calling the planner again. Toggle each part and watch the planner calls, unsafe moves and success change. Everything is computed live in your browser; the planner is a simple stand-in, not an LLM. Also: <a href="memory-gate-3d.html">3-joint arm</a> · <a href="memory-gate-panda.html">7-DOF Panda</a></p>
 
   <div class="scenes">
@@ -63,7 +71,7 @@
         <span><span class="sw" style="background:#8a8f99"></span>planner move (stand-in for an LLM)</span>
         <span><span class="sw" style="background:var(--accent)"></span>replayed from memory</span>
         <span><span class="sw" style="background:var(--red)"></span>unsafe move executed</span>
-        <span style="color:#ff6b6b">✕</span><span style="margin-left:-8px">&nbsp;proposal blocked by the gate</span>
+        <span style="color:#c0392b">✕</span><span style="margin-left:-8px">&nbsp;proposal blocked by the gate</span>
         <span><span class="sw" style="background:#4682b4;height:6px"></span>real arm</span>
         <span><span class="sw" style="background:#9aa3b2;height:2px"></span>arm as the robot reads it</span>
       </div>
@@ -78,7 +86,7 @@
     <div>
       <div class="card">
         <h3>Switches</h3>
-        <label class="tg" style="cursor:default"><span>Planner reliability <span class="tag">stand-in</span><small>how often the planner proposes a wrong move</small></span><select id="rel" style="margin-left:auto;background:#0b0d11;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:3px"><option value="0.3">wrong 30%</option><option value="0.5" selected>wrong 50%</option><option value="0.7">wrong 70%</option></select></label>
+        <label class="tg" style="cursor:default"><span>Planner reliability <span class="tag">stand-in</span><small>how often the planner proposes a wrong move</small></span><select id="rel" style="margin-left:auto;background:#ffffff;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:3px"><option value="0.3">wrong 30%</option><option value="0.5" selected>wrong 50%</option><option value="0.7">wrong 70%</option></select></label>
         <label class="tg"><input type="checkbox" id="tMem" checked><span>Memory replay <span class="tag">PoC 1, 4</span><small>reuse a move that already passed in a similar state</small></span></label>
         <label class="tg"><input type="checkbox" id="tGate" checked><span>Verification gate <span class="tag">base loop</span><small>reject moves that break joint/step limits or do not get closer; with it off, memory also stores unchecked moves</small></span></label>
         <label class="tg"><input type="checkbox" id="tBias"><span>Joint misread 0.15 rad <span class="tag">PoC 3</span><small>the robot reads its shoulder angle wrong</small></span></label>
@@ -92,7 +100,7 @@
     </div>
   </div>
 
-  <p class="note"><b>What this is and is not.</b> The planner here is a small analytic stand-in with injected mistakes (a wrong move 30, 50 or 70% of the time — the memory saves more when the planner is less reliable), not an LLM, so the numbers on this page are illustrative. The pre-registered runs with real LLM planners (GPT-6.1 Pro, Gemini 2.5 Flash) — e.g. 60 → 24 planner calls on the 2-link arm at 30/30 success — and their raw data are on the <a href="../index.html">main page</a>. The arm, gate, memory key and replay rule follow the same definitions as those runs, with two differences made for clarity: after four rejected proposals the arm holds still (in the runs the last proposal was executed), and with the gate switched off the memory stores moves without checking them.</p>
+  <p class="note"><b>What this is and is not.</b> The planner here is a small analytic stand-in with injected mistakes (a wrong move 30, 50 or 70% of the time — the memory saves more when the planner is less reliable), not an LLM, so the numbers on this page are illustrative. The pre-registered runs with real LLM planners (GPT-6.1 Pro, Gemini 2.5 Flash) — e.g. 60 → 24 planner calls on the 2-link arm at 30/30 success — and their raw data are on the <a href="../research/poc.html">study page</a>. The arm, gate, memory key and replay rule follow the same definitions as those runs, with two differences made for clarity: after four rejected proposals the arm holds still (in the runs the last proposal was executed), and with the gate switched off the memory stores moves without checking them.</p>
 </main>
 
 <script>
@@ -226,15 +234,15 @@ function episode(task, sw, st) {
 const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
 const SC = 820, OX = 300, OY = 300;
 const P = p => [OX + p[0] * SC, OY - p[1] * SC];
-const COL = { plan: "#8a8f99", mem: "#6ea8fe", unsafe: "#ff6b6b" };
+const COL = { plan: "#8a8f99", mem: "#1a5fb4", unsafe: "#c0392b" };
 function drawArm(t1, t2, color, w, dash) {
   const e = [L1 * Math.cos(t1), L1 * Math.sin(t1)], h = fk(t1, t2);
   ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = "round"; if (dash) ctx.setLineDash([6, 6]);
   ctx.beginPath(); ctx.moveTo(...P([0, 0])); ctx.lineTo(...P(e)); ctx.lineTo(...P(h)); ctx.stroke(); ctx.restore();
 }
 function frame(ep, k, label) {
-  ctx.fillStyle = "#0b0d11"; ctx.fillRect(0, 0, cv.width, cv.height);
-  ctx.strokeStyle = "#1c2029"; ctx.beginPath(); ctx.arc(...P([0, 0]), (L1 + L2) * SC, 0, 2 * Math.PI); ctx.stroke();
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.strokeStyle = "#e3e3e6"; ctx.beginPath(); ctx.arc(...P([0, 0]), (L1 + L2) * SC, 0, 2 * Math.PI); ctx.stroke();
   const t = P(ep.target); ctx.fillStyle = "#e6a700"; ctx.beginPath(); ctx.arc(t[0], t[1], 7, 0, 2 * Math.PI); ctx.fill();
   for (let i = 0; i < k && i < ep.trace.length; i++) {
     const a = P(fk(ep.trace[i].from.t1, ep.trace[i].from.t2)), b = P(fk(ep.trace[i].to.t1, ep.trace[i].to.t2));
@@ -247,16 +255,16 @@ function frame(ep, k, label) {
     for (const b of ep.trace[k].blocked) {   // proposals the gate rejected at this step
       const n1 = f.t1 + b[0], n2 = f.t2 + b[1], h = P(fk(n1, n2));
       drawArm(n1, n2, "rgba(255,107,107,0.35)", 3, true);
-      ctx.strokeStyle = "#ff6b6b"; ctx.lineWidth = 2; ctx.beginPath();
+      ctx.strokeStyle = "#c0392b"; ctx.lineWidth = 2; ctx.beginPath();
       ctx.moveTo(h[0] - 6, h[1] - 6); ctx.lineTo(h[0] + 6, h[1] + 6); ctx.moveTo(h[0] + 6, h[1] - 6); ctx.lineTo(h[0] - 6, h[1] + 6); ctx.stroke();
     }
     drawArm(f.seen.t1, f.seen.t2, "#9aa3b2", 2, true);
   }
   drawArm(cur.t1, cur.t2, "#4682b4", 7, false);
-  ctx.fillStyle = "#4a4a4a"; ctx.fillRect(OX - 12, OY - 6, 24, 12);
-  ctx.fillStyle = "#e6e9ef"; ctx.font = "14px -apple-system, sans-serif";
+  ctx.fillStyle = "#6b6b70"; ctx.fillRect(OX - 12, OY - 6, 24, 12);
+  ctx.fillStyle = "#1d1d1f"; ctx.font = "14px -apple-system, sans-serif";
   ctx.fillText(label, 14, 24);
-  if (k >= ep.trace.length) { ctx.fillStyle = ep.success ? "#39d98a" : "#ff6b6b"; ctx.fillText(ep.success ? "reached and grasped" : "not reached in 10 steps", 14, 46); }
+  if (k >= ep.trace.length) { ctx.fillStyle = ep.success ? "#1e7d4f" : "#c0392b"; ctx.fillText(ep.success ? "reached and grasped" : "not reached in 10 steps", 14, 46); }
 }
 
 // ---------- UI ----------

@@ -24,7 +24,7 @@
   </div>
 
   <a class="demo" href="../demo/memory-gate-panda.html"><img src="../assets/poc/panda_demo.png" alt="Live demo: 7-DOF Franka Panda arm with memory replay and a forward-kinematics gate">
-    <div><b>▶ Try it live — 7-DOF Franka Panda</b> · toggle memory replay, the verification gate, a 0.15 rad joint misread and an independent fingertip sensor, and watch the counts change. Runs in your browser; the planner is a stand-in, not an LLM.</div></a>
+    <div><b>▶ Try it live — 7-DOF Franka Panda</b> · seven scenes: memory replay, the verification gate, a 0.15 rad joint misread, an independent fingertip sensor, swapped look-alike objects with a touch check, a memory–camera conflict check, and a check before vs after planning. Runs in your browser; the planner is a stand-in, not an LLM.</div></a>
   <h2>System <span class="ko">구조</span></h2>
   <div class="flow">
     <span>camera (YOLOv8n)</span><i>→</i><span>tracker + calibrated decoder</span><i>→</i><span class="gate">perception gate</span><i>→</i>
