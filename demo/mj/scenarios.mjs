@@ -1,0 +1,187 @@
+// 7개 시나리오를 MuJoCo 물리 위에서 돌리는 에피소드 엔진 (걸음 단위 판단). Node(일괄 통계)와 브라우저(재생)가 같은 코드를 쓴다.
+// 원래 데모와 같은 구조: 손끝을 잡을 지점 위로 보내는 동안 걸음마다
+//   상황 키로 기억 조회 → 없으면 플래너(LLM 대역)에게 다음 관절 이동을 묻고 → 순기구학 게이트가 검사(막히면 다시 생성)
+//   → MuJoCo 가 실제로 그 걸음을 실행 → 나아갔으면 기억에 저장, 기억에서 꺼낸 걸음이 안 나아갔으면 그 기억을 지운다.
+// 다 오면 내려가 실제 손가락으로 쥐고(촉각), 들어 옮겨 놓는다. 에피소드는 제너레이터: 제어 한 틱마다 yield.
+import { OPEN, CLOSED } from './pickplace_ctrl.mjs';
+
+export const TARGET_W = 0.032, LOOK_W = 0.040;     // 손가락이 닫힌 폭: 목표 상자 32 mm, 닮은 상자 40 mm
+const SUB = 5, PRE = 0.08, ABOVE = 0.15, GRASP_Z = 0.035, PLACE_Z = 0.037;
+const BIAS_JOINT = 1, TOUCH_TOL = 0.006, CAM_NOISE = 0.003, SENSOR_NOISE = 0.002;
+const STEP = 0.06, SUCC = 0.025, PROG = 0.005, JERK = 0.4, MAX_STEPS = 12, MAX_REPLAN = 3, UNSAFE = 0.005, TILT = 0.25;
+
+export const SCENES = [
+  { target: [0.55, 0.10], look: [0.45, 0.20] }, { target: [0.50, 0.18], look: [0.60, 0.05] },
+  { target: [0.60, 0.00], look: [0.48, 0.12] }, { target: [0.45, 0.08], look: [0.58, 0.18] },
+  { target: [0.57, 0.16], look: [0.44, 0.02] }, { target: [0.48, 0.00], look: [0.60, 0.12] },
+];
+
+export function makeRng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+const gauss = rng => Math.sqrt(-2 * Math.log(rng() + 1e-12)) * Math.cos(2 * Math.PI * rng());
+const d2 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const d3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+export function makeEngine(mj, model, data, C, goal) {
+  const physicsTick = () => { for (let s = 0; s < SUB; s++) { C.gravComp(); mj.mj_step(model, data); } };
+  const jr = j => [model.jnt_range[2 * j], model.jnt_range[2 * j + 1]];
+
+  // 관절 명령: 로봇은 "읽은 값"이 qBelief 가 되도록 서보한다. 읽기에 bias 가 있으면 실제 관절은 qBelief - bias 로 간다
+  function* moveJoints(qBelief, bias, maxTicks = 500) {
+    const qTrue = qBelief.map((v, i) => v - (i === BIAS_JOINT ? bias : 0));
+    let settle = 0;
+    for (let t = 0; t < maxTicks; t++) { const done = C.moveToward(qTrue); physicsTick(); yield; if (done && ++settle > 20) return; }
+  }
+  function* hold(ticks) { for (let t = 0; t < ticks; t++) { physicsTick(); yield; } }
+  const readJoints = bias => Array.from(data.qpos.slice(0, 7)).map((v, i) => v + (i === BIAS_JOINT ? bias : 0));
+
+  // 상황 키: 목표까지 방향(x·y·z 부호, 1 cm 불감대) + 거리 구간 + 큰 관절 3개(1·2·4)의 구간
+  function situationKey(tip, target, q) {
+    const sg = v => (Math.abs(v) < 0.01 ? 0 : Math.sign(v));
+    const dd = d3(tip, target), db = dd < 0.05 ? 0 : dd < 0.15 ? 1 : 2;
+    const jb = [1, 2, 3].map(j => { const [lo, hi] = jr(j); return Math.min(2, Math.floor(3 * (q[j] - lo) / (hi - lo))); });
+    return [sg(target[0] - tip[0]), sg(target[1] - tip[1]), sg(target[2] - tip[2]), db, ...jb].join(',');
+  }
+
+  // 플래너(대역): 믿는 손끝에서 목표 쪽으로 최대 6 cm 가는 관절 이동을 낸다. 확률 pm 으로 관절 두 개를 크게 틀리게 낸다
+  function planStep(qB, tipB, target, cfg, st, rng) {
+    st.calls++;
+    const fk = C.fkTip(qB), v = [target[0] - tipB[0], target[1] - tipB[1], target[2] - tipB[2]];
+    const n = Math.hypot(...v), k = n > STEP ? STEP / n : 1;
+    const way = [fk[0] + k * v[0], fk[1] + k * v[1], fk[2] + k * v[2]];   // 센서가 있으면 tipB 는 잰 손끝 → 오차만큼 목표를 옮겨 낸다
+    const q = C.solveIK(way, 60, qB).q, dq = q.map((x, i) => x - qB[i]);
+    const pm = cfg.pre ? cfg.pMistake / 4 : cfg.pMistake;   // 계획 전 검사: 같은 상태를 보고 실수율만 낮춘다
+    if (rng() < pm) for (const j of [Math.floor(rng() * 4), 4 + Math.floor(rng() * 3)]) dq[j] += (rng() < 0.5 ? -1 : 1) * (0.25 + 0.15 * rng());
+    return dq;
+  }
+
+  // 게이트: 이 이동 뒤 손끝(읽은 관절값 기준, 센서가 있으면 잰 손끝 기준)이 목표에 다가가는지, 급하지 않은지, 관절 한계 안인지, 손이 계속 아래를 향하는지
+  function gateOk(qB, tipB, dq, target) {
+    if (Math.max(...dq.map(Math.abs)) > JERK) return false;
+    if (C.handErr(qB.map((x, i) => x + dq[i])) > TILT) return false;
+    for (let j = 0; j < 7; j++) { const [lo, hi] = jr(j); if (qB[j] + dq[j] < lo || qB[j] + dq[j] > hi) return false; }
+    const f0 = C.fkTip(qB), f1 = C.fkTip(qB.map((x, i) => x + dq[i]));
+    const pred = [tipB[0] + f1[0] - f0[0], tipB[1] + f1[1] - f0[1], tipB[2] + f1[2] - f0[2]];
+    return d3(pred, target) < d3(tipB, target) - PROG;
+  }
+
+  function* episode(task, cfg, mem, st, seed, ev = () => {}) {
+    const base = (seed * 7919 + task.idx * 104729) >>> 0;
+    const rCam = makeRng(base + 1), rPlan = makeRng(base + 2), rSen = makeRng(base + 3);
+    const bias = cfg.bias ? 0.15 : 0;
+    C.reset([0, 0], task.place);
+    for (let t = 0; t < 40; t++) { physicsTick(); yield; }
+    const truth = C.bodyPos(C.bTarget);
+    const cam = () => [truth[0] + CAM_NOISE * gauss(rCam), truth[1] + CAM_NOISE * gauss(rCam)];
+    let belief, source;
+    if (cfg.mem && mem.scene.has(task.key)) {
+      belief = mem.scene.get(task.key); source = 'memory';
+      if (cfg.camCheck) { const c = cam(); if (d2(belief, c) > 0.02) { mem.scene.delete(task.key); belief = c; source = 'camera'; st.dropped++; ev('drop'); } }
+    } else { belief = cam(); source = 'camera'; }
+    ev('belief', { belief, source, task });
+    const tipNow = () => C.sitePos();
+    const believedTip = qB => cfg.sensor ? tipNow().map(v => v + SENSOR_NOISE * gauss(rSen)) : C.fkTip(qB);
+    data.ctrl[7] = OPEN;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const pre = [belief[0], belief[1], GRASP_Z + PRE];
+      ev('reach-start', { tip: tipNow(), belief: believedTip(readJoints(bias)) });
+      // ---- 걸음 단위로 잡을 지점 위까지 ----
+      let reached = false;
+      for (let step = 0; step < MAX_STEPS; step++) {
+        const qB = readJoints(bias), tipB = believedTip(qB);
+        if (d3(tipB, pre) < SUCC) { reached = true; break; }
+        const key = situationKey(tipB, pre, qB);
+        let dq = null, src = 'plan';
+        if (cfg.mem && mem.act.has(key)) { dq = mem.act.get(key).slice(); src = 'mem'; st.replays++; }
+        else dq = planStep(qB, tipB, pre, cfg, st, rPlan);
+        if (cfg.gate) {
+          let tries = 0;
+          while (!gateOk(qB, tipB, dq, pre) && tries++ < MAX_REPLAN) {
+            st.rejected++; ev('reject', { q: qB.map((x, i) => x + dq[i] - (i === BIAS_JOINT ? bias : 0)), src });
+            if (src === 'mem') { mem.act.delete(key); st.memDeleted++; }
+            dq = planStep(qB, tipB, pre, cfg, st, rPlan); src = 'plan';
+          }
+          if (!gateOk(qB, tipB, dq, pre)) { st.blocked++; ev('blocked'); continue; }   // 끝까지 막히면 움직이지 않고 다음 걸음에서 다시 묻는다
+        }
+        const realBefore = d3(tipNow(), pre);
+        yield* moveJoints(qB.map((x, i) => x + dq[i]), bias);
+        const qB2 = readJoints(bias), tipB2 = believedTip(qB2);
+        const unsafe = d3(tipNow(), pre) > realBefore + UNSAFE;   // 실제 손끝이 향하던 지점에서 멀어졌다
+        if (unsafe) st.unsafe++;
+        st.steps++; if (src === 'mem') st.memSteps++;
+        const progressed = d3(tipB2, pre) < d3(tipB, pre) - PROG;
+        if (cfg.mem) {
+          if (src === 'plan' && progressed) mem.act.set(key, dq);
+          if (src === 'mem' && !progressed) { mem.act.delete(key); st.memDeleted++; }
+        }
+        ev('step', { src: unsafe ? 'unsafe' : src, tip: tipNow(), belief: tipB2, key });
+      }
+      if (!reached) { const qB = readJoints(bias); reached = d3(believedTip(qB), pre) < SUCC; }
+      if (!reached) { st.notReached++; ev('not-reached'); break; }
+
+      // ---- 정렬해서 내려가 쥐기 (읽은 관절값 기준 IK). 센서가 있으면 잰 손끝 오차를 매번 다시 재서 고친다 ----
+      let off = [0, 0, 0];
+      const corrected = function* (pt) {
+        yield* moveJoints(C.solveIK([pt[0] + off[0], pt[1] + off[1], pt[2] + off[2]], 150, readJoints(bias)).q, bias);
+        if (!cfg.sensor) return;
+        for (let k = 0; k < 3; k++) {
+          const m = tipNow().map(v => v + SENSOR_NOISE * gauss(rSen)), e = [pt[0] - m[0], pt[1] - m[1], pt[2] - m[2]];
+          if (Math.hypot(...e) < 0.004) return;
+          off = [off[0] + e[0], off[1] + e[1], off[2] + e[2]]; ev('sensor-fix');
+          yield* moveJoints(C.solveIK([pt[0] + off[0], pt[1] + off[1], pt[2] + off[2]], 150, readJoints(bias)).q, bias);
+        }
+      };
+      const g = [belief[0], belief[1], GRASP_Z];
+      yield* corrected([g[0], g[1], g[2] + PRE]);
+      yield* corrected([g[0], g[1], g[2] + 0.03]);
+      yield* corrected(g);
+      data.ctrl[7] = CLOSED; yield* hold(60);
+      const width = data.qpos[7] + data.qpos[8];
+      ev('touch', { width, tip: tipNow(), belief: C.fkTip(readJoints(bias)) });   // belief = 읽은 관절값으로 계산한 손끝 (센서와 무관)
+      if (cfg.touch && Math.abs(width - TARGET_W) > TOUCH_TOL) {
+        st.caught++; ev('caught', { width });
+        data.ctrl[7] = OPEN; yield* hold(40);
+        yield* corrected([g[0], g[1], g[2] + ABOVE]);
+        mem.scene.delete(task.key); belief = cam(); continue;
+      }
+      // ---- 들어서 옮겨 놓기 ----
+      yield* corrected([g[0], g[1], GRASP_Z + ABOVE]);
+      const over = [goal[0], goal[1], GRASP_Z + ABOVE];
+      yield* corrected(over);
+      yield* corrected([goal[0], goal[1], PLACE_Z]);
+      data.ctrl[7] = OPEN; yield* hold(40);
+      yield* corrected(over);
+      for (let t = 0; t < 40; t++) { physicsTick(); yield; }
+      if (cfg.mem) mem.scene.set(task.key, belief);
+      break;
+    }
+    const inGoal = b => { const p = C.bodyPos(b); return Math.abs(p[0] - goal[0]) < 0.06 && Math.abs(p[1] - goal[1]) < 0.06; };
+    const result = inGoal(C.bTarget) ? 'success' : inGoal(C.bLook) ? 'wrong' : 'miss';
+    st[result]++; st.n++;
+    ev('result', { result, source, task });
+    return result;
+  }
+
+  function tasks(swap) {
+    const out = [];
+    for (let v = 0; v < 3; v++) SCENES.forEach((sc, i) => out.push({ idx: out.length, key: i, visit: v, place: swap && v > 0 ? { target: sc.look, look: sc.target } : sc }));
+    return out;
+  }
+  const newStats = () => ({ n: 0, success: 0, wrong: 0, miss: 0, calls: 0, replays: 0, rejected: 0, caught: 0, dropped: 0, unsafe: 0, steps: 0, memSteps: 0, memDeleted: 0, notReached: 0, blocked: 0 });
+  function runBatch(cfg, seed = 7) {
+    const st = newStats(), mem = { scene: new Map(), act: new Map() };
+    for (const t of tasks(cfg.swap)) { const g = episode(t, cfg, mem, st, seed); while (!g.next().done); }
+    return st;
+  }
+  return { episode, tasks, runBatch, newStats };
+}
+
+export const SCENARIOS = [
+  { id: 1, title: 'Memory cuts planner calls', sub: '18 visits without vs with step replay', cfgs: [{ gate: true, pMistake: 0.3 }, { gate: true, mem: true, pMistake: 0.3 }], labels: ['no memory', 'memory + gate'] },
+  { id: 2, title: 'Memory without a gate', sub: 'what happens when nothing checks each step first', cfgs: [{ mem: true, pMistake: 0.5 }, { mem: true, gate: true, pMistake: 0.5 }], labels: ['memory, no gate', 'memory + gate'] },
+  { id: 3, title: 'When the joint reading is wrong', sub: 'the gate checks the misread state and is fooled', cfgs: [{ gate: true, pMistake: 0.3 }, { gate: true, bias: true, pMistake: 0.3 }], labels: ['correct reading', 'shoulder misread +0.15 rad'] },
+  { id: 4, title: 'An independent sensor', sub: 'check against the fingertip sensor instead', cfgs: [{ gate: true, bias: true, pMistake: 0.3 }, { gate: true, bias: true, sensor: true, pMistake: 0.3 }], labels: ['misread, gate only', 'misread + fingertip sensor'] },
+  { id: 5, title: 'Objects get swapped', sub: 'memory points at the look-alike; a touch check catches it', cfgs: [{ gate: true, mem: true, swap: true, pMistake: 0.3 }, { gate: true, mem: true, swap: true, touch: true, pMistake: 0.3 }], labels: ['memory, no touch', 'memory + touch check'] },
+  { id: 6, title: 'Memory vs camera', sub: 'drop the memory when the camera disagrees', cfgs: [{ gate: true, mem: true, swap: true, pMistake: 0.3 }, { gate: true, mem: true, swap: true, camCheck: true, pMistake: 0.3 }], labels: ['memory, no camera check', 'memory + camera check'] },
+  { id: 7, title: 'Check before or after planning?', sub: 'with a wrong joint reading, both are fooled', cfgs: [{ pre: true, bias: true, pMistake: 0.3 }, { gate: true, bias: true, pMistake: 0.3 }, { gate: true, bias: true, sensor: true, pMistake: 0.3 }], labels: ['check before planning', 'check after planning', 'after planning + sensor'] },
+];

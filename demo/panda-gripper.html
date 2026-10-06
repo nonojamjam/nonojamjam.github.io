@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live demo · Panda gripper — Juhyeok Park</title>
+<style>
+  :root{
+    --bg:#fff; --card:#f6f7f9; --line:#e3e3e6; --txt:#1d1d1f; --mut:#6b6b70;
+    --accent:#1a5fb4; --green:#1e7d4f; --red:#c0392b; --mem:#2f6fd6;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+  main{max-width:1100px;margin:0 auto;padding:22px 16px 48px}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .crumb{font-size:.88rem;margin:0 0 10px}
+  h1{font-size:1.6rem;margin:0 0 2px;font-weight:650}
+  .meta{color:var(--mut);font-size:.88rem;margin:0 0 6px}
+  .ko{color:var(--mut);font-size:.92rem;margin:4px 0 14px}
+  h2{font-size:1.1rem;margin:28px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line);font-weight:650}
+  h2 span{color:var(--mut);font-weight:400;font-size:.9rem;margin-left:8px}
+
+  .scenes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 12px}
+  @media (max-width:820px){.scenes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .scene{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 11px;text-align:left;color:var(--txt);font-weight:400;cursor:pointer}
+  .scene b{display:block;color:var(--accent);font-size:.86rem;margin-bottom:2px}
+  .scene span{color:var(--mut);font-size:.78rem;line-height:1.35;display:block}
+  .scene:hover{border-color:var(--accent)}
+  .scene.on{border-color:var(--accent);box-shadow:0 0 0 2px #cfe0f4 inset;background:#f5f9fe}
+
+  #view{width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#f3f5f8;border:1px solid var(--line);position:relative}
+  #view canvas{display:block;width:100%;height:100%}
+  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);background:#f3f5f8}
+  .ov{position:absolute;pointer-events:none;background:rgba(255,255,255,.93);border:1px solid var(--line);border-radius:9px;padding:6px 11px;font-size:.88rem}
+  #where{left:14px;top:12px} #where b{color:var(--accent)}
+  #event{left:14px;bottom:12px;max-width:72%;font-size:.92rem}
+  #event.bad{background:#fdeeed;border-color:#f1c6c2;color:#8e2a20}
+  #event.good{background:#e9f6ef;border-color:#bfe3cf;color:#17623d}
+  #event.mem{background:#ecf2fd;border-color:#c8d8f6;color:#1f4f9e}
+  #verdict{right:14px;top:12px;font-weight:700;display:none}
+  #verdict.ok{display:block;background:#e7f5ee;color:var(--green);border-color:#bfe3cf}
+  #verdict.bad{display:block;background:#fbeceb;color:var(--red);border-color:#f1c6c2}
+  .hint{position:absolute;right:14px;bottom:12px;color:var(--mut);font-size:.74rem;pointer-events:none}
+  #strip{right:14px;top:56px;display:flex;flex-wrap:wrap;gap:3px;max-width:260px;padding:6px 8px}
+  #strip:empty{display:none}
+  #strip i{display:inline-block;width:16px;height:16px;border-radius:4px;font:700 10px/16px var(--mono);text-align:center;font-style:normal;color:#fff}
+  #strip i.m{background:#2f6fd6} #strip i.p{background:#8a8f98} #strip i.u{background:#c0392b} #strip i.x{background:#fff;color:#c0392b;border:1.5px solid #c0392b;line-height:13px} #strip i.d{background:#fff;color:#2f6fd6;border:1.5px dashed #2f6fd6;line-height:13px}
+
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 0}
+  button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:9px 15px;font-weight:650;cursor:pointer;font-size:.9rem}
+  button.ghost{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  button:disabled{opacity:.45;cursor:default}
+  .seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{background:#fff;color:var(--txt);border-radius:0;padding:7px 11px;font-weight:500}
+  .seg button.on{background:var(--txt);color:#fff}
+  .spacer{flex:1}
+  .lbl{font-size:.78rem;color:var(--mut)}
+
+  .kp{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:12px 0 0}
+  @media (max-width:820px){.kp{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  .kp div{background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 11px}
+  .kp b{display:block;font-family:var(--mono);font-size:1.35rem;line-height:1.2}
+  .kp span{font-size:.74rem;color:var(--mut)}
+  .kp b.good{color:var(--green)} .kp b.bad{color:var(--red)} .kp b.mem{color:var(--mem)}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;color:var(--mut);font-size:.8rem;margin-top:10px}
+  .sw{display:inline-block;width:13px;height:13px;border-radius:3px;margin-right:6px;vertical-align:-2px}
+  .sw.out{background:transparent;border:2px solid}
+
+  #cmp{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:8px}
+  #cmp th,#cmp td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}
+  #cmp th:first-child,#cmp td:first-child{text-align:left}
+  #cmp th{font-weight:600;color:var(--mut);font-size:.8rem}
+  #cmp td.g{color:var(--green);font-weight:650} #cmp td.r{color:var(--red);font-weight:650}
+  #cmpNote{color:var(--mut);font-size:.84rem;margin:6px 0 0}
+  .note{color:var(--mut);font-size:.84rem;margin-top:14px;max-width:880px}
+  table.map{width:100%;border-collapse:collapse;font-size:.88rem}
+  table.map th,table.map td{text-align:left;padding:6px 10px 6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  table.map th{font-weight:600}
+</style>
+</head>
+<body>
+<main>
+  <p class="crumb"><a href="../research/poc.html">← Verify, remember, and decide how much to compute</a></p>
+  <h1>Live demo · Panda gripper, real contact physics</h1>
+  <p class="meta">Juhyeok Park · 2026.10 · MuJoCo physics running in your browser · scripted stand-in planner, not an LLM</p>
+  <p class="ko">시나리오를 고르면 Panda가 걸음마다 기억을 꺼낼지 플래너에게 물을지 정하고, 게이트가 각 걸음을 검사한 뒤 실제 접촉 물리로 집어 옮깁니다. 손끝 궤적은 기억(파랑)·플래너(회색)·위험한 걸음(빨강)으로, 거절된 걸음은 빨간 유령으로, 로봇이 믿는 경로는 점선으로 그립니다.</p>
+
+  <div class="scenes" id="scenes"></div>
+
+  <div id="view">
+    <div id="loading">loading MuJoCo and the Panda model (≈6 MB)…</div>
+    <div class="ov" id="where">pick a scenario</div>
+    <div class="ov" id="event">—</div>
+    <div class="ov" id="verdict"></div>
+    <div class="ov" id="strip"></div>
+    <div class="hint">drag to orbit · scroll to zoom</div>
+  </div>
+
+  <div class="bar">
+    <button id="play" disabled>▶ Play</button>
+    <button id="restart" class="ghost" disabled>Restart</button>
+    <button id="reseed" class="ghost" disabled title="new camera noise and new planner mistakes">New random draw</button>
+    <span class="lbl">setting</span><div class="seg" id="cfgSeg"></div>
+    <span class="spacer"></span>
+    <span class="lbl">speed</span><div class="seg" id="speed"><button data-v="0.5">0.5×</button><button data-v="1" class="on">1×</button><button data-v="3">3×</button><button data-v="8">8×</button></div>
+  </div>
+
+  <div class="kp">
+    <div><b id="kVisit">–</b><span>visit</span></div>
+    <div><b id="kOk" class="good">0</b><span>target placed</span></div>
+    <div><b id="kBad" class="bad">0</b><span>wrong box / missed</span></div>
+    <div><b id="kCalls">0</b><span>planner calls</span></div>
+    <div><b id="kMem" class="mem">0</b><span>steps from memory / all steps</span></div>
+    <div><b id="kStop">0 · 0</b><span>gate rejections · unsafe steps</span></div>
+  </div>
+  <div class="legend">
+    <span><span class="sw" style="background:#d93636"></span>target box (32 mm)</span>
+    <span><span class="sw" style="background:#bf4a8c"></span>look-alike (40 mm)</span>
+    <span><span class="sw" style="background:#2fa65a;opacity:.6"></span>goal zone</span>
+    <span><span class="sw" style="background:#2f6fd6;opacity:.45"></span>where memory says the target is</span>
+    <span><span class="sw" style="background:#e04b3c;opacity:.45"></span>planner move rejected by the gate</span>
+    <span><span class="sw" style="background:#3b4a63;opacity:.45"></span>where the robot believes its arm is</span>
+    <span><span class="sw" style="background:#2f6fd6"></span>step from memory (M)</span>
+    <span><span class="sw" style="background:#8a8f98"></span>step from the planner (P)</span>
+    <span><span class="sw" style="background:#c0392b"></span>unsafe step executed (!)</span>
+    <span><span class="sw out" style="border-color:#c0392b"></span>✗ rejected by the gate · <span style="color:#2f6fd6">⌫</span> memory deleted</span>
+    <span><span class="sw" style="background:repeating-linear-gradient(90deg,#3b4a63 0 3px,transparent 3px 6px)"></span>path the robot believes it took</span>
+    <span><span class="sw out" style="border-color:#c0392b"></span>wrong / missed box</span>
+    <span><span class="sw out" style="border-color:#1e7d4f"></span>target placed</span>
+  </div>
+
+  <h2>Comparison on the same 18 visits <span>같은 18번 방문에서 설정 비교</span></h2>
+  <button id="compare" class="ghost" disabled>Run comparison</button>
+  <table id="cmp"></table>
+  <p id="cmpNote"></p>
+
+  <h2>What is real here <span>무엇이 실제인가</span></h2>
+  <table class="map">
+    <tr><th>Part</th><th>In this demo</th></tr>
+    <tr><td>Physics</td><td>MuJoCo 3.15 (official WebAssembly build): rigid bodies, joint limits, finger–box contact and friction. Boxes are lifted by finger friction, not attached to the hand, so a wrong grasp, a knocked box or an empty grasp happens in the physics.</td></tr>
+    <tr><td>Robot</td><td>Franka Emika Panda with its hand, from DeepMind's MuJoCo Menagerie (Apache-2.0). Visual meshes simplified to load faster; collision geometry unchanged.</td></tr>
+    <tr><td>Planner</td><td>A stand-in for an LLM, asked one step at a time: it returns the next joint move (at most 6 cm toward the pre-grasp point), but with a fixed probability (30 % or 50 %) it gets two joints badly wrong. Each request counts as one planner call.</td></tr>
+    <tr><td>Gate</td><td>Checks every step before it runs: forward kinematics of the proposed move must bring the fingertip closer, stay within joint limits, avoid jerks and keep the hand pointing down. Up to three regenerations, otherwise the step is skipped. It uses the robot's own joint readings.</td></tr>
+    <tr><td>Memory</td><td>Steps that made progress, keyed by the situation (direction and distance to the goal, bands of three joints), replayed without a planner call; a replayed step that fails is deleted. Also where the target was in each scene — stored when the robot <i>believed</i> it succeeded, so without a touch check a wrong grasp is remembered too.</td></tr>
+    <tr><td>Checks</td><td>Touch: the closed finger opening must match the target width (32 mm ± 6 mm). Camera: target position with 3 mm noise. Fingertip sensor: measured fingertip with 2 mm noise, independent of the joint readings. Misread: the shoulder reading is 0.15 rad off.</td></tr>
+  </table>
+  <p class="note">Every setting runs the same visits with the same camera noise and planner mistakes, so the numbers differ only because of the setting. Results from the study with a real LLM planner are on the <a href="../research/poc.html">study page</a>; the earlier <a href="memory-gate-panda.html">kinematic demo</a> shows the same seven scenarios without contact physics.</p>
+</main>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import loadMujoco from 'https://cdn.jsdelivr.net/npm/@mujoco/mujoco@3.15.0/mujoco.js';
+import { makeController, pickPlacePlan } from './mj/pickplace_ctrl.mjs';
+import { makeEngine, SCENARIOS } from './mj/scenarios.mjs';
+
+const $ = id => document.getElementById(id);
+const BASIC = { id: 0, title: 'Pick and place', sub: 'one clean grasp, carry and place', cfgs: [{ basic: true }], labels: ['scripted pick and place'] };
+const ALL = [BASIC, ...SCENARIOS];
+$('scenes').innerHTML = ALL.map(s => `<button class="scene" data-id="${s.id}"><b>${s.id ? s.id + ' · ' : ''}${s.title}</b><span>${s.sub}</span></button>`).join('');
+
+// ---------- MuJoCo: one MjData for the live view, one for the background comparison, one for ghosts ----------
+const mj = await loadMujoco();
+mj.FS.writeFile('/pp.mjb', new Uint8Array(await (await fetch('mj/pickplace.mjb')).arrayBuffer()));
+const model = mj.MjModel.from_binary_path('/pp.mjb', new mj.MjVFS());
+const data = new mj.MjData(model), dataB = new mj.MjData(model), ghostData = new mj.MjData(model);
+const C = makeController(mj, model, data), CB = makeController(mj, model, dataB);
+const ID = (t, n) => mj.mj_name2id(model, t.value, n);
+const gGoal = ID(mj.mjtObj.mjOBJ_GEOM, 'goal'), gTarget = ID(mj.mjtObj.mjOBJ_GEOM, 'target'), gLook = ID(mj.mjtObj.mjOBJ_GEOM, 'lookalike');
+C.reset(); CB.reset();
+const goal = Array.from(data.geom_xpos.slice(3 * gGoal, 3 * gGoal + 3));
+const E = makeEngine(mj, model, data, C, goal), EB = makeEngine(mj, model, dataB, CB, goal);
+
+// ---------- three.js scene (z-up) ----------
+const view = $('view');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio)); renderer.shadowMap.enabled = true;
+view.prepend(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xf3f5f8);
+const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.01, 20); camera.up.set(0, 0, 1); camera.position.set(1.5, 1.0, 1.0);
+const orbit = new OrbitControls(camera, renderer.domElement); orbit.target.set(0.45, 0.02, 0.18); orbit.enableDamping = true; orbit.update();
+scene.add(new THREE.HemisphereLight(0xffffff, 0xb9c2cc, 0.9));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.2, 0.8, 2.2); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
+Object.assign(sun.shadow.camera, { left: -1, right: 1, top: 1, bottom: -1, near: 0.1, far: 6 }); scene.add(sun);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), new THREE.MeshStandardMaterial({ color: 0xeef0f3, roughness: 0.95 }));
+floor.receiveShadow = true; scene.add(floor);
+const grid = new THREE.GridHelper(4, 40, 0xd5d9df, 0xe3e6ea); grid.rotation.x = Math.PI / 2; grid.position.z = 0.0005; scene.add(grid);
+
+const GEOM = { PLANE: 0, SPHERE: 2, CAPSULE: 3, CYLINDER: 5, BOX: 6, MESH: 7 };
+const objBodies = new Set([0, model.geom_bodyid[gTarget], model.geom_bodyid[gLook]]);
+function geomGeometry(g) {
+  const type = model.geom_type[g], s = model.geom_size.slice(3 * g, 3 * g + 3);
+  if (type === GEOM.BOX) return new THREE.BoxGeometry(2 * s[0], 2 * s[1], 2 * s[2]);
+  if (type === GEOM.SPHERE) return new THREE.SphereGeometry(s[0], 24, 16);
+  if (type === GEOM.CYLINDER) { const c = new THREE.CylinderGeometry(s[0], s[0], 2 * s[1], 24); c.rotateX(Math.PI / 2); return c; }
+  if (type === GEOM.CAPSULE) { const c = new THREE.CapsuleGeometry(s[0], 2 * s[1], 8, 16); c.rotateX(Math.PI / 2); return c; }
+  if (type === GEOM.MESH) {
+    const m = model.geom_dataid[g], va = model.mesh_vertadr[m], vn = model.mesh_vertnum[m], fa = model.mesh_faceadr[m], fn = model.mesh_facenum[m];
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(model.mesh_vert.slice(3 * va, 3 * (va + vn))), 3));
+    geo.setIndex(Array.from(model.mesh_face.slice(3 * fa, 3 * (fa + fn)))); geo.computeVertexNormals(); return geo;
+  }
+  return null;
+}
+const meshes = [], ghostRed = [], ghostGray = [], outlines = {};
+const ghostMat = c => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.3, depthWrite: false });
+const redMat = ghostMat(0xe04b3c), grayMat = ghostMat(0x3b4a63);   // believed arm: dark slate so it stands out against the white robot
+for (let g = 0; g < model.ngeom; g++) {
+  if (model.geom_type[g] === GEOM.PLANE || model.geom_group[g] >= 3) continue;
+  const geo = geomGeometry(g); if (!geo) continue;
+  const mat = model.geom_matid[g];
+  const rgba = mat >= 0 ? model.mat_rgba.slice(4 * mat, 4 * mat + 4) : model.geom_rgba.slice(4 * g, 4 * g + 4);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: new THREE.Color(rgba[0], rgba[1], rgba[2]), roughness: 0.55, metalness: 0.05, transparent: rgba[3] < 1, opacity: rgba[3], side: THREE.DoubleSide }));
+  mesh.castShadow = g !== gGoal; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; scene.add(mesh); meshes.push([g, mesh]);
+  if (g === gGoal) mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x1e7d4f })));
+  if (g === gTarget || g === gLook) {   // outcome frame: a tinted shell slightly larger than the box, with crisp edges
+    const shellGeo = new THREE.BoxGeometry(...Array.from(model.geom_size.slice(3 * g, 3 * g + 3)).map(v => 2 * v + 0.014));
+    const o = new THREE.Mesh(shellGeo, new THREE.MeshBasicMaterial({ color: 0xc0392b, transparent: true, opacity: 0.16, depthWrite: false }));
+    o.add(new THREE.LineSegments(new THREE.EdgesGeometry(shellGeo), new THREE.LineBasicMaterial({ color: 0xc0392b })));
+    o.visible = false; mesh.add(o); outlines[g] = { shell: o, box: mesh };
+  }
+  if (!objBodies.has(model.geom_bodyid[g])) {   // robot parts get two ghost copies: rejected plan (red) and believed arm (gray)
+    for (const [list, m] of [[ghostRed, redMat], [ghostGray, grayMat]]) { const gm = new THREE.Mesh(geo, m); gm.matrixAutoUpdate = false; gm.visible = false; gm.renderOrder = 2; scene.add(gm); list.push([g, gm]); }
+  }
+}
+const setM = (mesh, p, R, g) => { const i = 3 * g, k = 9 * g; mesh.matrix.set(R[k], R[k + 1], R[k + 2], p[i], R[k + 3], R[k + 4], R[k + 5], p[i + 1], R[k + 6], R[k + 7], R[k + 8], p[i + 2], 0, 0, 0, 1); };
+function syncMeshes() { for (const [g, m] of meshes) setM(m, data.geom_xpos, data.geom_xmat, g); }
+function placeGhost(list, q) {
+  for (let i = 0; i < model.nq; i++) ghostData.qpos[i] = data.qpos[i];
+  for (let i = 0; i < 7; i++) ghostData.qpos[i] = q[i];
+  mj.mj_kinematics(model, ghostData);
+  for (const [g, m] of list) { setM(m, ghostData.geom_xpos, ghostData.geom_xmat, g); m.visible = true; }
+}
+const hideGhost = list => { for (const [, m] of list) m.visible = false; };
+
+// fingertip trails: real path coloured by where each step came from; dashed path = where the robot believes its fingertip went
+const trails = new THREE.Group(); scene.add(trails);
+const TRAIL = { mem: 0x2f6fd6, plan: 0x8a8f98, unsafe: 0xc0392b };
+let lastReal = null, lastBel = null;
+function segment(a, b, color, dotted) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), len = A.distanceTo(B);
+  if (dotted) {   // believed path: a row of small beads
+    const n = Math.max(1, Math.round(len / 0.012));
+    for (let i = 1; i <= n; i++) { const d = new THREE.Mesh(beadGeo, new THREE.MeshBasicMaterial({ color })); d.position.lerpVectors(A, B, i / n); trails.add(d); }
+    return;
+  }
+  if (len > 1e-4) {   // real path: a tube, so it reads at any zoom
+    const t = new THREE.Mesh(new THREE.CylinderGeometry(0.0028, 0.0028, len, 8), new THREE.MeshBasicMaterial({ color }));
+    t.position.copy(A).add(B).multiplyScalar(0.5); t.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()); trails.add(t);
+  }
+  const dot = new THREE.Mesh(dotGeo, new THREE.MeshBasicMaterial({ color })); dot.position.copy(B); trails.add(dot);
+}
+const beadGeo = new THREE.SphereGeometry(0.0035, 8, 6), dotGeo = new THREE.SphereGeometry(0.0065, 12, 8);
+function clearTrails() { for (const o of trails.children) { if (o.geometry !== beadGeo && o.geometry !== dotGeo) o.geometry.dispose(); o.material.dispose(); } trails.clear(); lastReal = lastBel = null; $('strip').innerHTML = ''; }
+const chip = (cls, t) => { const i = document.createElement('i'); i.className = cls; i.textContent = t; $('strip').appendChild(i); };
+
+// memory marker: translucent blue box where memory says this scene's target is (rebuilt only when it changes)
+const memGeo = new THREE.BoxGeometry(0.032, 0.04, 0.06);
+const memBox = new THREE.Mesh(memGeo, new THREE.MeshBasicMaterial({ color: 0x2f6fd6, transparent: true, opacity: 0.25, depthWrite: false }));
+memBox.add(new THREE.LineSegments(new THREE.EdgesGeometry(memGeo), new THREE.LineBasicMaterial({ color: 0x2f6fd6 })));
+memBox.visible = false; scene.add(memBox);
+function drawMemory() {
+  const b = run && run.mem && run.mem.scene.get(run.key);
+  memBox.visible = !!b; if (b) memBox.position.set(b[0], b[1], 0.03);
+}
+function resize() { const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(view); resize();
+$('loading').remove();
+
+// ---------- live run ----------
+let sc = null, cfgIdx = 0, run = null, playing = false, speed = 1, acc = 0, redUntil = 0, simTime = 0, seed = 7;   // seed: camera noise and planner mistakes; 'New random draw' changes it
+const TICK = 5 * model.opt.timestep;
+function say(text, kind = '') { const e = $('event'); e.innerHTML = text; e.className = 'ov ' + kind; }
+function verdict(text, ok) { const v = $('verdict'); v.textContent = text; v.className = 'ov ' + (ok === null ? '' : ok ? 'ok' : 'bad'); }
+// outcome: red = wrong/missed (the box itself fades), green = placed
+function outline(g, color) {
+  const { shell, box } = outlines[g]; shell.visible = !!color;
+  if (color) { shell.material.color.set(color); shell.children[0].material.color.set(color); }
+  const fade = color === '#c0392b';
+  box.material.transparent = fade; box.material.opacity = fade ? 0.4 : 1; box.material.needsUpdate = true;
+}
+
+function onEvent(k, x) {
+  if (k === 'belief') {
+    outline(gTarget, null); outline(gLook, null); verdict('', null); hideGhost(ghostRed); clearTrails();
+    run.key = x.task.key;
+    const swapped = sc.cfgs[cfgIdx].swap && x.task.visit > 0;
+    $('where').innerHTML = `visit <b>${x.task.visit + 1}/3</b> · scene <b>${x.task.key + 1}/6</b>${swapped ? ' · <b style="color:#c0392b">boxes swapped since last visit</b>' : ''}`;
+    say(x.source === 'memory' ? 'target position taken <b>from memory</b> (blue box) — the robot does not look' : 'target position from the <b>camera</b>', x.source === 'memory' ? 'mem' : '');
+  } else if (k === 'drop') say('camera disagrees with memory → <b>memory dropped</b>, use the camera', 'good');
+  else if (k === 'reject') {
+    placeGhost(ghostRed, x.q); redUntil = simTime + 1.0; chip('x', '✗');
+    if (x.src === 'mem') chip('d', '⌫');
+    say(x.src === 'mem' ? 'gate rejected a step <b>from memory</b> (red ghost) → memory deleted, ask the planner' : '<b>gate rejected</b> a wrong planner step (red ghost) → generate again', 'bad');
+  }
+  else if (k === 'blocked') say('every regeneration failed the gate → <b>this step is skipped</b>', 'bad');
+  else if (k === 'reach-start') { lastReal = x.tip; lastBel = x.belief; }
+  else if (k === 'step') {
+    if (lastReal) segment(lastReal, x.tip, TRAIL[x.src], false);
+    const cfg = sc.cfgs[cfgIdx];
+    if ((cfg.bias || cfg.sensor) && lastBel) segment(lastBel, x.belief, 0x3b4a63, true);
+    lastReal = x.tip; lastBel = x.belief;
+    chip(x.src === 'mem' ? 'm' : x.src === 'unsafe' ? 'u' : 'p', x.src === 'mem' ? 'M' : x.src === 'unsafe' ? '!' : 'P');
+    say(x.src === 'mem' ? 'step <b>replayed from memory</b> — no planner call' : x.src === 'unsafe' ? 'an <b>unsafe step</b> ran: the real fingertip moved away' : 'planner proposed the step — <b>1 call</b>', x.src === 'mem' ? 'mem' : x.src === 'unsafe' ? 'bad' : '');
+  }
+  else if (k === 'not-reached') say('never reached the grasp point in 12 steps', 'bad');
+  else if (k === 'sensor-fix') say('fingertip sensor: the hand is not where the joints say → <b>correcting</b>', 'good');
+  else if (k === 'touch') {
+    const gap = Math.hypot(x.tip[0] - x.belief[0], x.tip[1] - x.belief[1], x.tip[2] - x.belief[2]);
+    if (gap > 0.01) {   // the joints say the hand is in one place, it is in another: draw the gap
+      segment(x.belief, x.tip, 0xc0392b, false);
+      say(`the joints say the hand is above the box — it is really <b>${(100 * gap).toFixed(1)} cm</b> away (red line) · fingers closed at <b>${(1000 * x.width).toFixed(0)} mm</b>`, 'bad');
+    } else say(`touch: fingers closed at <b>${(1000 * x.width).toFixed(0)} mm</b> (target is 32 mm)`, Math.abs(x.width - 0.032) > 0.006 ? 'bad' : 'good');
+  }
+  else if (k === 'caught') { outline(gLook, '#c0392b'); say(`touch check: ${(1000 * x.width).toFixed(0)} mm ≠ 32 mm → <b>let go, forget, look again</b>`, 'good'); }
+  else if (k === 'result') {
+    if (x.result === 'success') { outline(gTarget, '#1e7d4f'); verdict('✓ target placed', true); }
+    else if (x.result === 'wrong') { outline(gLook, '#c0392b'); verdict('✗ placed the look-alike', false); say('the robot believes it succeeded — it carried the <b>look-alike</b>', 'bad'); }
+    else { outline(gTarget, '#c0392b'); verdict('✗ missed the target', false); say('the hand closed where the box was not — <b>missed</b>', 'bad'); }
+  }
+  stats();
+}
+function stats() {
+  const s = run && run.st;
+  $('kVisit').textContent = run ? `${Math.min(run.i + 1, run.tasks.length)}/${run.tasks.length}` : '–';
+  $('kOk').textContent = s ? s.success : 0; $('kBad').textContent = s ? s.wrong + s.miss : 0;
+  $('kCalls').textContent = s ? s.calls : 0; $('kMem').textContent = s ? `${s.memSteps}/${s.steps}` : '0/0';
+  $('kStop').textContent = s ? `${s.rejected} · ${s.unsafe}` : '0 · 0';
+}
+function newRun() {
+  const cfg = sc.cfgs[cfgIdx];
+  hideGhost(ghostRed); hideGhost(ghostGray); outline(gTarget, null); outline(gLook, null); verdict('', null); clearTrails();
+  run = cfg.basic ? { basic: true, tasks: [0], i: 0, st: E.newStats(), gen: null }
+                  : { tasks: E.tasks(cfg.swap), i: 0, st: E.newStats(), mem: { scene: new Map(), act: new Map() }, gen: null, key: -1 };
+  C.reset();
+  say(cfg.basic ? 'press Play: approach, grasp, lift, carry, place' : 'press Play to run 18 visits (6 scenes × 3)');
+  $('where').textContent = sc.labels[cfgIdx]; stats();
+}
+function* basicEpisode() {
+  C.reset(); const obj = C.bodyPos(C.bTarget);
+  for (const ph of pickPlacePlan(obj, goal)) {
+    data.ctrl[7] = ph.grip; say(`<b>${ph.name}</b>`);
+    const q = ph.pos ? C.solveIK(ph.pos).q : null;
+    for (let t = 0, settle = 0; t < 1500; t++) {
+      const done = q ? C.moveToward(q) : true;
+      for (let s = 0; s < 5; s++) { C.gravComp(); mj.mj_step(model, data); }
+      yield;
+      if (ph.hold) { if (t >= ph.hold / 5) break; continue; }
+      if (done && Math.hypot(...C.sitePos().map((v, i) => v - ph.pos[i])) < ph.tol && ++settle > 3) break;
+    }
+  }
+  const p = C.bodyPos(C.bTarget), d = Math.hypot(p[0] - goal[0], p[1] - goal[1]);
+  if (d < 0.06) { outline(gTarget, '#1e7d4f'); verdict(`✓ placed (${(100 * d).toFixed(1)} cm from centre)`, true); run.st.success++; } else { verdict('✗ not placed', false); run.st.miss++; }
+  run.st.n++;
+}
+function stepRun() {
+  if (!run.gen) {
+    if (run.i >= run.tasks.length) { playing = false; $('play').textContent = '▶ Play'; if (!run.basic) say(`done: ${run.st.success}/${run.st.n} placed · ${run.st.calls} planner calls · ${run.st.memSteps}/${run.st.steps} steps from memory`, run.st.success === run.st.n ? 'good' : 'bad'); return; }
+    run.gen = run.basic ? basicEpisode() : E.episode(run.tasks[run.i], sc.cfgs[cfgIdx], run.mem, run.st, seed, onEvent);
+  }
+  if (run.gen.next().done) { run.gen = null; run.i++; stats(); }
+  simTime += TICK;
+}
+
+// ---------- background comparison on the second MjData, a slice of work per frame ----------
+let cmp = null;
+function startCompare() { cmp = { rows: sc.cfgs.map(() => null), ci: 0, ti: 0, st: null, mem: null, gen: null, tasks: null, sc, seed }; $('compare').disabled = true; renderCmp(); }
+function compareSlice(budgetMs) {
+  const t0 = performance.now();
+  while (cmp && performance.now() - t0 < budgetMs) {
+    const cfg = cmp.sc.cfgs[cmp.ci];
+    if (!cmp.gen) {
+      if (!cmp.st) { cmp.st = EB.newStats(); cmp.mem = { scene: new Map(), act: new Map() }; cmp.tasks = EB.tasks(cfg.swap); cmp.ti = 0; }
+      if (cmp.ti >= cmp.tasks.length) {
+        cmp.rows[cmp.ci] = cmp.st; cmp.st = null; cmp.ci++;
+        if (cmp.ci >= cmp.sc.cfgs.length) { cmp.sc._rows = cmp.rows; cmp = null; $('compare').disabled = false; }
+        renderCmp(); continue;
+      }
+      cmp.gen = EB.episode(cmp.tasks[cmp.ti], cfg, cmp.mem, cmp.st, cmp.seed);
+    }
+    for (let k = 0; k < 200; k++) if (cmp.gen.next().done) { cmp.gen = null; cmp.ti++; break; }
+  }
+}
+function renderCmp() {
+  if (!sc || sc.id === 0) { $('cmp').innerHTML = ''; $('cmpNote').textContent = 'Pick one of scenarios 1–7 to compare its settings.'; return; }
+  const rows = (cmp && cmp.sc === sc) ? cmp.rows : (sc._rows || sc.cfgs.map(() => null));
+  const done = rows.filter(Boolean), best = done.length ? Math.max(...done.map(r => r.success)) : -1;
+  $('cmp').innerHTML = '<tr><th>setting</th><th>target placed</th><th>look-alike placed</th><th>missed</th><th>planner calls</th><th>steps (from memory)</th><th>gate rejections</th><th>unsafe steps</th><th>memory deleted</th><th>touch catches</th><th>memory dropped</th></tr>' +
+    sc.cfgs.map((c, i) => { const r = rows[i], busy = cmp && cmp.sc === sc && cmp.ci === i;
+      return `<tr><td>${sc.labels[i]}</td>` + (r ? `<td class="${r.success === best ? 'g' : ''}">${r.success}/${r.n}</td><td class="${r.wrong ? 'r' : ''}">${r.wrong}</td><td class="${r.miss ? 'r' : ''}">${r.miss}</td><td>${r.calls}</td><td>${r.steps} (${r.memSteps})</td><td>${r.rejected}</td><td class="${r.unsafe ? 'r' : ''}">${r.unsafe}</td><td>${r.memDeleted}</td><td>${r.caught}</td><td>${r.dropped}</td>`
+        : `<td colspan="10" style="text-align:left;color:#6b6b70">${busy ? 'running in the background…' : '—'}</td>`) + '</tr>'; }).join('');
+  $('cmpNote').textContent = `Each setting runs the same 18 visits with the same camera noise and planner mistakes (random draw #${seed}). It runs in the background while you watch; press “New random draw” to see how much the numbers move.`;
+}
+
+// ---------- controls ----------
+function selectScenario(id) {
+  sc = ALL.find(s => s.id === id); cfgIdx = sc.cfgs.length - 1; playing = false;
+  for (const b of $('scenes').children) b.classList.toggle('on', +b.dataset.id === id);
+  $('cfgSeg').innerHTML = sc.labels.map((l, i) => `<button data-i="${i}" class="${i === cfgIdx ? 'on' : ''}">${l}</button>`).join('');
+  for (const b of $('cfgSeg').children) b.onclick = () => { cfgIdx = +b.dataset.i; for (const o of $('cfgSeg').children) o.classList.toggle('on', o === b); playing = false; $('play').textContent = '▶ Play'; newRun(); };
+  $('play').disabled = false; $('restart').disabled = false; $('reseed').disabled = sc.id === 0; $('compare').disabled = sc.id === 0 || !!cmp; $('play').textContent = '▶ Play';
+  newRun(); renderCmp();
+}
+for (const b of $('scenes').children) b.onclick = () => selectScenario(+b.dataset.id);
+$('play').onclick = () => { if (run.i >= run.tasks.length) newRun(); playing = !playing; $('play').textContent = playing ? '❚❚ Pause' : '▶ Play'; };
+$('restart').onclick = () => { playing = false; $('play').textContent = '▶ Play'; newRun(); };
+$('compare').onclick = startCompare;
+$('reseed').onclick = () => { seed = 1 + Math.floor(Math.random() * 99999); for (const x of ALL) delete x._rows; playing = false; $('play').textContent = '▶ Play'; newRun(); renderCmp(); };
+for (const b of $('speed').children) b.onclick = () => { speed = +b.dataset.v; for (const o of $('speed').children) o.classList.toggle('on', o === b); };
+selectScenario(0);
+
+// ---------- loop ----------
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (playing && run) { acc += dt * speed; let n = 0; while (acc >= TICK && playing && n++ < 400) { stepRun(); acc -= TICK; } }
+  else { acc = 0; C.gravComp(); mj.mj_step(model, data); }
+  if (cmp) compareSlice(6);
+  if (simTime > redUntil) hideGhost(ghostRed);
+  const cfg = sc && sc.cfgs[cfgIdx];
+  if (cfg && cfg.bias) { const q = Array.from(data.qpos.slice(0, 7)); q[1] += 0.15; placeGhost(ghostGray, q); } else hideGhost(ghostGray);
+  drawMemory();
+  syncMeshes(); orbit.update(); renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -15,7 +15,6 @@
   <p class="lead">A vision-language model proposes an end-effector target; forward kinematics determines reachability before execution. The pipeline functioned as a filter. The reported result concerns what happened when the VLM was given additional physical information in text.</p>
   <div class="kpis">
     <div class="kpi"><b>165.7 → 276.9 mm</b><span>position error when joint angles were given as text</span></div>
-    <div class="kpi"><b>F1 = 0.995</b><span>the verification cascade itself (N = 91)</span></div>
   </div>
   <figure><img src="../assets/ive_verification_demo.gif" alt="Verification loop"><figcaption>Verification loop from the study: render / IK+FK / collision / semantic + workspace / image–text checks with a cube-error readout, locating the step at which the plan fails.</figcaption></figure>
   <h2>Pipeline <span class="ko">파이프라인 (발표 슬라이드)</span></h2>
@@ -30,7 +29,7 @@
 <tr><td style="padding:6px 10px;vertical-align:top">Skeleton reference</td><td style="padding:6px 10px;vertical-align:top">show the target pose as a skeleton image</td><td style="padding:6px 10px;vertical-align:top">0/5 (215.8 vs 226.6 mm)</td><td style="padding:6px 10px;vertical-align:top">pixel editing ignores rigid-body constraints</td></tr>
 <tr><td style="padding:6px 10px;vertical-align:top">Oracle image</td><td style="padding:6px 10px;vertical-align:top">give a perfect target image, extract the motion</td><td style="padding:6px 10px;vertical-align:top">position 5/5 (20.1 mm); absolute angle 1/5; link length off by up to 75%</td><td style="padding:6px 10px;vertical-align:top">even a perfect picture does not yield full kinematics</td></tr>
 <tr><td style="padding:6px 10px;vertical-align:top">DOF scaling</td><td style="padding:6px 10px;vertical-align:top">1 → 5 links, with and without the verifier cascade</td><td style="padding:6px 10px;vertical-align:top">2-DOF 0% → 100% with verification; plateau at +20% from 4 links</td><td style="padding:6px 10px;vertical-align:top">the verifier rescues, but cannot supply spatial grounding</td></tr>
-<tr><td style="padding:6px 10px;vertical-align:top">Verifier itself</td><td style="padding:6px 10px;vertical-align:top">cascade of render, IK/FK, collision, workspace and image–text checks</td><td style="padding:6px 10px;vertical-align:top">F1 = 0.995 (N = 91); 0 false passes in 50 checks on a 3D shelf task</td><td style="padding:6px 10px;vertical-align:top">the check was reliable; the planner was the bottleneck</td></tr>
+<tr><td style="padding:6px 10px;vertical-align:top">Verifier itself</td><td style="padding:6px 10px;vertical-align:top">cascade of render, IK/FK, collision, workspace and image–text checks</td><td style="padding:6px 10px;vertical-align:top">0 false passes in 50 checks on a 3D shelf task</td><td style="padding:6px 10px;vertical-align:top">the check was reliable; the planner was the bottleneck</td></tr>
 </table>
   <h2>Findings <span class="ko">발견</span></h2>
   <p>Image editing manipulates pixels, not rigid bodies: link lengths and joint connectivity are not preserved, rotations fail more often than translations, and without a grid there is no pixel-to-metre scale. Language does not carry the missing quantities either — giving joint angles as text made the result worse.</p>

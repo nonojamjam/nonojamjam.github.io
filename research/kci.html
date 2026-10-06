@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI agent framework for an ultrasonic imaging algorithm · Juhyeok Park</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<main class="wrap page">
+  <p class="crumb"><a href="../index.html">← Juhyeok Park</a></p>
+  <h1>AI agent framework for autonomous improvement of an ultrasonic imaging algorithm</h1>
+  <p class="meta">D. Choi, <b>J. Park</b>, H. Seo · <i>Journal of the Korean Society for Nondestructive Testing</i> 46(4):268–277, 2026 (KCI) · co-author · benchmark task design and code documentation</p>
+  <p class="ko">LLM 에이전트가 초음파 영상 알고리즘(SAFT) 코드를 스스로 고치고, 평가기가 고친 것을 받아들이거나 되돌리는 루프를 만든 연구입니다. 저는 벤치마크 과제 설계와 코드 문서화를 맡았습니다.</p>
+  <p class="lead">An LLM edits the code of an ultrasonic imaging algorithm, the code runs, and an evaluator keeps or rejects each edit. The question was how to set up that loop so the search keeps improving instead of drifting.</p>
+  <div class="duo">
+    <figure style="margin:0"><img src="../assets/kci/saft_bscan.png" alt="Raw B-scan and SAFT-processed image of an internal defect"><figcaption>(a) raw B-scan, (b) SAFT-processed image of an internal defect: the imaging algorithm the agent improves.</figcaption></figure>
+    <figure style="margin:0"><img src="../assets/kci/agent_loop.png" alt="Agent loop: LLM edits code, code runs, evaluator accepts or rejects"><figcaption>The loop: LLM edits code, an evaluator keeps or rejects each edit.</figcaption></figure>
+  </div>
+
+  <h2>What we found <span class="ko">결과</span></h2>
+  <ul>
+    <li>Per-item scores beat a single total score.</li>
+    <li>One edit per iteration beat several.</li>
+    <li>Without edit history the search collapsed: full history won on 4 of 6 conditions (ANOVA p &lt; 0.001).</li>
+    <li>The narrow defect below the wavelength did not improve under any setting, a diffraction limit.</li>
+  </ul>
+
+  <h2>What I took from it <span class="ko">배운 것</span></h2>
+  <div class="box">The loop worked when a verifier and a memory worked together: the evaluator decides what to keep, and the edit history tells the model what has already been tried.</div>
+  <p><a href="https://doi.org/10.7779/JKSNT.2026.46.4.268">Paper (doi)</a></p>
+</main>
+<footer class="wrap"><a href="../index.html">← back</a></footer>
+</body>
+</html>
