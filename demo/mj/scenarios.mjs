@@ -91,15 +91,17 @@ export function makeEngine(mj, model, data, C, goal) {
         const qB = readJoints(bias), tipB = believedTip(qB);
         if (d3(tipB, pre) < SUCC) { reached = true; break; }
         const key = situationKey(tipB, pre, qB);
-        let dq = null, src = 'plan';
-        if (cfg.mem && mem.act.has(key)) { dq = mem.act.get(key).slice(); src = 'mem'; st.replays++; }
-        else dq = planStep(qB, tipB, pre, cfg, st, rPlan);
+        // 타임라인용: 플래너 호출마다 번호(call)를 붙이고, 기억에는 그 걸음을 낸 호출 번호(from)를 함께 저장한다
+        const ask = () => { const d = planStep(qB, tipB, pre, cfg, st, rPlan); ev('call', { id: st.calls }); return d; };
+        let dq = null, src = 'plan', call = 0, from = 0;
+        if (cfg.mem && mem.act.has(key)) { const m = mem.act.get(key); dq = m.dq.slice(); from = m.from; src = 'mem'; st.replays++; }
+        else { dq = ask(); call = st.calls; }
         if (cfg.gate) {
           let tries = 0;
           while (!gateOk(qB, tipB, dq, pre) && tries++ < MAX_REPLAN) {
-            st.rejected++; ev('reject', { q: qB.map((x, i) => x + dq[i] - (i === BIAS_JOINT ? bias : 0)), src });
-            if (src === 'mem') { mem.act.delete(key); st.memDeleted++; }
-            dq = planStep(qB, tipB, pre, cfg, st, rPlan); src = 'plan';
+            st.rejected++; ev('reject', { q: qB.map((x, i) => x + dq[i] - (i === BIAS_JOINT ? bias : 0)), src, call, from });
+            if (src === 'mem') { mem.act.delete(key); st.memDeleted++; ev('forget', { from }); }
+            dq = ask(); call = st.calls; from = 0; src = 'plan';
           }
           if (!gateOk(qB, tipB, dq, pre)) { st.blocked++; ev('blocked'); continue; }   // 끝까지 막히면 움직이지 않고 다음 걸음에서 다시 묻는다
         }
@@ -111,10 +113,10 @@ export function makeEngine(mj, model, data, C, goal) {
         st.steps++; if (src === 'mem') st.memSteps++;
         const progressed = d3(tipB2, pre) < d3(tipB, pre) - PROG;
         if (cfg.mem) {
-          if (src === 'plan' && progressed) mem.act.set(key, dq);
-          if (src === 'mem' && !progressed) { mem.act.delete(key); st.memDeleted++; }
+          if (src === 'plan' && progressed) { mem.act.set(key, { dq, from: call }); ev('store', { call }); }
+          if (src === 'mem' && !progressed) { mem.act.delete(key); st.memDeleted++; ev('forget', { from }); }
         }
-        ev('step', { src: unsafe ? 'unsafe' : src, tip: tipNow(), belief: tipB2, key });
+        ev('step', { src: unsafe ? 'unsafe' : src, mem: src === 'mem', tip: tipNow(), belief: tipB2, key, call, from });
       }
       if (!reached) { const qB = readJoints(bias); reached = d3(believedTip(qB), pre) < SUCC; }
       if (!reached) { st.notReached++; ev('not-reached'); break; }

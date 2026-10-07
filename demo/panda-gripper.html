@@ -21,8 +21,24 @@
   h2{font-size:1.1rem;margin:28px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line);font-weight:650}
   h2 span{color:var(--mut);font-weight:400;font-size:.9rem;margin-left:8px}
 
-  .scenes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 12px}
-  @media (max-width:820px){.scenes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .thesis{font-size:1.02rem;margin:10px 0 4px;max-width:900px}
+  .thesis b{color:var(--accent)}
+  .start{display:flex;gap:8px;align-items:center;margin:10px 0 8px;font-size:.84rem;color:var(--mut)}
+  .start .scene{width:auto;padding:6px 11px}
+  .acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 12px}
+  @media (max-width:820px){.acts{grid-template-columns:1fr}}
+  .act{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 11px;display:flex;flex-direction:column;gap:6px}
+  .act h3{margin:0;font-size:.95rem;font-weight:650}
+  .act h3 i{font-style:normal;color:var(--accent);margin-right:6px}
+  .act .q{margin:0;font-size:.84rem;color:var(--mut)}
+  .act .ans{margin:2px 0 0;font-size:.82rem;line-height:1.45;border-top:1px dashed var(--line);padding-top:6px;color:var(--mut)}
+  .act .ans b{color:var(--txt)}
+  .act .ans .g{color:var(--green);font-weight:650} .act .ans .r{color:var(--red);font-weight:650}
+  .scenes{display:flex;flex-direction:column;gap:6px}
+  #tlWrap{margin:10px 0 0;border:1px solid var(--line);border-radius:10px;padding:6px 8px 4px;background:#fff}
+  #tlWrap .tlh{display:flex;justify-content:space-between;font-size:.76rem;color:var(--mut);gap:10px;flex-wrap:wrap}
+  #tl{display:block;width:100%;height:118px}
+  .tlleg{display:flex;flex-wrap:wrap;gap:12px;font-size:.74rem;color:var(--mut);margin:2px 0 2px}
   .scene{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 11px;text-align:left;color:var(--txt);font-weight:400;cursor:pointer}
   .scene b{display:block;color:var(--accent);font-size:.86rem;margin-bottom:2px}
   .scene span{color:var(--mut);font-size:.78rem;line-height:1.35;display:block}
@@ -72,6 +88,7 @@
   #cmp th,#cmp td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}
   #cmp th:first-child,#cmp td:first-child{text-align:left}
   #cmp th{font-weight:600;color:var(--mut);font-size:.8rem}
+  #cmp tr.mine td{background:#f5f9fe} #cmp td.swc{color:var(--mut);font-size:.8rem;text-align:left}
   #cmp td.g{color:var(--green);font-weight:650} #cmp td.r{color:var(--red);font-weight:650}
   #cmpNote{color:var(--mut);font-size:.84rem;margin:6px 0 0}
   .note{color:var(--mut);font-size:.84rem;margin-top:14px;max-width:880px}
@@ -85,9 +102,11 @@
   <p class="crumb"><a href="../research/poc.html">← Verify, remember, and decide how much to compute</a></p>
   <h1>Live demo · Panda gripper, real contact physics</h1>
   <p class="meta">Juhyeok Park · 2026.10 · MuJoCo physics running in your browser · scripted stand-in planner, not an LLM</p>
-  <p class="ko">시나리오를 고르면 Panda가 걸음마다 기억을 꺼낼지 플래너에게 물을지 정하고, 게이트가 각 걸음을 검사한 뒤 실제 접촉 물리로 집어 옮깁니다. 손끝 궤적은 기억(파랑)·플래너(회색)·위험한 걸음(빨강)으로, 거절된 걸음은 빨간 유령으로, 로봇이 믿는 경로는 점선으로 그립니다.</p>
+  <p class="thesis">Asking an LLM for every step is slow and costly, so the robot <b>replays steps it has done before</b>. Memory can be wrong, so <b>every step is checked before it runs</b>, and when the check itself can be fooled, it is backed by <b>an independent sensor</b>.</p>
+  <p class="ko">LLM에게 매 걸음 묻는 것은 느리고 비싸서, 해 본 걸음은 기억으로 처리합니다. 기억은 틀릴 수 있으니 걸음마다 실행 전에 검사하고, 검사마저 속을 때는 독립된 센서로 확인합니다. 아래 세 질문을 차례로 눌러 보세요. 설정 두 개를 같은 18번 방문으로 돌린 결과가 각 질문의 답으로 채워집니다.</p>
 
-  <div class="scenes" id="scenes"></div>
+  <div class="start">Start here <span class="scenes" id="scene0"></span> no memory, no checks: just the physics</div>
+  <div class="acts" id="acts"></div>
 
   <div id="view">
     <div id="loading">loading MuJoCo and the Panda model (≈6 MB)…</div>
@@ -96,6 +115,18 @@
     <div class="ov" id="verdict"></div>
     <div class="ov" id="strip"></div>
     <div class="hint">drag to orbit · scroll to zoom</div>
+  </div>
+
+  <div id="tlWrap">
+    <div class="tlh"><span><b>When the planner was called</b> · 플래너(LLM 자리)를 부른 순간과 기억에서 꺼낸 걸음</span><span id="tlCount"></span></div>
+    <canvas id="tl"></canvas>
+    <div class="tlleg">
+      <span><span class="sw" style="background:#8a8f98"></span>planner call</span>
+      <span><span class="sw" style="background:#2f6fd6"></span>step from memory, linked to the call that first produced it</span>
+      <span><span class="sw out" style="border-color:#c0392b"></span>rejected by the gate</span>
+      <span><span class="sw" style="background:#c0392b"></span>unsafe step ran</span>
+      <span><b style="color:#c0392b">╳</b> memory deleted</span>
+    </div>
   </div>
 
   <div class="bar">
@@ -131,9 +162,9 @@
     <span><span class="sw out" style="border-color:#1e7d4f"></span>target placed</span>
   </div>
 
-  <h2>Comparison on the same 18 visits <span>같은 18번 방문에서 설정 비교</span></h2>
-  <button id="compare" class="ghost" disabled>Run comparison</button>
-  <table id="cmp"></table>
+  <h2>All ten conditions on the same 18 visits <span>조건 10개, 같은 18번 방문</span></h2>
+  <button id="compare" class="ghost" disabled>Run again</button>
+  <div style="overflow-x:auto"><table id="cmp"></table></div>
   <p id="cmpNote"></p>
 
   <h2>What is real here <span>무엇이 실제인가</span></h2>
@@ -155,12 +186,57 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import loadMujoco from 'https://cdn.jsdelivr.net/npm/@mujoco/mujoco@3.15.0/mujoco.js';
 import { makeController, pickPlacePlan } from './mj/pickplace_ctrl.mjs';
-import { makeEngine, SCENARIOS } from './mj/scenarios.mjs';
+import { makeEngine } from './mj/scenarios.mjs';
 
 const $ = id => document.getElementById(id);
 const BASIC = { id: 0, title: 'Pick and place', sub: 'one clean grasp, carry and place', cfgs: [{ basic: true }], labels: ['scripted pick and place'] };
-const ALL = [BASIC, ...SCENARIOS];
-$('scenes').innerHTML = ALL.map(s => `<button class="scene" data-id="${s.id}"><b>${s.id ? s.id + ' · ' : ''}${s.title}</b><span>${s.sub}</span></button>`).join('');
+// Ten distinct conditions, each defined once. Every question compares conditions that differ in one switch only.
+// sw = the switches shown in the table: memory, gate, planner mistake rate, what goes wrong, extra check
+const CONDS = [
+  { k: 'A', cfg: { gate: true, pMistake: 0.3 },                              sw: ['off', 'on', '30 %', '—', '—'] },
+  { k: 'B', cfg: { gate: true, mem: true, pMistake: 0.3 },                   sw: ['on', 'on', '30 %', '—', '—'] },
+  { k: 'C', cfg: { mem: true, pMistake: 0.5 },                               sw: ['on', 'off', '50 %', '—', '—'] },
+  { k: 'D', cfg: { gate: true, mem: true, pMistake: 0.5 },                   sw: ['on', 'on', '50 %', '—', '—'] },
+  { k: 'E', cfg: { gate: true, bias: true, pMistake: 0.3 },                  sw: ['off', 'on', '30 %', 'shoulder misread', '—'] },
+  { k: 'F', cfg: { gate: true, bias: true, sensor: true, pMistake: 0.3 },    sw: ['off', 'on', '30 %', 'shoulder misread', 'fingertip sensor'] },
+  { k: 'J', cfg: { pre: true, bias: true, pMistake: 0.3 },                   sw: ['off', 'before planning', '30 %', 'shoulder misread', '—'] },
+  { k: 'G', cfg: { gate: true, mem: true, swap: true, pMistake: 0.3 },       sw: ['on', 'on', '30 %', 'boxes swapped', '—'] },
+  { k: 'H', cfg: { gate: true, mem: true, swap: true, touch: true, pMistake: 0.3 },    sw: ['on', 'on', '30 %', 'boxes swapped', 'touch'] },
+  { k: 'I', cfg: { gate: true, mem: true, swap: true, camCheck: true, pMistake: 0.3 }, sw: ['on', 'on', '30 %', 'boxes swapped', 'camera'] },
+];
+const CI = Object.fromEntries(CONDS.map((c, i) => [c.k, i]));
+const NAME = { A: 'planner every step', B: 'memory', C: 'memory, no gate', D: 'memory + gate', E: 'misread, gate only', F: 'misread + fingertip sensor', J: 'misread, check before planning', G: 'swapped, memory only', H: 'swapped + touch check', I: 'swapped + camera check' };
+const mk = (id, title, sub, ks) => ({ id, title, sub, ks, cfgs: ks.map(k => CONDS[CI[k]].cfg), labels: ks.map(k => `${k} · ${NAME[k]}`) });
+const QS = [
+  mk(1, 'Memory on vs off', 'switch: memory', ['A', 'B']),
+  mk(2, 'Gate on vs off', 'switch: gate (planner mistakes raised to 50 %)', ['C', 'D']),
+  mk(3, 'Joint reading is wrong', 'switch: fingertip sensor, or check before planning', ['J', 'E', 'F']),
+  mk(4, 'Boxes were swapped', 'switch: touch or camera check', ['G', 'H', 'I']),
+];
+const ALL = [BASIC, ...QS];
+let ROWS = CONDS.map(() => null);   // comparison results for this random draw, one row per condition
+const R = k => ROWS[CI[k]];
+const ANSWER = {
+  1: () => `Yes. <span class="g">${R('A').calls} → ${R('B').calls}</span> planner calls on the same visits; <b>${R('B').memSteps}</b> of ${R('B').steps} steps came from memory, still <b>${R('B').success}/${R('B').n}</b> placed.`,
+  2: () => `The gate. Without it <span class="r">${R('C').unsafe}</span> unsafe steps ran and ${R('C').success}/${R('C').n} were placed; with it <span class="g">${R('D').unsafe}</span> unsafe, ${R('D').success}/${R('D').n} placed.`,
+  3: () => `A wrong shoulder reading fools the gate, which checks that same reading: placed <span class="r">${R('A').success}/${R('A').n} → ${R('E').success}/${R('E').n}</span>. Checking before planning instead: ${R('J').success}/${R('J').n}. A fingertip sensor that does not use the reading: <span class="g">${R('F').success}/${R('F').n}</span>.`,
+  4: () => `Memory points at the look-alike: delivered <span class="r">${R('G').wrong}</span> times. Touch check: <span class="g">${R('H').wrong}</span> (caught ${R('H').caught}); camera check: <span class="g">${R('I').wrong}</span> (memory dropped ${R('I').dropped}).`,
+};
+const ACTS = [
+  { n: 1, h: 'Memory is fast', q: 'Can the robot skip the planner for steps it has done before?', ids: [1] },
+  { n: 2, h: 'Steps can be wrong', q: 'Memory and planner both make mistakes. What stops a bad step before it runs?', ids: [2] },
+  { n: 3, h: 'The check can be fooled', q: 'What if the state the gate checks is wrong, or the world has changed since memory was made?', ids: [3, 4] },
+];
+const btn = s => `<button class="scene" data-id="${s.id}"><b>${s.title}</b><span>${s.sub}</span></button>`;
+$('scene0').innerHTML = btn(BASIC);
+$('acts').innerHTML = ACTS.map(a => `<div class="act"><h3><i>${a.n}</i>${a.h}</h3><p class="q">${a.q}</p><div class="scenes">${a.ids.map(id => btn(ALL.find(s => s.id === id))).join('')}</div><p class="ans" id="ans${a.n}">Answer appears after the comparison runs.</p></div>`).join('');
+const sceneBtns = () => document.querySelectorAll('button.scene');
+function renderAnswers() {
+  for (const a of ACTS) {
+    const lines = a.ids.map(id => ALL.find(x => x.id === id).ks.concat(id === 3 ? ['A'] : []).every(k => R(k)) ? ANSWER[id]() : null).filter(Boolean);
+    $('ans' + a.n).innerHTML = lines.length ? lines.join('<br>') : 'Answer appears after the comparison runs.';
+  }
+}
 
 // ---------- MuJoCo: one MjData for the live view, one for the background comparison, one for ghosts ----------
 const mj = await loadMujoco();
@@ -284,7 +360,78 @@ function outline(g, color) {
   box.material.transparent = fade; box.material.opacity = fade ? 0.4 : 1; box.material.needsUpdate = true;
 }
 
+// ---------- timeline: planner calls (top lane), steps that ran (bottom lane), memory steps linked back to their originating call ----------
+const tlc = $('tl'), tctx = tlc.getContext('2d');
+let TL = null;   // { items, calls: Map(id → item), slot, lastCall, nCalls, nMem }
+function tlReset() { TL = { items: [], calls: new Map(), slot: 0, lastCall: null, nCalls: 0, nMem: 0, pendingCut: null }; tlDraw(); }
+function tlEvent(k, x) {
+  if (!TL) return;
+  const add = it => { it.x = TL.slot++; TL.items.push(it); return it; };
+  if (k === 'belief') { if (TL.items.length) TL.slot += 1; add({ t: 'visit', n: x.task.visit * 6 + x.task.key + 1 }); }
+  else if (k === 'call') { const c = add({ t: 'call', id: x.id }); TL.calls.set(x.id, c); TL.lastCall = c; TL.nCalls++; }
+  else if (k === 'reject') {
+    if (x.src === 'mem') add({ t: 'mem', from: x.from, rej: true });
+    else if (TL.calls.has(x.call)) TL.calls.get(x.call).rej = true;
+  }
+  else if (k === 'blocked') { if (TL.lastCall) TL.lastCall.rej = true; }
+  else if (k === 'forget') {   // after a gate rejection the rejected memory item is the last one; after a replay that made no progress, 'forget' arrives before its 'step'
+    const c = TL.calls.get(x.from); if (c) c.cut = true;
+    const last = TL.items[TL.items.length - 1];
+    if (last && last.t === 'mem' && last.rej && last.from === x.from) last.cut = true; else TL.pendingCut = x.from;
+  }
+  else if (k === 'store') { const c = TL.calls.get(x.call); if (c) c.stored = true; }
+  else if (k === 'step') {
+    if (x.mem) { const m = add({ t: 'mem', from: x.from, unsafe: x.src === 'unsafe' }); TL.nMem++; if (TL.pendingCut === x.from) { m.cut = true; TL.pendingCut = null; } }
+    else { const c = TL.calls.get(x.call); if (c) { c.ran = true; c.unsafe = x.src === 'unsafe'; } }
+  }
+  else return;
+  tlDraw();
+}
+function tlDraw() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1), W = tlc.clientWidth, H = tlc.clientHeight;
+  if (tlc.width !== W * dpr || tlc.height !== H * dpr) { tlc.width = W * dpr; tlc.height = H * dpr; }
+  const g = tctx; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const L = 74, R = W - 6, yC = 30, yS = 86, hb = 14;
+  g.font = '11px -apple-system,Segoe UI,sans-serif'; g.fillStyle = '#6b6b70'; g.textBaseline = 'middle';
+  g.fillText('planner', 4, yC); g.fillText('steps run', 4, yS);
+  g.strokeStyle = '#e3e3e6'; g.lineWidth = 1; g.beginPath(); g.moveTo(L, yC); g.lineTo(R, yC); g.moveTo(L, yS); g.lineTo(R, yS); g.stroke();
+  if (!TL || !TL.items.length) { g.fillText('press Play — every planner call and every step from memory appears here', L + 6, (yC + yS) / 2); $('tlCount').textContent = ''; return; }
+  const sp = Math.min(11, (R - L) / Math.max(40, TL.slot)), X = i => L + (i + 0.5) * sp, w = Math.max(2, sp * 0.72);
+  // visit separators
+  g.fillStyle = '#6b6b70'; g.textAlign = 'left';
+  for (const it of TL.items) if (it.t === 'visit') {
+    g.strokeStyle = '#d5d9df'; g.beginPath(); g.moveTo(X(it.x), 8); g.lineTo(X(it.x), H - 6); g.stroke();
+    if (sp * 6 > 18 || it.n % 6 === 1) g.fillText(String(it.n), X(it.x) + 2, 9);
+  }
+  // arcs: memory step → the call that first produced that step
+  for (const it of TL.items) if (it.t === 'mem') {
+    const c = TL.calls.get(it.from); if (!c) continue;
+    const x0 = X(it.x), x1 = X(c.x), top = yC + hb / 2 + 2, bot = yS - hb / 2 - 2;
+    g.strokeStyle = it.rej ? 'rgba(192,57,43,.55)' : 'rgba(47,111,214,.32)'; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(x0, bot); g.bezierCurveTo(x0, (top + bot) / 2, x1, (top + bot) / 2, x1, top); g.stroke();
+  }
+  const box = (x, y, fill, rej, alpha = 1) => {
+    g.globalAlpha = rej ? 0.35 : alpha; g.fillStyle = fill; g.fillRect(x - w / 2, y - hb / 2, w, hb); g.globalAlpha = 1;
+    if (rej) { g.strokeStyle = '#c0392b'; g.lineWidth = 1.4; g.strokeRect(x - w / 2, y - hb / 2, w, hb); }
+  };
+  const cut = (x, y) => { g.strokeStyle = '#c0392b'; g.lineWidth = 1.8; const r = Math.max(3, w * 0.6); g.beginPath(); g.moveTo(x - r, y - r); g.lineTo(x + r, y + r); g.moveTo(x + r, y - r); g.lineTo(x - r, y + r); g.stroke(); };
+  for (const it of TL.items) {
+    if (it.t === 'call') {
+      box(X(it.x), yC, '#8a8f98', it.rej);
+      if (it.stored) { g.fillStyle = '#2f6fd6'; g.fillRect(X(it.x) - w / 2, yC + hb / 2 + 1, w, 2); }
+      if (it.ran) box(X(it.x), yS, it.unsafe ? '#c0392b' : '#8a8f98', false, 0.85);
+      if (it.cut) cut(X(it.x), yC);
+    } else if (it.t === 'mem') {
+      box(X(it.x), yS, it.unsafe ? '#c0392b' : '#2f6fd6', it.rej);
+      if (it.cut) cut(X(it.x), yS);
+    }
+  }
+  $('tlCount').textContent = `${TL.nCalls} planner calls · ${TL.nMem} steps from memory`;
+}
+new ResizeObserver(() => tlDraw()).observe(tlc);
+
 function onEvent(k, x) {
+  tlEvent(k, x);
   if (k === 'belief') {
     outline(gTarget, null); outline(gLook, null); verdict('', null); hideGhost(ghostRed); clearTrails();
     run.key = x.task.key;
@@ -336,7 +483,7 @@ function newRun() {
   hideGhost(ghostRed); hideGhost(ghostGray); outline(gTarget, null); outline(gLook, null); verdict('', null); clearTrails();
   run = cfg.basic ? { basic: true, tasks: [0], i: 0, st: E.newStats(), gen: null }
                   : { tasks: E.tasks(cfg.swap), i: 0, st: E.newStats(), mem: { scene: new Map(), act: new Map() }, gen: null, key: -1 };
-  C.reset();
+  C.reset(); tlReset(); $('tlWrap').style.display = cfg.basic ? 'none' : '';
   say(cfg.basic ? 'press Play: approach, grasp, lift, carry, place' : 'press Play to run 18 visits (6 scenes × 3)');
   $('where').textContent = sc.labels[cfgIdx]; stats();
 }
@@ -368,17 +515,17 @@ function stepRun() {
 
 // ---------- background comparison on the second MjData, a slice of work per frame ----------
 let cmp = null;
-function startCompare() { cmp = { rows: sc.cfgs.map(() => null), ci: 0, ti: 0, st: null, mem: null, gen: null, tasks: null, sc, seed }; $('compare').disabled = true; renderCmp(); }
+function startCompare() { ROWS = CONDS.map(() => null); cmp = { ci: 0, ti: 0, st: null, mem: null, gen: null, tasks: null, seed }; $('compare').disabled = true; renderCmp(); renderAnswers(); }
 function compareSlice(budgetMs) {
   const t0 = performance.now();
   while (cmp && performance.now() - t0 < budgetMs) {
-    const cfg = cmp.sc.cfgs[cmp.ci];
+    const cfg = CONDS[cmp.ci].cfg;
     if (!cmp.gen) {
       if (!cmp.st) { cmp.st = EB.newStats(); cmp.mem = { scene: new Map(), act: new Map() }; cmp.tasks = EB.tasks(cfg.swap); cmp.ti = 0; }
       if (cmp.ti >= cmp.tasks.length) {
-        cmp.rows[cmp.ci] = cmp.st; cmp.st = null; cmp.ci++;
-        if (cmp.ci >= cmp.sc.cfgs.length) { cmp.sc._rows = cmp.rows; cmp = null; $('compare').disabled = false; }
-        renderCmp(); continue;
+        ROWS[cmp.ci] = cmp.st; cmp.st = null; cmp.ci++;
+        if (cmp.ci >= CONDS.length) { cmp = null; $('compare').disabled = false; }
+        renderCmp(); renderAnswers(); continue;
       }
       cmp.gen = EB.episode(cmp.tasks[cmp.ti], cfg, cmp.mem, cmp.st, cmp.seed);
     }
@@ -386,32 +533,30 @@ function compareSlice(budgetMs) {
   }
 }
 function renderCmp() {
-  if (!sc || sc.id === 0) { $('cmp').innerHTML = ''; $('cmpNote').textContent = 'Pick one of scenarios 1–7 to compare its settings.'; return; }
-  const rows = (cmp && cmp.sc === sc) ? cmp.rows : (sc._rows || sc.cfgs.map(() => null));
-  const done = rows.filter(Boolean), best = done.length ? Math.max(...done.map(r => r.success)) : -1;
-  $('cmp').innerHTML = '<tr><th>setting</th><th>target placed</th><th>look-alike placed</th><th>missed</th><th>planner calls</th><th>steps (from memory)</th><th>gate rejections</th><th>unsafe steps</th><th>memory deleted</th><th>touch catches</th><th>memory dropped</th></tr>' +
-    sc.cfgs.map((c, i) => { const r = rows[i], busy = cmp && cmp.sc === sc && cmp.ci === i;
-      return `<tr><td>${sc.labels[i]}</td>` + (r ? `<td class="${r.success === best ? 'g' : ''}">${r.success}/${r.n}</td><td class="${r.wrong ? 'r' : ''}">${r.wrong}</td><td class="${r.miss ? 'r' : ''}">${r.miss}</td><td>${r.calls}</td><td>${r.steps} (${r.memSteps})</td><td>${r.rejected}</td><td class="${r.unsafe ? 'r' : ''}">${r.unsafe}</td><td>${r.memDeleted}</td><td>${r.caught}</td><td>${r.dropped}</td>`
-        : `<td colspan="10" style="text-align:left;color:#6b6b70">${busy ? 'running in the background…' : '—'}</td>`) + '</tr>'; }).join('');
-  $('cmpNote').textContent = `Each setting runs the same 18 visits with the same camera noise and planner mistakes (random draw #${seed}). It runs in the background while you watch; press “New random draw” to see how much the numbers move.`;
+  const mine = new Set(sc && sc.ks ? sc.ks : []);
+  $('cmp').innerHTML = '<tr><th>condition</th><th>memory</th><th>gate</th><th>planner mistakes</th><th>what goes wrong</th><th>extra check</th><th>target placed</th><th>look-alike placed</th><th>missed</th><th>planner calls</th><th>steps (from memory)</th><th>gate rejections</th><th>unsafe steps</th></tr>' +
+    CONDS.map((c, i) => { const r = ROWS[i], busy = cmp && cmp.ci === i;
+      return `<tr class="${mine.has(c.k) ? 'mine' : ''}"><td><b>${c.k}</b> ${NAME[c.k]}</td>` + c.sw.map(v => `<td class="swc">${v}</td>`).join('') + (r ? `<td class="${r.success === r.n ? 'g' : r.success < r.n / 2 ? 'r' : ''}">${r.success}/${r.n}</td><td class="${r.wrong ? 'r' : ''}">${r.wrong}</td><td class="${r.miss ? 'r' : ''}">${r.miss}</td><td>${r.calls}</td><td>${r.steps} (${r.memSteps})</td><td>${r.rejected}</td><td class="${r.unsafe ? 'r' : ''}">${r.unsafe}</td>`
+        : `<td colspan="7" style="text-align:left;color:#6b6b70">${busy ? 'running in the background…' : '—'}</td>`) + '</tr>'; }).join('');
+  $('cmpNote').textContent = `Each condition runs the same 18 visits (6 scenes × 3) with the same camera noise and planner mistakes (random draw #${seed}). Highlighted rows are the question you picked. It runs in the background while you watch; press “New random draw” to see how much the numbers move.`;
 }
 
 // ---------- controls ----------
 function selectScenario(id) {
   sc = ALL.find(s => s.id === id); cfgIdx = sc.cfgs.length - 1; playing = false;
-  for (const b of $('scenes').children) b.classList.toggle('on', +b.dataset.id === id);
+  for (const b of sceneBtns()) b.classList.toggle('on', +b.dataset.id === id);
   $('cfgSeg').innerHTML = sc.labels.map((l, i) => `<button data-i="${i}" class="${i === cfgIdx ? 'on' : ''}">${l}</button>`).join('');
   for (const b of $('cfgSeg').children) b.onclick = () => { cfgIdx = +b.dataset.i; for (const o of $('cfgSeg').children) o.classList.toggle('on', o === b); playing = false; $('play').textContent = '▶ Play'; newRun(); };
-  $('play').disabled = false; $('restart').disabled = false; $('reseed').disabled = sc.id === 0; $('compare').disabled = sc.id === 0 || !!cmp; $('play').textContent = '▶ Play';
+  $('play').disabled = false; $('restart').disabled = false; $('reseed').disabled = false; $('compare').disabled = !!cmp; $('play').textContent = '▶ Play';
   newRun(); renderCmp();
 }
-for (const b of $('scenes').children) b.onclick = () => selectScenario(+b.dataset.id);
+for (const b of sceneBtns()) b.onclick = () => selectScenario(+b.dataset.id);
 $('play').onclick = () => { if (run.i >= run.tasks.length) newRun(); playing = !playing; $('play').textContent = playing ? '❚❚ Pause' : '▶ Play'; };
 $('restart').onclick = () => { playing = false; $('play').textContent = '▶ Play'; newRun(); };
 $('compare').onclick = startCompare;
-$('reseed').onclick = () => { seed = 1 + Math.floor(Math.random() * 99999); for (const x of ALL) delete x._rows; playing = false; $('play').textContent = '▶ Play'; newRun(); renderCmp(); };
+$('reseed').onclick = () => { seed = 1 + Math.floor(Math.random() * 99999); playing = false; $('play').textContent = '▶ Play'; newRun(); cmp = null; startCompare(); };
 for (const b of $('speed').children) b.onclick = () => { speed = +b.dataset.v; for (const o of $('speed').children) o.classList.toggle('on', o === b); };
-selectScenario(0);
+selectScenario(0); startCompare();   // all ten conditions, once, in the background
 
 // ---------- loop ----------
 let last = performance.now();
