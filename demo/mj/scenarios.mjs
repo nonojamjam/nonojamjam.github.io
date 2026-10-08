@@ -9,6 +9,7 @@ export const TARGET_W = 0.032, LOOK_W = 0.040;     // 손가락이 닫힌 폭: �
 const SUB = 5, PRE = 0.08, ABOVE = 0.15, GRASP_Z = 0.035, PLACE_Z = 0.037;
 const BIAS_JOINT = 1, TOUCH_TOL = 0.006, CAM_NOISE = 0.003, SENSOR_NOISE = 0.002;
 const STEP = 0.06, SUCC = 0.025, PROG = 0.005, JERK = 0.4, MAX_STEPS = 12, MAX_REPLAN = 3, UNSAFE = 0.005, TILT = 0.25;
+const FLOOR_EPS = 0.003;   // P1(10/9): 쥔 상자를 들고 걸을 때 손끝이 PLACE_Z(상자가 탁자에 닿는 높이)보다 이만큼 아래로 내려가는 제안은 거절
 
 export const SCENES = [
   { target: [0.55, 0.10], look: [0.45, 0.20] }, { target: [0.50, 0.18], look: [0.60, 0.05] },
@@ -91,14 +92,18 @@ export function makeEngine(mj, model, data, C, goal) {
 
   // 게이트: 이 이동 뒤 손끝(읽은 관절값 기준, 센서가 있으면 잰 손끝 기준)이 목표에 다가가는지, 급하지 않은지, 관절 한계 안인지, 손이 계속 아래를 향하는지
   // S5a: 같은 순서로 검사하되 처음 걸린 이유와 수치를 함께 돌려준다 (로그 스키마 proposal.gate). 난수를 쓰지 않는다
-  function gateCheck(qB, tipB, dq, target) {
+  // P1: floorZ 를 주면(쥔 채 걷는 단계) 예측 손끝 높이가 그보다 낮은 제안을 'floor' 로 거절 — 게이트가 쥔 물체·탁자 충돌을 안 보던 구멍(10/9 패널)
+  function gateCheck(qB, tipB, dq, target, floorZ = null) {
     const q1 = qB.map((x, i) => x + dq[i]);
     const maxDq = Math.max(...dq.map(Math.abs)), handErr = C.handErr(q1);
     let margin = Infinity; for (let j = 0; j < 7; j++) { const [lo, hi] = jr(j); margin = Math.min(margin, q1[j] - lo, hi - q1[j]); }
     const f0 = C.fkTip(qB), f1 = C.fkTip(q1), dtip = [f1[0] - f0[0], f1[1] - f0[1], f1[2] - f0[2]];
     const pred = [tipB[0] + dtip[0], tipB[1] + dtip[1], tipB[2] + dtip[2]], progress = d3(tipB, target) - d3(pred, target);
-    const reason = maxDq > JERK ? 'jerk' : handErr > TILT ? 'tilt' : margin < 0 ? 'limit' : progress > PROG ? null : 'progress';
-    return { ok: reason === null, reason, dtip, values: { max_dq: maxDq, hand_err: handErr, limit_margin: margin, progress } };
+    const floorHit = floorZ !== null && pred[2] < floorZ;
+    const reason = maxDq > JERK ? 'jerk' : handErr > TILT ? 'tilt' : margin < 0 ? 'limit' : floorHit ? 'floor' : progress > PROG ? null : 'progress';
+    const values = { max_dq: maxDq, hand_err: handErr, limit_margin: margin, progress };
+    if (floorZ !== null) values.pred_z = pred[2];   // 바닥 검사를 켰을 때만 (끄면 기록이 예전과 같다)
+    return { ok: reason === null, reason, dtip, values };
   }
   const gateOk = (qB, tipB, dq, target) => gateCheck(qB, tipB, dq, target).ok;
 
@@ -149,7 +154,8 @@ export function makeEngine(mj, model, data, C, goal) {
         else { dq = ask(); call = st.calls; }
         let attemptNo = 0, gateUs = 0;
         const judge = () => {   // 제안 하나를 게이트에 넣고 proposal 이벤트를 남긴다 (게이트 꺼짐이면 판정 없이 기록만)
-          const t0 = performance.now(), g = cfg.gate ? gateCheck(qB, tipB, dq, target) : null; gateUs += performance.now() - t0;
+          const floorZ = cfg.stepPhases && ['lift', 'carry', 'place'].includes(phase) ? PLACE_Z - FLOOR_EPS : null;   // P1: 걸음 단계 옵션일 때 쥔 채 걷는 단계만
+          const t0 = performance.now(), g = cfg.gate ? gateCheck(qB, tipB, dq, target, floorZ) : null; gateUs += performance.now() - t0;
           const dtip = g ? g.dtip : (() => { const a = C.fkTip(qB), b = C.fkTip(qB.map((x, i) => x + dq[i])); return [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; })();
           ev('proposal', { step, attempt: attemptNo++, phase, src, call, from, dq: dq.slice(), dtipPred: dtip, gate: g && { ok: g.ok, reason: g.reason, values: g.values } });
           return g ? g.ok : true;
