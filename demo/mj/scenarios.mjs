@@ -39,6 +39,11 @@ export function scenesFor(sceneSeed = 0) {
   return out;
 }
 
+// 쓰러짐 판정 (S2a): 상자 긴 축(몸체 z, 반높이 0.03 m) 과 세계 수직의 각도. xmat 은 행 우선 3×3 → z 축의 세계 z 성분 = m[8].
+// 평지에 멈춘 상자는 0°(섬) 아니면 90°(누움) 이라 45° 에서 가른다. 자세는 시뮬 참값 = 오라클.
+export const FALL_DEG = 45;
+export function tiltDegFromXmat(m) { return Math.acos(Math.min(1, Math.abs(m[8]))) * 180 / Math.PI; }
+
 export function makeRng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 const gauss = rng => Math.sqrt(-2 * Math.log(rng() + 1e-12)) * Math.cos(2 * Math.PI * rng());
 const d2 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -184,6 +189,17 @@ export function makeEngine(mj, model, data, C, goal) {
     const result = inGoal(C.bTarget) ? 'success' : inGoal(C.bLook) ? 'wrong' : 'miss';
     st[result]++; st.n++;
     ev('result', { result, source, task });
+    // S2a: 판정 '뒤에' 상자가 멈출 때까지 기다려 기울기만 기록한다 (성공 판정·통계 불변, 다음 에피소드는 reset).
+    // 목표 상자 자유관절 속도 = qvel[9..14] [실측 jnt_dofadr]. 0.01 미만이 10틱 이어지면 정지, 최대 200틱.
+    let still = 0, ticks = 0;
+    for (; ticks < 200 && still < 10; ticks++) {
+      physicsTick(); yield;
+      let v = 0; for (let i = 9; i < 15; i++) v = Math.max(v, Math.abs(data.qvel[i]));
+      still = v < 0.01 ? still + 1 : 0;
+    }
+    const tiltOf = b => tiltDegFromXmat(data.xmat.slice(9 * b, 9 * b + 9));
+    const tilt = tiltOf(C.bTarget);
+    ev('settle', { result, tilt, tiltLook: tiltOf(C.bLook), fallen: tilt >= FALL_DEG, settled: still >= 10, ticks });
     return result;
   }
 
