@@ -109,8 +109,12 @@ export function makeEngine(mj, model, data, C, goal) {
     const tipNow = () => C.sitePos();
     const believedTip = qB => cfg.sensor ? tipNow().map(v => v + SENSOR_NOISE * gauss(rSen)) : C.fkTip(qB);
     data.ctrl[7] = OPEN;
+    // S4: phase 태그 — 추론하지 않고 제어 코드가 지금 하는 일을 그대로 적는다 (approach·grasp·lift·carry·place·retreat)
+    let phase = null;
+    const setPhase = p => { phase = p; ev('phase', { phase: p }); };
 
     for (let attempt = 0; attempt < 3; attempt++) {
+      setPhase('approach');
       const pre = [belief[0], belief[1], GRASP_Z + PRE];
       ev('reach-start', { tip: tipNow(), belief: believedTip(readJoints(bias)) });
       // ---- 걸음 단위로 잡을 지점 위까지 ----
@@ -144,7 +148,7 @@ export function makeEngine(mj, model, data, C, goal) {
           if (src === 'plan' && progressed) { mem.act.set(key, { dq, from: call }); ev('store', { call }); }
           if (src === 'mem' && !progressed) { mem.act.delete(key); st.memDeleted++; ev('forget', { from }); }
         }
-        ev('step', { src: unsafe ? 'unsafe' : src, mem: src === 'mem', tip: tipNow(), belief: tipB2, key, call, from });
+        ev('step', { src: unsafe ? 'unsafe' : src, mem: src === 'mem', tip: tipNow(), belief: tipB2, key, call, from, phase });
       }
       if (!reached) { const qB = readJoints(bias); reached = d3(believedTip(qB), pre) < SUCC; }
       if (!reached) { st.notReached++; ev('not-reached'); break; }
@@ -162,6 +166,7 @@ export function makeEngine(mj, model, data, C, goal) {
         }
       };
       const g = [belief[0], belief[1], GRASP_Z];
+      setPhase('grasp');
       yield* corrected([g[0], g[1], g[2] + PRE]);
       yield* corrected([g[0], g[1], g[2] + 0.03]);
       yield* corrected(g);
@@ -175,11 +180,15 @@ export function makeEngine(mj, model, data, C, goal) {
         mem.scene.delete(task.key); belief = cam(); continue;
       }
       // ---- 들어서 옮겨 놓기 ----
+      setPhase('lift');
       yield* corrected([g[0], g[1], GRASP_Z + ABOVE]);
       const over = [goal[0], goal[1], GRASP_Z + ABOVE];
+      setPhase('carry');
       yield* corrected(over);
+      setPhase('place');
       yield* corrected([goal[0], goal[1], PLACE_Z]);
       data.ctrl[7] = OPEN; yield* hold(40);
+      setPhase('retreat');
       yield* corrected(over);
       for (let t = 0; t < 40; t++) { physicsTick(); yield; }
       if (cfg.mem) mem.scene.set(task.key, belief);
