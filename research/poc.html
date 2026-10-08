@@ -55,12 +55,23 @@
   <figure><img src="../assets/poc/fig16_prepost_trajectory_en.png" alt="Believed vs actual fingertip path"><figcaption>Believed (dashed) vs actual fingertip path for a task fixed before the run.</figcaption></figure>
   <div class="box">My verification assumes the robot knows its own state. This study measured where that assumption breaks.</div>
 
+  <h2>4 · On the device: a cloud model's verified memory, replayed by a 2B model <span class="ko">클라우드가 쌓은 기억을 기기 위 작은 모델이</span></h2>
+  <p>A 2B planner running on the laptop (gemma4:e2b) never passed the kinematic check on its own, so it could not build any memory. I let GPT-6.1 Pro solve 10 practice tasks on the 3D arm, kept the 10–11 verified actions it left in memory, and gave only that memory to the 2B planner on 10 similar evaluation tasks (3 runs; pass/fail criteria fixed before the run).</p>
+  <ul>
+    <li>2B planner alone: <b>0/30</b>. With the cloud model's memory: <b>17/30</b>, every success finished by one replayed action with no LLM call (exact McNemar p = 1.5×10⁻⁵).</li>
+    <li>The same memory replayed without the situation key: 2/30. LLM calls per task: 38.9 → 14.3.</li>
+    <li>This met the significance criterion but not the pre-set goal of reaching 80% of the cloud model alone (24/30). At a new location: 0/10, because the situation keys no longer matched.</li>
+    <li>Energy, measured with powermetrics on the whole laptop and idle-subtracted: one memory lookup plus kinematic check ≈ 0.015 mJ; one 2B planning call ≈ 2.3 J. A first run was set aside because its idle window was noisy.</li>
+  </ul>
+  <figure><img src="../assets/poc/fig17_memory_transfer_ondevice_en.png" alt="Strict success and LLM calls per task for the on-device 2B planner with and without the cloud model's memory"><figcaption>On-device 2B planner (gemma4:e2b), 3 runs. Dashed line: the cloud model planning alone on the same tasks.</figcaption></figure>
+  <div class="box">Evaluation tasks share centers with the practice tasks, so this is reuse in similar situations, not generalization; and a laptop is not an embedded board.</div>
+
   <h2>What I want to study next <span class="ko">다음 연구</span></h2>
   <p class="ko">어떤 기억을 불러올지, 어떻게 가져올지, 그리고 불러온 행동이 맞지 않을 때 LLM에게 맥락으로 주어 다시 계획할지 저장된 관절 각도에서 빠르게 다시 계산할지를 연구하고 싶습니다.</p>
-  <p>Memory saved most planner calls here, so the next questions are about memory itself: <b>which memory to recall, and how to retrieve it</b> for a new scene; and when a recalled action no longer fits, <b>whether to hand it to the LLM as context for a new plan, or to start from its stored joint angles and compute a new action quickly</b> without calling the LLM at all. In parallel, I am extending the simplified grasp (the gripper closes on whatever object is under the fingertip) into full pick-and-place, with a gripper model and a goal zone.</p>
+  <p>Memory saved most planner calls here, so the next questions are about memory itself: <b>which memory to recall, and how to retrieve it</b> for a new scene; and when a recalled action no longer fits, <b>whether to hand it to the LLM as context for a new plan, or to start from its stored joint angles and compute a new action quickly</b> without calling the LLM at all; and, where no memory reaches, <b>when the device should give up and hand the step to a larger model</b>. In parallel, I am extending the simplified grasp (the gripper closes on whatever object is under the fingertip) into full pick-and-place, with a gripper model and a goal zone.</p>
 
   <h2>Setup <span class="ko">설정</span></h2>
-  <p>Simulated arms; timings measured on an Apple M5 Pro laptop; the model used in each condition, every run and its pass/fail criterion are kept with the code.</p>
+  <p>Simulated arms; timings and energy (powermetrics) measured on an Apple M5 Pro laptop; the model used in each condition, every run and its pass/fail criterion are kept with the code.</p>
   <div class="btns"><a href="../demo/panda-gripper.html">live demo · Panda gripper (MuJoCo physics)</a><a href="../demo/memory-gate-panda.html">live demo · 7-DOF Panda</a><a href="../demo/memory-gate-3d.html">3-joint arm</a><a href="../demo/memory-gate.html">2-link arm</a></div>
 </main>
 <footer class="wrap"><a href="../index.html">← back</a></footer>
