@@ -200,6 +200,9 @@ export function makeEngine(mj, model, data, C, goal) {
     const tiltOf = b => tiltDegFromXmat(data.xmat.slice(9 * b, 9 * b + 9));
     const tilt = tiltOf(C.bTarget);
     ev('settle', { result, tilt, tiltLook: tiltOf(C.bLook), fallen: tilt >= FALL_DEG, settled: still >= 10, ticks });
+    // S2b: 지표 S1 = 목표 칸 + 서 있음. success(S0) 는 그대로 두고 병기한다. fallen = 목표 상자가 45° 이상 (결과와 무관하게 셈)
+    if (tilt >= FALL_DEG) st.fallen++;
+    else if (result === 'success') st.standing++;
     return result;
   }
 
@@ -208,7 +211,7 @@ export function makeEngine(mj, model, data, C, goal) {
     for (let v = 0; v < 3; v++) scenesFor(sceneSeed).forEach((sc, i) => out.push({ idx: out.length, key: i, visit: v, place: swap && v > 0 ? { target: sc.look, look: sc.target } : sc }));
     return out;
   }
-  const newStats = () => ({ n: 0, success: 0, wrong: 0, miss: 0, calls: 0, replays: 0, rejected: 0, caught: 0, dropped: 0, unsafe: 0, steps: 0, memSteps: 0, memDeleted: 0, notReached: 0, blocked: 0 });
+  const newStats = () => ({ n: 0, success: 0, wrong: 0, miss: 0, calls: 0, replays: 0, rejected: 0, caught: 0, dropped: 0, unsafe: 0, steps: 0, memSteps: 0, memDeleted: 0, notReached: 0, blocked: 0, standing: 0, fallen: 0 });
   function runBatch(cfg, seed = 7) {
     const st = newStats(), mem = { scene: new Map(), act: new Map() };
     for (const t of tasks(cfg.swap, cfg.sceneSeed)) { const g = episode(t, cfg, mem, st, seed); while (!g.next().done); }
