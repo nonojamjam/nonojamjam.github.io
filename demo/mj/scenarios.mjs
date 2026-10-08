@@ -17,10 +17,26 @@ export const SCENES = [
 ];
 
 // 장면 seed → 장면 목록. seed 0(또는 없음) = 위 고정 6장면 (데모·기준선 전용, 통계 제외).
-// 0 이 아닌 seed 의 무작위 생성은 S1b 에서 넣는다 — 그 전엔 조용히 고정 장면을 돌려주지 않고 멈춘다.
+// 양의 정수 seed = 무작위 6장면 (S1b-1: 위치만. 회전은 손목 정렬이 필요해 S1b-2).
+// 범위는 고정 장면이 이미 검증한 영역 그대로, 닮은 상자는 목표와 SCENE_MIN_SEP 이상 떨어뜨린다.
+// 장면 난수는 잡음 seed(runBatch 의 seed)와 별도 스트림이다.
+const SCENE_X = [0.45, 0.60], SCENE_Y = [0.00, 0.18], SCENE_MIN_SEP = 0.10, SCENE_N = 6;
 export function scenesFor(sceneSeed = 0) {
   if (!sceneSeed) return SCENES;
-  throw new Error(`scenesFor: sceneSeed ${sceneSeed} 는 아직 지원하지 않음 (S1b)`);
+  if (!Number.isInteger(sceneSeed) || sceneSeed < 0) throw new Error(`scenesFor: sceneSeed 는 0 이상 정수여야 함 (${sceneSeed})`);
+  // LCG 첫 출력은 seed 와 거의 선형이라(첫 장면 x 가 seed 순으로 0.494→0.507 [실측]) 해시로 먼저 섞는다
+  let h = (sceneSeed ^ 0x9e3779b9) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b); h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35); h = (h ^ (h >>> 16)) >>> 0;
+  const rng = makeRng(h);
+  const pick = () => [SCENE_X[0] + (SCENE_X[1] - SCENE_X[0]) * rng(), SCENE_Y[0] + (SCENE_Y[1] - SCENE_Y[0]) * rng()];
+  const out = [];
+  for (let k = 0; k < SCENE_N; k++) {
+    const target = pick(); let look = null;
+    for (let tries = 0; tries < 200 && !look; tries++) { const c = pick(); if (Math.hypot(c[0] - target[0], c[1] - target[1]) >= SCENE_MIN_SEP) look = c; }
+    if (!look) throw new Error(`scenesFor: seed ${sceneSeed} 장면 ${k} 닮은 상자 배치 실패`);
+    out.push({ target, look });
+  }
+  return out;
 }
 
 export function makeRng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
