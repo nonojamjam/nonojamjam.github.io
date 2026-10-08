@@ -83,14 +83,17 @@ export function makeEngine(mj, model, data, C, goal) {
   }
 
   // 게이트: 이 이동 뒤 손끝(읽은 관절값 기준, 센서가 있으면 잰 손끝 기준)이 목표에 다가가는지, 급하지 않은지, 관절 한계 안인지, 손이 계속 아래를 향하는지
-  function gateOk(qB, tipB, dq, target) {
-    if (Math.max(...dq.map(Math.abs)) > JERK) return false;
-    if (C.handErr(qB.map((x, i) => x + dq[i])) > TILT) return false;
-    for (let j = 0; j < 7; j++) { const [lo, hi] = jr(j); if (qB[j] + dq[j] < lo || qB[j] + dq[j] > hi) return false; }
-    const f0 = C.fkTip(qB), f1 = C.fkTip(qB.map((x, i) => x + dq[i]));
-    const pred = [tipB[0] + f1[0] - f0[0], tipB[1] + f1[1] - f0[1], tipB[2] + f1[2] - f0[2]];
-    return d3(pred, target) < d3(tipB, target) - PROG;
+  // S5a: 같은 순서로 검사하되 처음 걸린 이유와 수치를 함께 돌려준다 (로그 스키마 proposal.gate). 난수를 쓰지 않는다
+  function gateCheck(qB, tipB, dq, target) {
+    const q1 = qB.map((x, i) => x + dq[i]);
+    const maxDq = Math.max(...dq.map(Math.abs)), handErr = C.handErr(q1);
+    let margin = Infinity; for (let j = 0; j < 7; j++) { const [lo, hi] = jr(j); margin = Math.min(margin, q1[j] - lo, hi - q1[j]); }
+    const f0 = C.fkTip(qB), f1 = C.fkTip(q1), dtip = [f1[0] - f0[0], f1[1] - f0[1], f1[2] - f0[2]];
+    const pred = [tipB[0] + dtip[0], tipB[1] + dtip[1], tipB[2] + dtip[2]], progress = d3(tipB, target) - d3(pred, target);
+    const reason = maxDq > JERK ? 'jerk' : handErr > TILT ? 'tilt' : margin < 0 ? 'limit' : progress > PROG ? null : 'progress';
+    return { ok: reason === null, reason, dtip, values: { max_dq: maxDq, hand_err: handErr, limit_margin: margin, progress } };
   }
+  const gateOk = (qB, tipB, dq, target) => gateCheck(qB, tipB, dq, target).ok;
 
   function* episode(task, cfg, mem, st, seed, ev = () => {}) {
     const base = (seed * 7919 + task.idx * 104729) >>> 0;
@@ -124,20 +127,28 @@ export function makeEngine(mj, model, data, C, goal) {
         if (d3(tipB, pre) < SUCC) { reached = true; break; }
         const key = situationKey(tipB, pre, qB);
         // 타임라인용: 플래너 호출마다 번호(call)를 붙이고, 기억에는 그 걸음을 낸 호출 번호(from)를 함께 저장한다
-        const ask = () => { const d = planStep(qB, tipB, pre, cfg, st, rPlan); ev('call', { id: st.calls }); return d; };
+        const ask = () => { const d = planStep(qB, tipB, pre, cfg, st, rPlan); ev('call', { id: st.calls, vars: { q: qB, tip: tipB, target: pre }, dq: d.slice() }); return d; };
         let dq = null, src = 'plan', call = 0, from = 0;
         if (cfg.mem && mem.act.has(key)) { const m = mem.act.get(key); dq = m.dq.slice(); from = m.from; src = 'mem'; st.replays++; }
         else { dq = ask(); call = st.calls; }
+        let attemptNo = 0, gateUs = 0;
+        const judge = () => {   // 제안 하나를 게이트에 넣고 proposal 이벤트를 남긴다 (게이트 꺼짐이면 판정 없이 기록만)
+          const t0 = performance.now(), g = cfg.gate ? gateCheck(qB, tipB, dq, pre) : null; gateUs += performance.now() - t0;
+          const dtip = g ? g.dtip : (() => { const a = C.fkTip(qB), b = C.fkTip(qB.map((x, i) => x + dq[i])); return [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; })();
+          ev('proposal', { step, attempt: attemptNo++, phase, src, call, from, dq: dq.slice(), dtipPred: dtip, gate: g && { ok: g.ok, reason: g.reason, values: g.values } });
+          return g ? g.ok : true;
+        };
+        if (!cfg.gate) judge();
         if (cfg.gate) {
-          let tries = 0;
-          while (!gateOk(qB, tipB, dq, pre) && tries++ < MAX_REPLAN) {
+          let tries = 0, lastOk = false;   // 루프를 빠져나온 마지막 판정 = 예전 코드의 재검사 결과와 같다 (같은 dq 를 두 번 기록하지 않으려고 재사용)
+          while (!(lastOk = judge()) && tries++ < MAX_REPLAN) {
             st.rejected++; ev('reject', { q: qB.map((x, i) => x + dq[i] - (i === BIAS_JOINT ? bias : 0)), src, call, from });
             if (src === 'mem') { mem.act.delete(key); st.memDeleted++; ev('forget', { from }); }
             dq = ask(); call = st.calls; from = 0; src = 'plan';
           }
-          if (!gateOk(qB, tipB, dq, pre)) { st.blocked++; ev('blocked'); continue; }   // 끝까지 막히면 움직이지 않고 다음 걸음에서 다시 묻는다
+          if (!lastOk) { st.blocked++; ev('blocked'); continue; }   // 끝까지 막히면 움직이지 않고 다음 걸음에서 다시 묻는다
         }
-        const realBefore = d3(tipNow(), pre);
+        const realBefore = d3(tipNow(), pre), qTrue0 = Array.from(data.qpos.slice(0, 7)), tip0 = tipNow();
         yield* moveJoints(qB.map((x, i) => x + dq[i]), bias);
         const qB2 = readJoints(bias), tipB2 = believedTip(qB2);
         const unsafe = d3(tipNow(), pre) > realBefore + UNSAFE;   // 실제 손끝이 향하던 지점에서 멀어졌다
@@ -148,7 +159,11 @@ export function makeEngine(mj, model, data, C, goal) {
           if (src === 'plan' && progressed) { mem.act.set(key, { dq, from: call }); ev('store', { call }); }
           if (src === 'mem' && !progressed) { mem.act.delete(key); st.memDeleted++; ev('forget', { from }); }
         }
-        ev('step', { src: unsafe ? 'unsafe' : src, mem: src === 'mem', tip: tipNow(), belief: tipB2, key, call, from, phase });
+        const tip1 = tipNow(), qTrue1 = Array.from(data.qpos.slice(0, 7));
+        ev('step', { src: unsafe ? 'unsafe' : src, mem: src === 'mem', tip: tip1, belief: tipB2, key, call, from, phase,
+          step, attempt: attemptNo - 1, qRead: qB, qTrue: qTrue0, tipToTarget: [pre[0] - tipB[0], pre[1] - tipB[1], pre[2] - tipB[2]],
+          dqCmd: dq.slice(), dqActual: qTrue1.map((v, i) => v - qTrue0[i]), dtipActual: [tip1[0] - tip0[0], tip1[1] - tip0[1], tip1[2] - tip0[2]],
+          distDelta: d3(tip1, pre) - realBefore, progressed, unsafe, gateUs });
       }
       if (!reached) { const qB = readJoints(bias); reached = d3(believedTip(qB), pre) < SUCC; }
       if (!reached) { st.notReached++; ev('not-reached'); break; }
