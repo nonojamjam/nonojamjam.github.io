@@ -241,7 +241,7 @@ export function makeEngine(mj, model, data, C, goal) {
     for (const t of tasks(cfg.swap, cfg.sceneSeed)) { const g = episode(t, cfg, mem, st, seed); while (!g.next().done); }
     return st;
   }
-  return { episode, tasks, runBatch, newStats };
+  return { episode, tasks, runBatch, newStats, gateCheck };   // gateCheck: 오프라인 재생 분석용 (R2, 상태·난수 안 건드림)
 }
 
 export const SCENARIOS = [
