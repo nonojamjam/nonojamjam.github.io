@@ -123,24 +123,24 @@ export function makeEngine(mj, model, data, C, goal) {
     let phase = null;
     const setPhase = p => { phase = p; ev('phase', { phase: p }); };
 
-    for (let attempt = 0; attempt < 3; attempt++) {
-      setPhase('approach');
-      const pre = [belief[0], belief[1], GRASP_Z + PRE];
-      ev('reach-start', { tip: tipNow(), belief: believedTip(readJoints(bias)) });
-      // ---- 걸음 단위로 잡을 지점 위까지 ----
+    // L5(E1): 경유점까지 걸음 단위로 가기 — 예전 접근 루프를 그대로 함수로 뺐다 (동작·난수 불변). 걸음 번호는 에피소드 전체에서 이어진다
+    //   (재시도마다 0 으로 돌아가면 기록의 (ep, step, attempt) 짝이 겹친다)
+    let stepNo = 0;
+    function* stepTo(target) {
       let reached = false;
-      for (let step = 0; step < MAX_STEPS; step++) {
+      for (let n = 0; n < MAX_STEPS; n++) {
         const qB = readJoints(bias), tipB = believedTip(qB);
-        if (d3(tipB, pre) < SUCC) { reached = true; break; }
-        const key = situationKey(tipB, pre, qB);
+        if (d3(tipB, target) < SUCC) { reached = true; break; }
+        const step = stepNo++;
+        const key = situationKey(tipB, target, qB);
         // 타임라인용: 플래너 호출마다 번호(call)를 붙이고, 기억에는 그 걸음을 낸 호출 번호(from)를 함께 저장한다
-        const ask = () => { const d = planStep(qB, tipB, pre, cfg, st, rPlan); ev('call', { id: st.calls, vars: { q: qB, tip: tipB, target: pre }, dq: d.slice() }); return d; };
+        const ask = () => { const d = planStep(qB, tipB, target, cfg, st, rPlan); ev('call', { id: st.calls, vars: { q: qB, tip: tipB, target: target }, dq: d.slice() }); return d; };
         let dq = null, src = 'plan', call = 0, from = 0;
         if (cfg.mem && mem.act.has(key)) { const m = mem.act.get(key); dq = m.dq.slice(); from = m.from; src = 'mem'; st.replays++; }
         else { dq = ask(); call = st.calls; }
         let attemptNo = 0, gateUs = 0;
         const judge = () => {   // 제안 하나를 게이트에 넣고 proposal 이벤트를 남긴다 (게이트 꺼짐이면 판정 없이 기록만)
-          const t0 = performance.now(), g = cfg.gate ? gateCheck(qB, tipB, dq, pre) : null; gateUs += performance.now() - t0;
+          const t0 = performance.now(), g = cfg.gate ? gateCheck(qB, tipB, dq, target) : null; gateUs += performance.now() - t0;
           const dtip = g ? g.dtip : (() => { const a = C.fkTip(qB), b = C.fkTip(qB.map((x, i) => x + dq[i])); return [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; })();
           ev('proposal', { step, attempt: attemptNo++, phase, src, call, from, dq: dq.slice(), dtipPred: dtip, gate: g && { ok: g.ok, reason: g.reason, values: g.values } });
           return g ? g.ok : true;
@@ -155,24 +155,33 @@ export function makeEngine(mj, model, data, C, goal) {
           }
           if (!lastOk) { st.blocked++; ev('blocked'); continue; }   // 끝까지 막히면 움직이지 않고 다음 걸음에서 다시 묻는다
         }
-        const realBefore = d3(tipNow(), pre), qTrue0 = Array.from(data.qpos.slice(0, 7)), tip0 = tipNow();
+        const realBefore = d3(tipNow(), target), qTrue0 = Array.from(data.qpos.slice(0, 7)), tip0 = tipNow();
         yield* moveJoints(qB.map((x, i) => x + dq[i]), bias);
         const qB2 = readJoints(bias), tipB2 = believedTip(qB2);
-        const unsafe = d3(tipNow(), pre) > realBefore + UNSAFE;   // 실제 손끝이 향하던 지점에서 멀어졌다
+        const unsafe = d3(tipNow(), target) > realBefore + UNSAFE;   // 실제 손끝이 향하던 지점에서 멀어졌다
         if (unsafe) st.unsafe++;
         st.steps++; if (src === 'mem') st.memSteps++;
-        const progressed = d3(tipB2, pre) < d3(tipB, pre) - PROG;
+        const progressed = d3(tipB2, target) < d3(tipB, target) - PROG;
         if (cfg.mem) {
           if (src === 'plan' && progressed) { mem.act.set(key, { dq, from: call }); ev('store', { call }); }
           if (src === 'mem' && !progressed) { mem.act.delete(key); st.memDeleted++; ev('forget', { from }); }
         }
         const tip1 = tipNow(), qTrue1 = Array.from(data.qpos.slice(0, 7));
         ev('step', { src: unsafe ? 'unsafe' : src, mem: src === 'mem', tip: tip1, belief: tipB2, key, call, from, phase,
-          step, attempt: attemptNo - 1, qRead: qB, qTrue: qTrue0, tipToTarget: [pre[0] - tipB[0], pre[1] - tipB[1], pre[2] - tipB[2]],
+          step, attempt: attemptNo - 1, qRead: qB, qTrue: qTrue0, tipToTarget: [target[0] - tipB[0], target[1] - tipB[1], target[2] - tipB[2]],
           dqCmd: dq.slice(), dqActual: qTrue1.map((v, i) => v - qTrue0[i]), dtipActual: [tip1[0] - tip0[0], tip1[1] - tip0[1], tip1[2] - tip0[2]],
-          distDelta: d3(tip1, pre) - realBefore, progressed, unsafe, gateUs });
+          distDelta: d3(tip1, target) - realBefore, progressed, unsafe, gateUs });
       }
-      if (!reached) { const qB = readJoints(bias); reached = d3(believedTip(qB), pre) < SUCC; }
+      if (!reached) { const qB = readJoints(bias); reached = d3(believedTip(qB), target) < SUCC; }
+      return reached;
+    }
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      setPhase('approach');
+      const pre = [belief[0], belief[1], GRASP_Z + PRE];
+      ev('reach-start', { tip: tipNow(), belief: believedTip(readJoints(bias)) });
+      // ---- 걸음 단위로 잡을 지점 위까지 ----
+      const reached = yield* stepTo(pre);
       if (!reached) { st.notReached++; ev('not-reached'); break; }
 
       // ---- 정렬해서 내려가 쥐기 (읽은 관절값 기준 IK). 센서가 있으면 잰 손끝 오차를 매번 다시 재서 고친다 ----
