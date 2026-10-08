@@ -136,7 +136,16 @@ export function makeEngine(mj, model, data, C, goal) {
         // 타임라인용: 플래너 호출마다 번호(call)를 붙이고, 기억에는 그 걸음을 낸 호출 번호(from)를 함께 저장한다
         const ask = () => { const d = planStep(qB, tipB, target, cfg, st, rPlan); ev('call', { id: st.calls, vars: { q: qB, tip: tipB, target: target }, dq: d.slice() }); return d; };
         let dq = null, src = 'plan', call = 0, from = 0;
+        // L6c: cfg.recall = 실행 밖 기억 묶음(DB). 재생 후보 [{id, dtip}] 를 점수순으로 게이트에 넣고, 없거나 다 거절되면 플래너.
+        //   손끝 변위 → 지금 자세에서 IK 로 관절 이동 (R2: 관절 증분 그대로보다 쓸 수 있는 거리가 두 배). 엔진 Map 기억(cfg.mem)과 함께 쓰지 않는다
+        const memQ = cfg.recall ? cfg.recall({ phase, tip: tipB, target, q: qB }).slice() : [];
+        const nextMem = () => {
+          const m = memQ.shift(), f = C.fkTip(qB);
+          dq = C.solveIK([f[0] + m.dtip[0], f[1] + m.dtip[1], f[2] + m.dtip[2]], 60, qB).q.map((x, i) => x - qB[i]);
+          from = m.id; src = 'mem'; call = 0; st.replays++;
+        };
         if (cfg.mem && mem.act.has(key)) { const m = mem.act.get(key); dq = m.dq.slice(); from = m.from; src = 'mem'; st.replays++; }
+        else if (memQ.length) nextMem();
         else { dq = ask(); call = st.calls; }
         let attemptNo = 0, gateUs = 0;
         const judge = () => {   // 제안 하나를 게이트에 넣고 proposal 이벤트를 남긴다 (게이트 꺼짐이면 판정 없이 기록만)
@@ -148,10 +157,13 @@ export function makeEngine(mj, model, data, C, goal) {
         if (!cfg.gate) judge();
         if (cfg.gate) {
           let tries = 0, lastOk = false;   // 루프를 빠져나온 마지막 판정 = 예전 코드의 재검사 결과와 같다 (같은 dq 를 두 번 기록하지 않으려고 재사용)
-          while (!(lastOk = judge()) && tries++ < MAX_REPLAN) {
+          // L6c: DB 기억 후보가 남아 있으면 거절돼도 재계획 횟수(tries)를 쓰지 않고 다음 후보로. 후보가 없으면 예전과 똑같은 순서·횟수
+          while (!(lastOk = judge())) {
+            if (!memQ.length && tries++ >= MAX_REPLAN) break;
             st.rejected++; ev('reject', { q: qB.map((x, i) => x + dq[i] - (i === BIAS_JOINT ? bias : 0)), src, call, from });
-            if (src === 'mem') { mem.act.delete(key); st.memDeleted++; ev('forget', { from }); }
-            dq = ask(); call = st.calls; from = 0; src = 'plan';
+            if (src === 'mem' && cfg.mem) { mem.act.delete(key); st.memDeleted++; ev('forget', { from }); }
+            if (memQ.length) nextMem();
+            else { dq = ask(); call = st.calls; from = 0; src = 'plan'; }
           }
           if (!lastOk) { st.blocked++; ev('blocked'); continue; }   // 끝까지 막히면 움직이지 않고 다음 걸음에서 다시 묻는다
         }
