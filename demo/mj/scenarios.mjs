@@ -16,6 +16,13 @@ export const SCENES = [
   { target: [0.57, 0.16], look: [0.44, 0.02] }, { target: [0.48, 0.00], look: [0.60, 0.12] },
 ];
 
+// 장면 seed → 장면 목록. seed 0(또는 없음) = 위 고정 6장면 (데모·기준선 전용, 통계 제외).
+// 0 이 아닌 seed 의 무작위 생성은 S1b 에서 넣는다 — 그 전엔 조용히 고정 장면을 돌려주지 않고 멈춘다.
+export function scenesFor(sceneSeed = 0) {
+  if (!sceneSeed) return SCENES;
+  throw new Error(`scenesFor: sceneSeed ${sceneSeed} 는 아직 지원하지 않음 (S1b)`);
+}
+
 export function makeRng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 const gauss = rng => Math.sqrt(-2 * Math.log(rng() + 1e-12)) * Math.cos(2 * Math.PI * rng());
 const d2 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -164,15 +171,15 @@ export function makeEngine(mj, model, data, C, goal) {
     return result;
   }
 
-  function tasks(swap) {
+  function tasks(swap, sceneSeed = 0) {
     const out = [];
-    for (let v = 0; v < 3; v++) SCENES.forEach((sc, i) => out.push({ idx: out.length, key: i, visit: v, place: swap && v > 0 ? { target: sc.look, look: sc.target } : sc }));
+    for (let v = 0; v < 3; v++) scenesFor(sceneSeed).forEach((sc, i) => out.push({ idx: out.length, key: i, visit: v, place: swap && v > 0 ? { target: sc.look, look: sc.target } : sc }));
     return out;
   }
   const newStats = () => ({ n: 0, success: 0, wrong: 0, miss: 0, calls: 0, replays: 0, rejected: 0, caught: 0, dropped: 0, unsafe: 0, steps: 0, memSteps: 0, memDeleted: 0, notReached: 0, blocked: 0 });
   function runBatch(cfg, seed = 7) {
     const st = newStats(), mem = { scene: new Map(), act: new Map() };
-    for (const t of tasks(cfg.swap)) { const g = episode(t, cfg, mem, st, seed); while (!g.next().done); }
+    for (const t of tasks(cfg.swap, cfg.sceneSeed)) { const g = episode(t, cfg, mem, st, seed); while (!g.next().done); }
     return st;
   }
   return { episode, tasks, runBatch, newStats };
