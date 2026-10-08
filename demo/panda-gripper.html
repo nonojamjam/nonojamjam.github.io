@@ -175,7 +175,7 @@
     <tr><td>Planner</td><td>A stand-in for an LLM, asked one step at a time: it returns the next joint move (at most 6 cm toward the pre-grasp point), but with a fixed probability (30 % or 50 %) it gets two joints badly wrong. Each request counts as one planner call.</td></tr>
     <tr><td>Gate</td><td>Checks every step before it runs: forward kinematics of the proposed move must bring the fingertip closer, stay within joint limits, avoid jerks and keep the hand pointing down. Up to three regenerations, otherwise the step is skipped. It uses the robot's own joint readings.</td></tr>
     <tr><td>Memory</td><td>Steps that made progress, keyed by the situation (direction and distance to the goal, bands of three joints), replayed without a planner call; a replayed step that fails is deleted. Also where the target was in each scene — stored when the robot <i>believed</i> it succeeded, so without a touch check a wrong grasp is remembered too.</td></tr>
-    <tr><td>Checks</td><td>Touch: the closed finger opening must match the target width (32 mm ± 6 mm). Camera: target position with 3 mm noise. Fingertip sensor: measured fingertip with 2 mm noise, independent of the joint readings. Misread: the shoulder reading is 0.15 rad off.</td></tr>
+    <tr><td>Checks</td><td>Touch: the closed finger opening must match the target width (32 mm ± 6 mm). Camera: target position with 3 mm noise. Fingertip sensor: measured fingertip with 2 mm noise, independent of the joint readings. Misread: the shoulder reading is 0.15 rad off. Left standing: once the hand has left and the box has come to rest, its long axis must be within 45° of vertical (true pose read from the simulator).</td></tr>
   </table>
   <p class="note">Every setting runs the same visits with the same camera noise and planner mistakes, so the numbers differ only because of the setting. Results from the study with a real LLM planner are on the <a href="../research/poc.html">study page</a>; the earlier <a href="memory-gate-panda.html">kinematic demo</a> shows the same seven scenarios without contact physics.</p>
 </main>
@@ -219,7 +219,7 @@ const R = k => ROWS[CI[k]];
 const ANSWER = {
   1: () => `Yes. <span class="g">${R('A').calls} → ${R('B').calls}</span> planner calls on the same visits; <b>${R('B').memSteps}</b> of ${R('B').steps} steps came from memory, still <b>${R('B').success}/${R('B').n}</b> placed.`,
   2: () => `The gate. Without it <span class="r">${R('C').unsafe}</span> unsafe steps ran and ${R('C').success}/${R('C').n} were placed; with it <span class="g">${R('D').unsafe}</span> unsafe, ${R('D').success}/${R('D').n} placed.`,
-  3: () => `A wrong shoulder reading fools the gate, which checks that same reading: placed <span class="r">${R('A').success}/${R('A').n} → ${R('E').success}/${R('E').n}</span>. Checking before planning instead: ${R('J').success}/${R('J').n}. A fingertip sensor that does not use the reading: <span class="g">${R('F').success}/${R('F').n}</span>.`,
+  3: () => `A wrong shoulder reading fools the gate, which checks that same reading: placed <span class="r">${R('A').success}/${R('A').n} → ${R('E').success}/${R('E').n}</span>. Checking before planning instead: ${R('J').success}/${R('J').n}. A fingertip sensor that does not use the reading: placed <span class="g">${R('F').success}/${R('F').n}</span>${R('F').standing < R('F').success ? `, but only <span class="r">${R('F').standing}/${R('F').n}</span> left standing — its repeated corrections tilt the grasp and the box ends up lying down` : ''}.`,
   4: () => `Memory points at the look-alike: delivered <span class="r">${R('G').wrong}</span> times. Touch check: <span class="g">${R('H').wrong}</span> (caught ${R('H').caught}); camera check: <span class="g">${R('I').wrong}</span> (memory dropped ${R('I').dropped}).`,
 };
 const ACTS = [
@@ -464,6 +464,9 @@ function onEvent(k, x) {
     } else say(`touch: fingers closed at <b>${(1000 * x.width).toFixed(0)} mm</b> (target is 32 mm)`, Math.abs(x.width - 0.032) > 0.006 ? 'bad' : 'good');
   }
   else if (k === 'caught') { outline(gLook, '#c0392b'); say(`touch check: ${(1000 * x.width).toFixed(0)} mm ≠ 32 mm → <b>let go, forget, look again</b>`, 'good'); }
+  else if (k === 'settle') {
+    if (x.fallen && x.result === 'success') verdict(`⚠ placed, but left lying down (${x.tilt.toFixed(0)}°)`, false);
+  }
   else if (k === 'result') {
     if (x.result === 'success') { outline(gTarget, '#1e7d4f'); verdict('✓ target placed', true); }
     else if (x.result === 'wrong') { outline(gLook, '#c0392b'); verdict('✗ placed the look-alike', false); say('the robot believes it succeeded — it carried the <b>look-alike</b>', 'bad'); }
@@ -534,10 +537,10 @@ function compareSlice(budgetMs) {
 }
 function renderCmp() {
   const mine = new Set(sc && sc.ks ? sc.ks : []);
-  $('cmp').innerHTML = '<tr><th>condition</th><th>memory</th><th>gate</th><th>planner mistakes</th><th>what goes wrong</th><th>extra check</th><th>target placed</th><th>look-alike placed</th><th>missed</th><th>planner calls</th><th>steps (from memory)</th><th>gate rejections</th><th>unsafe steps</th></tr>' +
+  $('cmp').innerHTML = '<tr><th>condition</th><th>memory</th><th>gate</th><th>planner mistakes</th><th>what goes wrong</th><th>extra check</th><th>target placed</th><th>left standing</th><th>look-alike placed</th><th>missed</th><th>planner calls</th><th>steps (from memory)</th><th>gate rejections</th><th>unsafe steps</th></tr>' +
     CONDS.map((c, i) => { const r = ROWS[i], busy = cmp && cmp.ci === i;
-      return `<tr class="${mine.has(c.k) ? 'mine' : ''}"><td><b>${c.k}</b> ${NAME[c.k]}</td>` + c.sw.map(v => `<td class="swc">${v}</td>`).join('') + (r ? `<td class="${r.success === r.n ? 'g' : r.success < r.n / 2 ? 'r' : ''}">${r.success}/${r.n}</td><td class="${r.wrong ? 'r' : ''}">${r.wrong}</td><td class="${r.miss ? 'r' : ''}">${r.miss}</td><td>${r.calls}</td><td>${r.steps} (${r.memSteps})</td><td>${r.rejected}</td><td class="${r.unsafe ? 'r' : ''}">${r.unsafe}</td>`
-        : `<td colspan="7" style="text-align:left;color:#6b6b70">${busy ? 'running in the background…' : '—'}</td>`) + '</tr>'; }).join('');
+      return `<tr class="${mine.has(c.k) ? 'mine' : ''}"><td><b>${c.k}</b> ${NAME[c.k]}</td>` + c.sw.map(v => `<td class="swc">${v}</td>`).join('') + (r ? `<td class="${r.success === r.n ? 'g' : r.success < r.n / 2 ? 'r' : ''}">${r.success}/${r.n}</td><td class="${r.standing === r.n ? 'g' : r.standing < r.success ? 'r' : ''}">${r.standing}/${r.n}</td><td class="${r.wrong ? 'r' : ''}">${r.wrong}</td><td class="${r.miss ? 'r' : ''}">${r.miss}</td><td>${r.calls}</td><td>${r.steps} (${r.memSteps})</td><td>${r.rejected}</td><td class="${r.unsafe ? 'r' : ''}">${r.unsafe}</td>`
+        : `<td colspan="8" style="text-align:left;color:#6b6b70">${busy ? 'running in the background…' : '—'}</td>`) + '</tr>'; }).join('');
   $('cmpNote').textContent = `Each condition runs the same 18 visits (6 scenes × 3) with the same camera noise and planner mistakes (random draw #${seed}). Highlighted rows are the question you picked. It runs in the background while you watch; press “New random draw” to see how much the numbers move.`;
 }
 
