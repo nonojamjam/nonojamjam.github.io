@@ -132,7 +132,7 @@ export function makeEngine(mj, model, data, C, goal) {
         const qB = readJoints(bias), tipB = believedTip(qB);
         if (d3(tipB, target) < SUCC) { reached = true; break; }
         const step = stepNo++;
-        const key = situationKey(tipB, target, qB);
+        const key = (phase === 'approach' ? '' : phase + ':') + situationKey(tipB, target, qB);   // E2: 접근 밖 단계는 키에 단계를 붙인다 (접근 기억을 운반에서 꺼내지 않게)
         // 타임라인용: 플래너 호출마다 번호(call)를 붙이고, 기억에는 그 걸음을 낸 호출 번호(from)를 함께 저장한다
         const ask = () => { const d = planStep(qB, tipB, target, cfg, st, rPlan); ev('call', { id: st.calls, vars: { q: qB, tip: tipB, target: target }, dq: d.slice() }); return d; };
         let dq = null, src = 'plan', call = 0, from = 0;
@@ -211,16 +211,19 @@ export function makeEngine(mj, model, data, C, goal) {
         mem.scene.delete(task.key); belief = cam(); continue;
       }
       // ---- 들어서 옮겨 놓기 ----
-      setPhase('lift');
-      yield* corrected([g[0], g[1], GRASP_Z + ABOVE]);
+      // L5(E2): cfg.stepPhases 에 든 단계는 경유점까지 걸음 단위(플래너·게이트·기억)로 간 뒤 IK 로 마무리 정렬한다. 없으면 예전처럼 IK 한 번.
+      //   단계 표지를 먼저 세운 뒤 걷는다 (setPhase 누락 시 이전 단계 이름이 찍힌다 — E1 검수 지적)
+      const go = function* (p, pt) {
+        setPhase(p);
+        if (cfg.stepPhases?.includes(p) && !(yield* stepTo(pt))) ev('phase-not-reached', { phase: p });
+        yield* corrected(pt);
+      };
+      yield* go('lift', [g[0], g[1], GRASP_Z + ABOVE]);
       const over = [goal[0], goal[1], GRASP_Z + ABOVE];
-      setPhase('carry');
-      yield* corrected(over);
-      setPhase('place');
-      yield* corrected([goal[0], goal[1], PLACE_Z]);
+      yield* go('carry', over);
+      yield* go('place', [goal[0], goal[1], PLACE_Z]);
       data.ctrl[7] = OPEN; yield* hold(40);
-      setPhase('retreat');
-      yield* corrected(over);
+      yield* go('retreat', over);
       for (let t = 0; t < 40; t++) { physicsTick(); yield; }
       if (cfg.mem) mem.scene.set(task.key, belief);
       break;
