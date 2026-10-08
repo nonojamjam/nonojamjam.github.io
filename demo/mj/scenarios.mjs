@@ -73,6 +73,13 @@ export function makeEngine(mj, model, data, C, goal) {
   // 플래너(대역): 믿는 손끝에서 목표 쪽으로 최대 6 cm 가는 관절 이동을 낸다. 확률 pm 으로 관절 두 개를 크게 틀리게 낸다
   function planStep(qB, tipB, target, cfg, st, rng) {
     st.calls++;
+    if (cfg.planner) {   // L1: 진짜 LLM(파일럿) — 손끝 이동량 [m] 배열이나 {dq} 를 받는다. 대역의 실수 주입·난수는 쓰지 않는다
+      const d = cfg.planner({ tip: tipB, target, q: qB });
+      if (!d) return qB.map(() => 0);   // 못 읽은 응답 = 움직이지 않음 (게이트가 전진 없음으로 거절)
+      if (d.dq) return d.dq.slice();
+      const f = C.fkTip(qB);
+      return C.solveIK([f[0] + d[0], f[1] + d[1], f[2] + d[2]], 60, qB).q.map((x, i) => x - qB[i]);
+    }
     const fk = C.fkTip(qB), v = [target[0] - tipB[0], target[1] - tipB[1], target[2] - tipB[2]];
     const n = Math.hypot(...v), k = n > STEP ? STEP / n : 1;
     const way = [fk[0] + k * v[0], fk[1] + k * v[1], fk[2] + k * v[2]];   // 센서가 있으면 tipB 는 잰 손끝 → 오차만큼 목표를 옮겨 낸다
