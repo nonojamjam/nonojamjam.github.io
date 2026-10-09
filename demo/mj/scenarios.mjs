@@ -5,6 +5,7 @@
 // 다 오면 내려가 실제 손가락으로 쥐고(촉각), 들어 옮겨 놓는다. 에피소드는 제너레이터: 제어 한 틱마다 yield.
 import { OPEN, CLOSED } from './pickplace_ctrl.mjs';
 import { estimateOffset } from './calib.mjs';
+import { makeVision } from './vision.mjs';
 
 export const TARGET_W = 0.032, LOOK_W = 0.040;     // 손가락이 닫힌 폭: 목표 상자 32 mm, 닮은 상자 40 mm
 const SUB = 5, PRE = 0.08, ABOVE = 0.15, GRASP_Z = 0.035, PLACE_Z = 0.037;
@@ -88,6 +89,7 @@ export function makeEngine(mj, model, data, C, goal) {
   }
   function* hold(ticks) { for (let t = 0; t < ticks; t++) { physicsTick(); yield; } }
   const readJoints = bias => Array.from(data.qpos.slice(0, 7)).map((v, i) => v + (i === BIAS_JOINT ? bias : 0));
+  let vis = null;   // V2: 이미지 기반 비전 (cfg.vision 일 때만 만든다)
   let kd = null;   // B′2: 보정용 운동학 전용 MjData (cfg.calib 일 때만 만든다)
   function handPose(q) {   // 손끝 위치 + 손 좌표계에서 본 중력 방향 (R 행 우선: Rᵀ·[0,0,-1] = −(셋째 행))
     kd ??= new mj.MjData(model);
@@ -149,11 +151,23 @@ export function makeEngine(mj, model, data, C, goal) {
     for (let t = 0; t < 40; t++) { physicsTick(); yield; }
     const truth = C.bodyPos(C.bTarget);
     const cam = () => [truth[0] + CAM_NOISE * gauss(rCam), truth[1] + CAM_NOISE * gauss(rCam)];
+    // V2: cfg.vision 이면 상자 위치를 참값 + 잡음 대신 ray 렌더 이미지에서 찾는다 (vision.mjs — 목표 판별은 측정 폭·모양으로만).
+    //   참값은 기록(err)에만 쓴다. 못 찾으면 작업 영역 가운데로 간다 (실패로 이어지게 — 참값으로 되돌리지 않는다). 끄면 see = cam 그대로
+    const rVis = cfg.vision ? makeRng(base + 5) : null;
+    let beliefYaw = 0;
+    const see = () => {
+      if (!cfg.vision) return cam();
+      vis ??= makeVision(mj, model, data, cfg.vision === true ? {} : cfg.vision);
+      const L = vis.look(rVis), now = C.bodyPos(C.bTarget);
+      ev('vision', { ok: L.ok, xy: L.xy, yaw: L.yaw, short: L.short ?? null, cands: L.cands.length, err: L.ok ? Math.hypot(L.xy[0] - now[0], L.xy[1] - now[1]) : null });
+      if (!L.ok) { st.visionMiss = (st.visionMiss || 0) + 1; return [0.525, 0.09]; }
+      beliefYaw = L.yaw; return L.xy;
+    };
     let belief, source;
     if (cfg.mem && mem.scene.has(task.key)) {
       belief = mem.scene.get(task.key); source = 'memory';
-      if (cfg.camCheck) { const c = cam(); if (d2(belief, c) > 0.02) { mem.scene.delete(task.key); belief = c; source = 'camera'; st.dropped++; ev('drop'); } }
-    } else { belief = cam(); source = 'camera'; }
+      if (cfg.camCheck) { const c = see(); if (d2(belief, c) > 0.02) { mem.scene.delete(task.key); belief = c; source = 'camera'; st.dropped++; ev('drop'); } }
+    } else { belief = see(); source = 'camera'; }
     ev('belief', { belief, source, task });
     const tipNow = () => C.sitePos();
     const TR = cfg.tracker ? (cfg.tracker === true ? TRACKER_DEFAULT : { ...TRACKER_DEFAULT, ...cfg.tracker }) : null;
@@ -305,7 +319,7 @@ export function makeEngine(mj, model, data, C, goal) {
         st.caught++; ev('caught', { width });
         data.ctrl[7] = OPEN; yield* hold(40);
         yield* corrected([g[0], g[1], g[2] + ABOVE]);
-        mem.scene.delete(task.key); belief = cam(); continue;
+        mem.scene.delete(task.key); belief = see(); continue;
       }
       // ---- 들어서 옮겨 놓기 ----
       // L5(E2): cfg.stepPhases 에 든 단계는 경유점까지 걸음 단위(플래너·게이트·기억)로 간 뒤 IK 로 마무리 정렬한다. 없으면 예전처럼 IK 한 번.
