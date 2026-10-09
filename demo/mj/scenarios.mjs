@@ -4,11 +4,13 @@
 //   → MuJoCo 가 실제로 그 걸음을 실행 → 나아갔으면 기억에 저장, 기억에서 꺼낸 걸음이 안 나아갔으면 그 기억을 지운다.
 // 다 오면 내려가 실제 손가락으로 쥐고(촉각), 들어 옮겨 놓는다. 에피소드는 제너레이터: 제어 한 틱마다 yield.
 import { OPEN, CLOSED } from './pickplace_ctrl.mjs';
+import { estimateOffset } from './calib.mjs';
 
 export const TARGET_W = 0.032, LOOK_W = 0.040;     // 손가락이 닫힌 폭: 목표 상자 32 mm, 닮은 상자 40 mm
 const SUB = 5, PRE = 0.08, ABOVE = 0.15, GRASP_Z = 0.035, PLACE_Z = 0.037;
 const BIAS_JOINT = 1, TOUCH_TOL = 0.006, CAM_NOISE = 0.003, SENSOR_NOISE = 0.002;
 const STEP = 0.06, SUCC = 0.025, PROG = 0.005, JERK = 0.4, MAX_STEPS = 12, MAX_REPLAN = 3, UNSAFE = 0.005, TILT = 0.25;
+const CAL = { k: 5, window: 20, min: 10, every: 5, sigI: Math.PI / 180, prior: 0.3 };   // B′2: 온라인 보정 — 추적 k 회 중앙값 + IMU σ 1°, 최근 20 관측, 10개부터 5개마다 재추정
 const FLOOR_EPS = 0.003;   // P1(10/9): 쥔 상자를 들고 걸을 때 손끝이 PLACE_Z(상자가 탁자에 닿는 높이)보다 이만큼 아래로 내려가는 제안은 거절
 
 export const SCENES = [
@@ -86,6 +88,14 @@ export function makeEngine(mj, model, data, C, goal) {
   }
   function* hold(ticks) { for (let t = 0; t < ticks; t++) { physicsTick(); yield; } }
   const readJoints = bias => Array.from(data.qpos.slice(0, 7)).map((v, i) => v + (i === BIAS_JOINT ? bias : 0));
+  let kd = null;   // B′2: 보정용 운동학 전용 MjData (cfg.calib 일 때만 만든다)
+  function handPose(q) {   // 손끝 위치 + 손 좌표계에서 본 중력 방향 (R 행 우선: Rᵀ·[0,0,-1] = −(셋째 행))
+    kd ??= new mj.MjData(model);
+    for (let i = 0; i < 7; i++) kd.qpos[i] = q[i];
+    mj.mj_kinematics(model, kd);
+    const R = kd.site_xmat.slice(9 * C.site, 9 * C.site + 9);
+    return { p: Array.from(kd.site_xpos.slice(3 * C.site, 3 * C.site + 3)), g: [-R[6], -R[7], -R[8]] };
+  }
 
   // 상황 키: 목표까지 방향(x·y·z 부호, 1 cm 불감대) + 거리 구간 + 큰 관절 3개(1·2·4)의 구간
   function situationKey(tip, target, q) {
@@ -165,6 +175,28 @@ export function makeEngine(mj, model, data, C, goal) {
       return out;
     };
     const believedTip = qB => cfg.sensor ? sense(qB) : C.fkTip(qB);
+    // B′2: 온라인 보정. Δ̂ 는 실행(mem) 전체에 유지한다 (고정 고장). 보정 관절 = 읽은 값 − Δ̂ 를 FK·게이트·기억·명령에 쓴다.
+    //   끄면 rd = readJoints(bias), mv = moveJoints(·, bias) 그대로 (S0 불변)
+    if (cfg.calib && !TR) throw new Error('cfg.calib 은 cfg.tracker 가 있어야 한다');
+    const cal = cfg.calib ? (mem.cal ??= { D: new Array(7).fill(0), obs: [], n: 0 }) : null;
+    const rCal = cal ? makeRng(base + 4) : null;
+    const rd = () => { const q = readJoints(bias); return cal ? q.map((v, i) => v - cal.D[i]) : q; };
+    const mv = qB => moveJoints(cal ? qB.map((v, i) => v + cal.D[i]) : qB, bias);
+    const calObserve = () => {   // 한 걸음의 관측(추적 k 회 중앙값 + IMU)을 쌓고 때가 되면 Δ̂ 를 다시 추정. 반환 = 추적 중앙값과 FK(보정 관절)의 거리
+      const qr = readJoints(bias), t = tipNow(), fk = C.fkTip(qr.map((v, i) => v - cal.D[i])), reads = [];
+      for (let i = 0; i < CAL.k; i++) reads.push(rangeTrack(t, rCal, TR, fk));
+      const pm = [0, 1, 2].map(j => reads.map(r => r[j]).sort((a, b) => a - b)[CAL.k >> 1]);
+      const R = data.site_xmat.slice(9 * C.site, 9 * C.site + 9), gn = [-R[6], -R[7], -R[8]].map(v => v + CAL.sigI * gauss(rCal)), nn = Math.hypot(...gn);
+      cal.obs.push({ qr, pm, gm: gn.map(v => v / nn) }); if (cal.obs.length > CAL.window) cal.obs.shift();
+      cal.n++;
+      if (cal.obs.length >= CAL.min && cal.n % CAL.every === 0) {
+        cal.D = estimateOffset(cal.obs, handPose, { sigP: TR.sigma * 1.5, sigI: CAL.sigI, prior: CAL.prior });
+        const truth = cal.D.map((v, i) => v - (i === BIAS_JOINT ? bias : 0));   // 시뮬이라 참 오프셋을 안다 — 기록 전용
+        ev('calib', { n: cal.n, D: cal.D.slice(), err: Math.hypot(...truth) });
+      }
+      const fkNow = C.fkTip(qr.map((v, i) => v - cal.D[i]));   // 검수(Flash) 반영: 격리 판단은 방금 갱신된 Δ̂ 기준 잔차로
+      return Math.hypot(pm[0] - fkNow[0], pm[1] - fkNow[1], pm[2] - fkNow[2]);
+    };
     data.ctrl[7] = OPEN;
     // S4: phase 태그 — 추론하지 않고 제어 코드가 지금 하는 일을 그대로 적는다 (approach·grasp·lift·carry·place·retreat)
     let phase = null;
@@ -176,7 +208,8 @@ export function makeEngine(mj, model, data, C, goal) {
     function* stepTo(target) {
       let reached = false;
       for (let n = 0; n < MAX_STEPS; n++) {
-        const qB = readJoints(bias), tipB = believedTip(qB);
+        const dis = cal ? calObserve() : 0;   // B′2: 관측은 읽기 전에 (방금 갱신된 Δ̂ 로 이 걸음을 읽는다)
+        const qB = rd(), tipB = believedTip(qB);
         if (d3(tipB, target) < SUCC) { reached = true; break; }
         const step = stepNo++;
         const key = (phase === 'approach' ? '' : phase + ':') + situationKey(tipB, target, qB);   // E2: 접근 밖 단계는 키에 단계를 붙인다 (접근 기억을 운반에서 꺼내지 않게)
@@ -186,7 +219,9 @@ export function makeEngine(mj, model, data, C, goal) {
         let dq = null, src = 'plan', call = 0, from = 0;
         // L6c: cfg.recall = 실행 밖 기억 묶음(DB). 재생 후보 [{id, dtip}] 를 점수순으로 게이트에 넣고, 없거나 다 거절되면 플래너.
         //   손끝 변위 → 지금 자세에서 IK 로 관절 이동 (R2: 관절 증분 그대로보다 쓸 수 있는 거리가 두 배). 엔진 Map 기억(cfg.mem)과 함께 쓰지 않는다
-        const memQ = cfg.recall ? cfg.recall({ phase, tip: tipB, target, q: qB }).slice() : [];
+        const quarantined = !!cfg.quarantine && dis > cfg.quarantine.delta;   // B′2(D2): 독립 감각과 어긋나는 동안은 기억을 꺼내지 않는다
+        if (quarantined) ev('quarantine', { dis });
+        const memQ = cfg.recall && !quarantined ? cfg.recall({ phase, tip: tipB, target, q: qB }).slice() : [];
         const nextMem = () => {
           const m = memQ.shift(), f = C.fkTip(qB);
           dq = C.solveIK([f[0] + m.dtip[0], f[1] + m.dtip[1], f[2] + m.dtip[2]], 60, qB).q.map((x, i) => x - qB[i]);
@@ -210,7 +245,7 @@ export function makeEngine(mj, model, data, C, goal) {
           // L6c: DB 기억 후보가 남아 있으면 거절돼도 재계획 횟수(tries)를 쓰지 않고 다음 후보로. 후보가 없으면 예전과 똑같은 순서·횟수
           while (!(lastOk = judge())) {
             if (!memQ.length && tries++ >= MAX_REPLAN) break;
-            st.rejected++; ev('reject', { q: qB.map((x, i) => x + dq[i] - (i === BIAS_JOINT ? bias : 0)), src, call, from });
+            st.rejected++; ev('reject', { q: qB.map((x, i) => x + dq[i] + (cal ? cal.D[i] : 0) - (i === BIAS_JOINT ? bias : 0)), src, call, from });
             if (src === 'mem' && cfg.mem) { mem.act.delete(key); st.memDeleted++; ev('forget', { from }); }
             if (memQ.length) nextMem();
             else { dq = ask(); call = st.calls; from = 0; src = 'plan'; }
@@ -218,8 +253,8 @@ export function makeEngine(mj, model, data, C, goal) {
           if (!lastOk) { st.blocked++; ev('blocked'); continue; }   // 끝까지 막히면 움직이지 않고 다음 걸음에서 다시 묻는다
         }
         const realBefore = d3(tipNow(), target), qTrue0 = Array.from(data.qpos.slice(0, 7)), tip0 = tipNow();
-        yield* moveJoints(qB.map((x, i) => x + dq[i]), bias);
-        const qB2 = readJoints(bias), tipB2 = believedTip(qB2);
+        yield* mv(qB.map((x, i) => x + dq[i]));
+        const qB2 = rd(), tipB2 = believedTip(qB2);
         const unsafe = d3(tipNow(), target) > realBefore + UNSAFE;   // 실제 손끝이 향하던 지점에서 멀어졌다
         if (unsafe) st.unsafe++;
         st.steps++; if (src === 'mem') st.memSteps++;
@@ -234,14 +269,14 @@ export function makeEngine(mj, model, data, C, goal) {
           dqCmd: dq.slice(), dqActual: qTrue1.map((v, i) => v - qTrue0[i]), dtipActual: [tip1[0] - tip0[0], tip1[1] - tip0[1], tip1[2] - tip0[2]],
           distDelta: d3(tip1, target) - realBefore, progressed, unsafe, gateUs });
       }
-      if (!reached) { const qB = readJoints(bias); reached = d3(believedTip(qB), target) < SUCC; }
+      if (!reached) { const qB = rd(); reached = d3(believedTip(qB), target) < SUCC; }
       return reached;
     }
 
     for (let attempt = 0; attempt < 3; attempt++) {
       setPhase('approach');
       const pre = [belief[0], belief[1], GRASP_Z + PRE];
-      ev('reach-start', { tip: tipNow(), belief: believedTip(readJoints(bias)) });
+      ev('reach-start', { tip: tipNow(), belief: believedTip(rd()) });
       // ---- 걸음 단위로 잡을 지점 위까지 ----
       const reached = yield* stepTo(pre);
       if (!reached) { st.notReached++; ev('not-reached'); break; }
@@ -249,13 +284,13 @@ export function makeEngine(mj, model, data, C, goal) {
       // ---- 정렬해서 내려가 쥐기 (읽은 관절값 기준 IK). 센서가 있으면 잰 손끝 오차를 매번 다시 재서 고친다 ----
       let off = [0, 0, 0];
       const corrected = function* (pt) {
-        yield* moveJoints(C.solveIK([pt[0] + off[0], pt[1] + off[1], pt[2] + off[2]], 150, readJoints(bias)).q, bias);
+        yield* mv(C.solveIK([pt[0] + off[0], pt[1] + off[1], pt[2] + off[2]], 150, rd()).q);
         if (!cfg.sensor) return;
         for (let k = 0; k < 3; k++) {
-          const m = sense(readJoints(bias)), e = [pt[0] - m[0], pt[1] - m[1], pt[2] - m[2]];
+          const m = sense(rd()), e = [pt[0] - m[0], pt[1] - m[1], pt[2] - m[2]];
           if (Math.hypot(...e) < 0.004) return;
           off = [off[0] + e[0], off[1] + e[1], off[2] + e[2]]; ev('sensor-fix');
-          yield* moveJoints(C.solveIK([pt[0] + off[0], pt[1] + off[1], pt[2] + off[2]], 150, readJoints(bias)).q, bias);
+          yield* mv(C.solveIK([pt[0] + off[0], pt[1] + off[1], pt[2] + off[2]], 150, rd()).q);
         }
       };
       const g = [belief[0], belief[1], GRASP_Z];
@@ -265,7 +300,7 @@ export function makeEngine(mj, model, data, C, goal) {
       yield* corrected(g);
       data.ctrl[7] = CLOSED; yield* hold(60);
       const width = data.qpos[7] + data.qpos[8];
-      ev('touch', { width, tip: tipNow(), belief: C.fkTip(readJoints(bias)) });   // belief = 읽은 관절값으로 계산한 손끝 (센서와 무관)
+      ev('touch', { width, tip: tipNow(), belief: C.fkTip(rd()) });   // belief = 읽은 관절값으로 계산한 손끝 (센서와 무관)
       if (cfg.touch && Math.abs(width - TARGET_W) > TOUCH_TOL) {
         st.caught++; ev('caught', { width });
         data.ctrl[7] = OPEN; yield* hold(40);
