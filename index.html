@@ -26,9 +26,9 @@
 <main class="wrap">
   <h2>News <span class="ko">소식</span></h2>
   <ul class="news">
-    <li><span class="d">2026.10</span><span>New: <a href="research/oracle-free.html">no oracle in the loop</a> — the same memory and checks on a Panda that sees only through a camera image, a range tracker, an IMU and touch, with local LLMs. <a href="demo/oracle-free.html">Live demo</a>.</span></li>
+    <li><span class="d">2026.10</span><span>Preliminary study, step 2: <a href="research/oracle-free.html">no oracle in the loop</a> — the same memory and checks on a Panda that sees only through a camera image, a range tracker, an IMU and touch, with local LLMs. <a href="demo/oracle-free.html">Live demo</a>.</span></li>
     <li><span class="d">2026.10</span><span>Live demo: <a href="demo/panda-gripper.html">the same loop on a Franka Panda in MuJoCo</a>, running in the browser — the gripper grasps, carries and places the box through finger contact.</span></li>
-    <li><span class="d">2026.10</span><span>Preliminary study: <a href="research/poc.html">verify, remember, and decide how much to compute</a> — camera, LLM planner, kinematic check, touch and memory in one loop.</span></li>
+    <li><span class="d">2026.10</span><span>Preliminary study, step 1: <a href="research/poc.html">verify, remember, and decide how much to compute</a> — camera, LLM planner, kinematic check, touch and memory in one loop.</span></li>
     <li><span class="d">2026.08</span><span>First-author oral talk at the 3rd IAA Conference on AI for Space, Jeju.</span></li>
     <li><span class="d">2026.05</span><span>First-author talk at the Korea Society of Industrial Information Systems (Spring 2026).</span></li>
     <li><span class="d">2026</span><span>KCI journal paper (co-author) · patent pending (co-inventor) · KAERI research intern, 6 months.</span></li>
@@ -39,20 +39,11 @@
   <div class="item">
     <a class="thumb" href="demo/oracle-free.html"><img src="assets/poc/oracle_free_thumb.gif" alt="Live demo: the Panda grasps a box in any orientation; the panel shows its own camera image with the boxes it measured"></a>
     <div>
-      <h3><a href="research/oracle-free.html">No oracle in the loop: memory and verification on a Panda</a></h3>
-      <p class="meta">2026.10 · self-initiated · MuJoCo Panda · local LLMs (4B and 32B) · pre-registered, held-out scenes</p>
-      <p>With a 32B model's verified memory, a 4B planner matched the 32B planner (36/36) with zero large-model calls. With a shoulder reading 0.15 rad off, independent sensors plus "observe, verify, then act" took the robot from 0 to 108/108.</p>
-      <div class="btns"><a class="primary" href="demo/oracle-free.html">▶ live demo</a><a href="research/oracle-free.html">details</a></div>
-    </div>
-  </div>
-
-  <div class="item">
-    <a class="thumb" href="demo/panda-gripper.html"><img src="assets/poc/mujoco_demo_thumb.gif" alt="Live MuJoCo demo: Panda replays steps from memory, a touch check catches a swapped look-alike, then the real box is placed"></a>
-    <div>
-      <h3><a href="research/poc.html">Verify, remember, and decide how much to compute</a> <span class="ko">(earlier step)</span></h3>
-      <p class="meta">2026.10 · self-initiated · simulated 3-joint arm · live Panda demo in MuJoCo · pre-registered</p>
-      <p>Verified memory removed most LLM calls on familiar scenes at the same success, and an independent touch check stopped wrong memories. When the robot's own state estimate was wrong, checks before and after planning were both fooled.</p>
-      <div class="btns"><a class="primary" href="demo/panda-gripper.html">▶ live demo · Panda in MuJoCo</a><a href="demo/memory-gate-panda.html">kinematic demo</a><a href="research/poc.html">details</a></div>
+      <h3><a href="research/oracle-free.html">Memory and verification on a Panda, without an oracle</a></h3>
+      <p class="meta">2026.10 · self-initiated · MuJoCo Panda · local LLMs (4B and 32B) · pre-registered, held-out scenes · two steps</p>
+      <p><b>Step 2 (current).</b> The robot sees only through a camera image, a range tracker, an IMU and touch. With a 32B model's verified memory, a 4B planner matched the 32B planner (36/36) with zero large-model calls. With a shoulder reading 0.15 rad off, independent sensors plus "observe, verify, then act" took the robot from 0 to 108/108.</p>
+      <p><b>Step 1.</b> With box and fingertip positions read from the simulator, verified memory removed most LLM calls at the same success, and a touch check stopped wrong memories. When the robot's own state was wrong, checks before and after planning were both fooled, which is what step 2 set out to fix.</p>
+      <div class="btns"><a class="primary" href="demo/oracle-free.html">▶ live demo</a><a href="research/oracle-free.html">step 2 details</a><a href="research/poc.html">step 1 details</a><a href="demo/panda-gripper.html">step 1 demo</a></div>
     </div>
   </div>
 

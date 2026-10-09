@@ -20,10 +20,10 @@
 <main class="wrap page">
   <p class="crumb"><a href="../index.html">← Juhyeok Park</a></p>
   <h1>No oracle in the loop: memory and verification on a Panda</h1>
-  <p class="meta">Preliminary study · 2026.10 · self-initiated · MuJoCo Franka Panda · local LLMs (gemma3 4B, qwen2.5-coder 32B) · every run pre-registered, judged on held-out scene seeds</p>
+  <p class="meta">Preliminary study, step 2 · 2026.10 · self-initiated · MuJoCo Franka Panda · local LLMs (gemma3 4B, qwen2.5-coder 32B) · every run pre-registered, judged on held-out scene seeds</p>
   <p class="ko">시뮬레이터의 정답값을 결정 경로에서 모두 빼고, 이미지·거리 추적·IMU·촉각만으로 집어 옮기기를 하면서 검증된 기억이 계산을 얼마나 줄이는지, 관절 읽기가 틀릴 때 무엇이 막는지를 본 예비 연구입니다.</p>
 
-  <p class="lead">My <a href="poc.html">earlier study</a> showed that verified memory cuts LLM calls, and that checks before and after planning are both fooled when the robot's own joint reading is wrong.
+  <p class="lead"><a href="poc.html">Step 1</a> of this study showed that verified memory cuts LLM calls, and that checks before and after planning are both fooled when the robot's own joint reading is wrong.
     It still read the box position and the fingertip from the simulator. Here I removed every such shortcut from the decision loop and asked the same two questions again:
     <b>can memory stand in for a large model</b>, and <b>what keeps the robot right when its own state is wrong</b>?</p>
 
@@ -94,7 +94,7 @@
 
   <h2>Setup <span class="ko">설정</span></h2>
   <p>MuJoCo 3.15, Franka Panda from MuJoCo Menagerie. Local models through Ollama at temperature 0 on an Apple M5 Pro laptop. Each comparison had its pass criteria written before running; selection was done on tuning seeds and judged once on seeds not used before. Code, logs and the pre-registrations are kept with the project.</p>
-  <div class="btns"><a class="primary" href="../demo/oracle-free.html">▶ live demo</a><a href="poc.html">earlier study</a><a href="../demo/panda-gripper.html">earlier Panda demo</a></div>
+  <div class="btns"><a class="primary" href="../demo/oracle-free.html">▶ live demo</a><a href="poc.html">step 1</a><a href="../demo/panda-gripper.html">step 1 Panda demo</a></div>
 </main>
 <footer class="wrap"><a href="../index.html">← back</a></footer>
 </body>
