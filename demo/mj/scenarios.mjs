@@ -221,6 +221,17 @@ export function makeEngine(mj, model, data, C, goal) {
       const fkNow = C.fkTip(qr.map((v, i) => v - cal.D[i]));   // 검수(Flash) 반영: 격리 판단은 방금 갱신된 Δ̂ 기준 잔차로
       return Math.hypot(pm[0] - fkNow[0], pm[1] - fkNow[1], pm[2] - fkNow[2]);
     };
+    // V4: 보정 없이도 독립 감각 불일치를 '감시만' 한다 (cfg.monitor). 추적 k 회 중앙값과 FK(읽은 관절)의 거리. 에피소드 최대값을 기록해
+    //   고장 기간 결과를 자동으로 무효 처리하는 데 쓴다 (derive_bank --auto-invalid). 보정이 켜져 있으면 calObserve 의 잔차를 쓴다
+    if (cfg.monitor && !TR) throw new Error('cfg.monitor 는 cfg.tracker 가 있어야 한다');
+    const rMon = cfg.monitor && !cal ? makeRng(base + 7) : null;
+    const monitorDis = () => {
+      const qr = readJoints(bias), t = tipNow(), fk = C.fkTip(qr), reads = [];
+      for (let i = 0; i < CAL.k; i++) reads.push(rangeTrack(t, rMon, TR, fk));
+      const pm = [0, 1, 2].map(j => reads.map(r => r[j]).sort((a, b) => a - b)[CAL.k >> 1]);
+      return Math.hypot(pm[0] - fk[0], pm[1] - fk[1], pm[2] - fk[2]);
+    };
+    const monAgg = { max: 0, n: 0, over: 0 };
     data.ctrl[7] = OPEN;
     // S4: phase 태그 — 추론하지 않고 제어 코드가 지금 하는 일을 그대로 적는다 (approach·grasp·lift·carry·place·retreat)
     let phase = null;
@@ -232,7 +243,8 @@ export function makeEngine(mj, model, data, C, goal) {
     function* stepTo(target) {
       let reached = false;
       for (let n = 0; n < MAX_STEPS; n++) {
-        const dis = cal ? calObserve() : 0;   // B′2: 관측은 읽기 전에 (방금 갱신된 Δ̂ 로 이 걸음을 읽는다)
+        const dis = cal ? calObserve() : rMon ? monitorDis() : 0;   // B′2: 관측은 읽기 전에 (방금 갱신된 Δ̂ 로 이 걸음을 읽는다) · V4: 감시만
+        if (cfg.monitor) { monAgg.n++; monAgg.max = Math.max(monAgg.max, dis); if (dis > (cfg.monitor.delta ?? 0.05)) monAgg.over++; }
         const qB = rd(), tipB = believedTip(qB);
         if (d3(tipB, target) < SUCC) { reached = true; break; }
         const step = stepNo++;
@@ -353,6 +365,7 @@ export function makeEngine(mj, model, data, C, goal) {
     const inGoal = b => { const p = C.bodyPos(b); return Math.abs(p[0] - goal[0]) < 0.06 && Math.abs(p[1] - goal[1]) < 0.06; };
     const result = inGoal(C.bTarget) ? 'success' : inGoal(C.bLook) ? 'wrong' : 'miss';
     st[result]++; st.n++;
+    if (cfg.monitor) ev('monitor', { ...monAgg });   // V4: 이 에피소드의 독립 감각 불일치 요약
     ev('result', { result, source, task });
     // S2a: 판정 '뒤에' 상자가 멈출 때까지 기다려 기울기만 기록한다 (성공 판정·통계 불변, 다음 에피소드는 reset).
     // 목표 상자 자유관절 속도 = qvel[9..14] [실측 jnt_dofadr]. 0.01 미만이 10틱 이어지면 정지, 최대 200틱.
