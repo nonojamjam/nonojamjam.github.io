@@ -206,14 +206,14 @@ export function makeEngine(mj, model, data, C, goal) {
     const rCal = cal ? makeRng(base + 4) : null;
     const rd = () => { const q = readJoints(bias); return cal ? q.map((v, i) => v - cal.D[i]) : q; };
     const mv = qB => moveJoints(cal ? qB.map((v, i) => v + cal.D[i]) : qB, bias);
-    const calObserve = () => {   // 한 걸음의 관측(추적 k 회 중앙값 + IMU)을 쌓고 때가 되면 Δ̂ 를 다시 추정. 반환 = 추적 중앙값과 FK(보정 관절)의 거리
+    const calObserve = (force = false) => {   // V8: force = 관측 수가 차 있으면 이번에 바로 재추정 (능동 감지용)   // 한 걸음의 관측(추적 k 회 중앙값 + IMU)을 쌓고 때가 되면 Δ̂ 를 다시 추정. 반환 = 추적 중앙값과 FK(보정 관절)의 거리
       const qr = readJoints(bias), t = tipNow(), fk = C.fkTip(qr.map((v, i) => v - cal.D[i])), reads = [];
       for (let i = 0; i < CAL.k; i++) reads.push(rangeTrack(t, rCal, TR, fk));
       const pm = [0, 1, 2].map(j => reads.map(r => r[j]).sort((a, b) => a - b)[CAL.k >> 1]);
       const R = data.site_xmat.slice(9 * C.site, 9 * C.site + 9), gn = [-R[6], -R[7], -R[8]].map(v => v + CAL.sigI * gauss(rCal)), nn = Math.hypot(...gn);
       cal.obs.push({ qr, pm, gm: gn.map(v => v / nn) }); if (cal.obs.length > CAL.window) cal.obs.shift();
       cal.n++;
-      if (cal.obs.length >= CAL.min && cal.n % CAL.every === 0) {
+      if (cal.obs.length >= CAL.min && (force || cal.n % CAL.every === 0)) {
         cal.D = estimateOffset(cal.obs, handPose, { sigP: TR.sigma * 1.5, sigI: CAL.sigI, prior: CAL.prior, maxStd: cfg.calib?.maxStd ?? null });
         const truth = cal.D.map((v, i) => v - (i === BIAS_JOINT ? bias : 0));   // 시뮬이라 참 오프셋을 안다 — 기록 전용
         ev('calib', { n: cal.n, D: cal.D.slice(), err: Math.hypot(...truth) });
@@ -232,6 +232,7 @@ export function makeEngine(mj, model, data, C, goal) {
       return Math.hypot(pm[0] - fk[0], pm[1] - fk[1], pm[2] - fk[2]);
     };
     const monAgg = { max: 0, n: 0, over: 0 };
+    let lastDis = Infinity;   // V8: 마지막 걸음의 추적-FK 불일치 (쥐기 관문이 본다)
     data.ctrl[7] = OPEN;
     // S4: phase 태그 — 추론하지 않고 제어 코드가 지금 하는 일을 그대로 적는다 (approach·grasp·lift·carry·place·retreat)
     let phase = null;
@@ -243,7 +244,7 @@ export function makeEngine(mj, model, data, C, goal) {
     function* stepTo(target) {
       let reached = false;
       for (let n = 0; n < MAX_STEPS; n++) {
-        const dis = cal ? calObserve() : rMon ? monitorDis() : 0;   // B′2: 관측은 읽기 전에 (방금 갱신된 Δ̂ 로 이 걸음을 읽는다) · V4: 감시만
+        const dis = cal ? calObserve() : rMon ? monitorDis() : 0; lastDis = dis;   // B′2: 관측은 읽기 전에 (방금 갱신된 Δ̂ 로 이 걸음을 읽는다) · V4: 감시만
         if (cfg.monitor) { monAgg.n++; monAgg.max = Math.max(monAgg.max, dis); if (dis > (cfg.monitor.delta ?? 0.05)) monAgg.over++; }
         const qB = rd(), tipB = believedTip(qB);
         if (d3(tipB, target) < SUCC) { reached = true; break; }
@@ -316,6 +317,19 @@ export function makeEngine(mj, model, data, C, goal) {
       // ---- 걸음 단위로 잡을 지점 위까지 ----
       const reached = yield* stepTo(pre);
       if (!reached) { st.notReached++; ev('not-reached'); break; }
+      // V8(10/9): 관측 → 검증 → 행동. 쥐기(되돌리기 어려움) 전에 보정이 준비됐고(관측 ≥ CAL.min) 독립 감각과 어긋나지 않는지(불일치 ≤ δ) 본다.
+      //   아니면 쥐기 대신 잡을 점 주변 몇 곳으로 움직여 관측을 쌓고 그때마다 다시 추정한다 (능동 감지). 실측 동기: 고장 + 보정 실패의 대부분이 첫 판(관측 10개 전 쥐기 확정)
+      if (cal && cfg.calibGate) {
+        const delta = cfg.calibGate.delta ?? 0.05, ready = () => cal.obs.length >= CAL.min && lastDis <= delta;
+        const OFF = [[0.04, 0, 0], [-0.04, 0, 0], [0, 0.04, 0], [0, -0.04, 0], [0, 0, 0.04], [0.03, 0.03, 0.02], [-0.03, -0.03, 0.02], [0, 0, 0]];
+        const before = { n: cal.obs.length, dis: lastDis }; let probes = 0;
+        while (!ready() && probes < OFF.length) {
+          const o = OFF[probes++];
+          yield* mv(C.solveIK([pre[0] + o[0], pre[1] + o[1], pre[2] + o[2]], 150, rd()).q);
+          lastDis = calObserve(true);
+        }
+        if (probes) { st.probes = (st.probes || 0) + probes; ev('active-sense', { probes, ready: ready(), before, n: cal.obs.length, dis: lastDis }); }
+      }
 
       // ---- 정렬해서 내려가 쥐기 (읽은 관절값 기준 IK). 센서가 있으면 잰 손끝 오차를 매번 다시 재서 고친다 ----
       let off = [0, 0, 0];
