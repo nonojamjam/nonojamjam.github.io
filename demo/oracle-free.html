@@ -125,11 +125,9 @@
       <div class="bar">
         <button id="play" disabled>▶ Play</button>
         <button id="restart" class="ghost" disabled>Restart</button>
-        <span class="lbl">difficulty</span><div class="seg" id="lvlSeg"><button data-v="easy">easy</button><button data-v="medium" class="on">medium</button><button data-v="hard">hard</button></div>
         <span class="spacer"></span>
         <span class="lbl">speed</span><div class="seg" id="speed"><button data-v="1">1×</button><button data-v="3" class="on">3×</button><button data-v="8">8×</button></div>
       </div>
-      <p class="note" id="lvlNote" style="margin:6px 0 0"></p>
       <div id="tlWrap">
         <div class="tlh"><span><b>Who decided each step</b> · 걸음마다 기억이 했는지 플래너(실험에선 LLM)가 했는지</span><span id="tlCount"></span></div>
         <canvas id="tl"></canvas>
@@ -253,7 +251,8 @@ const E = makeEngine(mj, model, data, C, goal), EB = makeEngine(mj, model, dataB
 
 // ---------- three.js ----------
 const view = $('view');
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const CAP = location.search.includes('cap');   // capture mode for the study page's animation: keep the drawing buffer so frames can be read
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: CAP });
 renderer.setPixelRatio(Math.min(2, window.devicePixelRatio)); renderer.shadowMap.enabled = true;
 view.prepend(renderer.domElement);
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0xf3f5f8);
@@ -480,7 +479,7 @@ function renderCmp() {
       return `<tr class="${setting && setting.k === x.k ? 'mine' : ''}"><td><b>${x.k}</b> ${x.title} <span style="color:#6b6b70">· ${x.sub}</span></td>` + (r
         ? `<td class="${r.standing === r.n ? 'g' : r.standing < r.n / 2 ? 'r' : ''}">${r.standing}/${r.n}</td><td class="${r.wrong + r.miss ? 'r' : ''}">${r.wrong + r.miss}</td><td>${r.calls}</td><td>${r.rounds.join(' / ')}</td><td>${r.memSteps}/${r.steps}</td><td>${r.bank}${SETTINGS[i].mem === 'bank' ? ' + 644' : ''}</td><td>${r.looks}</td>`
         : `<td colspan="7" style="text-align:left;color:#6b6b70">${busy ? 'running in the background…' : '—'}</td>`) + '</tr>'; }).join('');
-  $('cmpNote').textContent = `Same 18 visits (scene seed ${SCENE}, 6 scenes × 3, difficulty: ${LEVELS[level].label}) for every row, stand-in planner. A round = the 6 scenes once. With local LLMs on held-out seeds the study measured: 32B planner alone 36/36 with 793 large-model calls vs small model + memory 36/36 with 0; joint fault 0/108 → 100/108 (sensors) → 108/108 (observe → verify → act).`;
+  $('cmpNote').textContent = `Same 18 visits (scene seed ${SCENE}, 6 scenes × 3, boxes in any orientation) for every row, stand-in planner. A round = the 6 scenes once. With local LLMs on held-out seeds the study measured: 32B planner alone 36/36 with 793 large-model calls vs small model + memory 36/36 with 0; joint fault 0/108 → 100/108 (sensors) → 108/108 (observe → verify → act).`;
 }
 const R = k => ROWS[SI[k]];
 const ANSWER = {
@@ -500,9 +499,7 @@ for (const b of document.querySelectorAll('.pre')) b.onclick = () => selectSetti
 $('play').onclick = () => { if (run.i >= run.tasks.length) newRun(); playing = !playing; $('play').textContent = playing ? '❚❚ Pause' : '▶ Play'; };
 $('restart').onclick = () => { playing = false; $('play').textContent = '▶ Play'; newRun(); };
 for (const b of $('speed').children) b.onclick = () => { speed = +b.dataset.v; for (const o of $('speed').children) o.classList.toggle('on', o === b); };
-const showLevel = () => { $('lvlNote').textContent = `Difficulty: ${LEVELS[level].note}.`; };
-for (const b of $('lvlSeg').children) b.onclick = () => { level = b.dataset.v; for (const o of $('lvlSeg').children) o.classList.toggle('on', o === b); showLevel(); playing = false; $('play').textContent = '▶ Play'; newRun(); startCompare(); renderAnswers(); };
-showLevel();
+
 selectSetting('B'); startCompare();
 
 // ---------- loop ----------
@@ -522,6 +519,26 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+// capture mode only: compose the 3D view, what the robot sees and the current event line into one frame (data URLs)
+if (CAP) window.__capture = async (n, ms, W = 900) => {
+  const out = [], v = renderer.domElement, side = 300, vw = W - side - 12;
+  const sx = 0.14 * v.width, sy = 0.12 * v.height, sw = 0.72 * v.width, sh = 0.78 * v.height, vh = Math.round(vw * sh / sw);   // zoom on the work area
+  const H = Math.max(vh, side + 70) + 30;
+  for (let i = 0; i < n; i++) {
+    await new Promise(r => setTimeout(r, ms));
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
+    g.drawImage(v, sx, sy, sw, sh, 0, 0, vw, vh);
+    g.drawImage(eye, vw + 12, 0, side, side);
+    g.font = '600 15px -apple-system,Segoe UI,sans-serif'; g.fillStyle = '#1d1d1f'; g.fillText('what the robot sees', vw + 12, side + 20);
+    g.font = '13px -apple-system,Segoe UI,sans-serif'; g.fillStyle = '#6b6b70';
+    g.fillText(`hand gap ${$('gDis').textContent} · obs ${$('gObs').textContent}`, vw + 12, side + 40);
+    g.fillText(`${$('kVisit').textContent} visits · ${$('kCalls').textContent} calls · ${$('kLook').textContent} extra looks`, vw + 12, side + 58);
+    g.fillStyle = '#1f4f9e'; g.font = '15px -apple-system,Segoe UI,sans-serif'; g.fillText($('event').innerText.slice(0, 95), 6, H - 14);
+    out.push(c.toDataURL('image/png'));
+  }
+  return out;
+};
 </script>
 </body>
 </html>
