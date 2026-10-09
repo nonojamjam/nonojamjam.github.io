@@ -84,3 +84,52 @@ export function makeVision(mj, model, data, opt = {}) {
   }
   return { capture, detect, look, project, V };
 }
+
+// L2 S2(10/9): 놓을 곳 위 '장면 카메라' — 위에서 거의 수직으로 내려다보는 두 번째 고정 카메라의 깊이만으로 벽 윗면·받침 윗면을 잰다.
+//   색·geom 번호는 쓰지 않는다 (geom 번호로 벽/받침을 가르면 새 오라클 — 10/9 패널 Kimi). 가르는 기준은 잰 크기뿐:
+//   긴 변 ≥ wallLong 이면 벽, 두 변이 supMin~supMax 이면 받침. 윗면 높이는 덩어리 높이의 상위 백분위(잡음 σ 2 mm 에 최댓값은 위로 치우친다).
+//   에피소드 시작 때(팔이 시야 밖 집 자세) 한 번 본다. zMaxScene 위의 점(팔·손)은 버린다.
+export const SCENE_VISION_DEFAULT = {
+  pos: [0.47, -0.28, 0.95], look: [0.47, -0.26, 0.0],   // 놓을 곳 구역(x 0.22~0.72 · y −0.53~−0.03 남짓)을 위에서
+  fovy: 30, W: 128, H: 128,                             // 화소 하나 ≈ 4 mm
+  sigD: 0.002, pDrop: 0.03, sigC: 0.05,
+  zMin: 0.012, zMaxScene: 0.34, minPx: 12, topQ: 0.9, topBand: 0.008,
+  wallLong: 0.15, supMin: 0.04, supMax: 0.085,
+};
+export function makeSceneVision(mj, model, data, opt = {}) {
+  const S = { ...SCENE_VISION_DEFAULT, ...opt };
+  const cam = makeVision(mj, model, data, S);   // 같은 레이캐스트 카메라 (위치·시야만 다르다)
+  function measure(rng) {   // → { wall: {top, c, short, long, yaw} | null, support: {xy, top, short, long} | null, blobs }
+    const img = cam.capture(rng), W = S.W, H = S.H;
+    const up = img.map(px => px.p && px.p[2] > S.zMin && px.p[2] < S.zMaxScene);
+    const lab = new Int32Array(img.length).fill(-1), blobs = [];
+    for (let s = 0; s < img.length; s++) {
+      if (!up[s] || lab[s] >= 0) continue;
+      const stack = [s], mem = []; lab[s] = blobs.length;
+      while (stack.length) {
+        const i = stack.pop(); mem.push(i);
+        const r = (i / W) | 0, c = i % W;
+        for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const rr = r + dr, cc = c + dc, j = rr * W + cc;
+          if (rr >= 0 && rr < H && cc >= 0 && cc < W && up[j] && lab[j] < 0) { lab[j] = blobs.length; stack.push(j); }
+        }
+      }
+      if (mem.length < S.minPx) { blobs.push(null); continue; }
+      const zs = mem.map(i => img[i].p[2]).sort((a, b) => a - b), zTop = zs[Math.floor(S.topQ * (zs.length - 1))];
+      const top = mem.map(i => img[i].p).filter(p => Math.abs(p[2] - zTop) < S.topBand);
+      const mx = top.reduce((a, p) => a + p[0], 0) / top.length, my = top.reduce((a, p) => a + p[1], 0) / top.length;
+      const ext = a => { const e = top.map(p => (p[0] - mx) * Math.cos(a) + (p[1] - my) * Math.sin(a)).sort((x, y) => x - y);
+        return e[Math.floor(0.98 * (e.length - 1))] - e[Math.floor(0.02 * (e.length - 1))]; };
+      let best = null;
+      for (let k = 0; k < 45; k++) { const a = k * Math.PI / 90, e1 = ext(a), e2 = ext(a + Math.PI / 2); if (!best || e1 * e2 < best.area) best = { area: e1 * e2, a, e1, e2 }; }
+      const [short, long, shortAng] = best.e1 < best.e2 ? [best.e1, best.e2, best.a] : [best.e2, best.e1, best.a + Math.PI / 2];
+      blobs.push({ c: [mx, my], top: zTop, short, long, yaw: shortAng, n: mem.length });
+    }
+    const bs = blobs.filter(Boolean);
+    const wall = bs.filter(b => b.long >= S.wallLong).sort((a, b) => b.n - a.n)[0] ?? null;
+    const sup = bs.filter(b => b.short >= S.supMin && b.long <= S.supMax).sort((a, b) => b.n - a.n)[0] ?? null;
+    return { wall: wall && { top: wall.top, c: wall.c, short: wall.short, long: wall.long, yaw: wall.yaw },
+             support: sup && { xy: sup.c, top: sup.top, short: sup.short, long: sup.long }, blobs: bs.length };
+  }
+  return { measure, cam, S };
+}

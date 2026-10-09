@@ -5,7 +5,7 @@
 // 다 오면 내려가 실제 손가락으로 쥐고(촉각), 들어 옮겨 놓는다. 에피소드는 제너레이터: 제어 한 틱마다 yield.
 import { OPEN, CLOSED } from './pickplace_ctrl.mjs';
 import { estimateOffset } from './calib.mjs';
-import { makeVision } from './vision.mjs';
+import { makeVision, makeSceneVision } from './vision.mjs';
 
 export const TARGET_W = 0.032, LOOK_W = 0.040;     // 손가락이 닫힌 폭: 목표 상자 32 mm, 닮은 상자 40 mm
 const SUB = 5, PRE = 0.08, ABOVE = 0.15, GRASP_Z = 0.035, PLACE_Z = 0.037;
@@ -90,6 +90,7 @@ export function makeEngine(mj, model, data, C, goal) {
   function* hold(ticks) { for (let t = 0; t < ticks; t++) { physicsTick(); yield; } }
   const readJoints = bias => Array.from(data.qpos.slice(0, 7)).map((v, i) => v + (i === BIAS_JOINT ? bias : 0));
   let vis = null;   // V2: 이미지 기반 비전 (cfg.vision 일 때만 만든다)
+  let sceneVis = null;   // L2 S2: 놓을 곳 위 장면 카메라 (cfg.l2.measure 일 때만)
   // L2(10/9): 레벨 2 장면 — 장애물 벽(cfg.l2.wall) · 받침 상자(cfg.l2.support). pickplace_l2.mjb 의 mocap 몸체를 장면마다 옮긴다.
   //   위치·높이는 장면 seed·장면 번호로만 정한다(조건이 달라도 같은 세계). 둘 다 늘 뽑아서 l2a·l2b·l2ab 가 같은 수를 공유한다.
   //   ⚠️ 여기서 정한 참값은 채점·기록 전용이다. 결정 경로(계획·게이트·기억)는 측정값만 쓴다 — 오라클 회귀 방지 (패널 Kimi).
@@ -176,9 +177,21 @@ export function makeEngine(mj, model, data, C, goal) {
       for (const [a, t] of [[12, yT], [19, yL]]) { data.qpos[a] = Math.cos(t / 2); data.qpos[a + 1] = 0; data.qpos[a + 2] = 0; data.qpos[a + 3] = Math.sin(t / 2); }
       mj.mj_forward(model, data); trueYaw = yT;
     }
+    if (cfg.l2?.oracle && cfg.l2?.measure) throw new Error('L2: oracle 과 measure 는 함께 쓸 수 없다');
     const l2Truth = cfg.l2 ? placeL2(cfg, task) : null;   // L2: 채점·기록 전용 (결정 경로에서 읽지 않는다)
     if (l2Truth) ev('l2-scene', l2Truth);
     for (let t = 0; t < 40; t++) { physicsTick(); yield; }
+    // L2 S2: 측정판이면 시작할 때 장면 카메라로 한 번 본다 (관측 → 검증 → 행동). 참값은 오차 기록에만
+    let l2Meas = null;
+    if (cfg.l2?.measure) {
+      sceneVis ??= makeSceneVision(mj, model, data, cfg.l2.measure === true ? {} : cfg.l2.measure);
+      l2Meas = sceneVis.measure(makeRng(base + 7));
+      const e = (m, t, f) => m && t ? f(m, t) : m ? 'false-positive' : t ? 'missed' : null;
+      ev('scene-vision', { meas: l2Meas, err: {
+        wallTop: e(l2Meas.wall, l2Truth.wall, (m, t) => m.top - t.top),
+        supXY: e(l2Meas.support, l2Truth.support, (m, t) => Math.hypot(m.xy[0] - t.xy[0], m.xy[1] - t.xy[1])),
+        supTop: e(l2Meas.support, l2Truth.support, (m, t) => m.top - t.top) } });
+    }
     const truth = C.bodyPos(C.bTarget);
     const cam = () => [truth[0] + CAM_NOISE * gauss(rCam), truth[1] + CAM_NOISE * gauss(rCam)];
     // V2: cfg.vision 이면 상자 위치를 참값 + 잡음 대신 ray 렌더 이미지에서 찾는다 (vision.mjs — 목표 판별은 측정 폭·모양으로만).
@@ -391,10 +404,12 @@ export function makeEngine(mj, model, data, C, goal) {
       };
       // L2: 운반 높이·놓을 점·놓는 높이. 기본은 레벨 1 그대로(고정 놓을 곳, 탁자 높이).
       //   cfg.l2.oracle = 의도적 대조군: 벽·받침 참값으로 정한다 (풀 수 있는 과제인지 + 측정판의 상한). 측정판은 S2 에서 카메라 값으로 같은 자리를 채운다.
+      //   cfg.l2.measure = 측정판: 장면 카메라가 잰 벽·받침(l2Meas)으로 같은 자리를 채운다. 못 찾으면 레벨 1 기본값(실패로 이어지게 — 참값으로 되돌리지 않는다)
       let carryZ = GRASP_Z + ABOVE, dst = goal, placeZ = PLACE_Z;
-      if (cfg.l2?.oracle && l2Truth) {
-        if (l2Truth.wall) carryZ = Math.max(carryZ, l2Truth.wall.top + L2_CLEAR);
-        if (l2Truth.support) { dst = l2Truth.support.xy; placeZ = PLACE_Z + l2Truth.support.top; carryZ = Math.max(carryZ, placeZ + ABOVE); }
+      const l2Src = cfg.l2?.oracle ? l2Truth : cfg.l2?.measure ? l2Meas : null;
+      if (l2Src) {
+        if (l2Src.wall) carryZ = Math.max(carryZ, l2Src.wall.top + L2_CLEAR);
+        if (l2Src.support) { dst = l2Src.support.xy; placeZ = PLACE_Z + l2Src.support.top; carryZ = Math.max(carryZ, placeZ + ABOVE); }
       }
       yield* go('lift', [g[0], g[1], carryZ]);
       const over = [dst[0], dst[1], carryZ];
