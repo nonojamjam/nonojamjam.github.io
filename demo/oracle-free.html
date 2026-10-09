@@ -21,13 +21,23 @@
   h2{font-size:1.1rem;margin:28px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line);font-weight:650}
   h2 span{color:var(--mut);font-weight:400;font-size:.9rem;margin-left:8px}
 
-  .presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0 10px}
-  @media (max-width:820px){.presets{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  .pre{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 11px;text-align:left;color:var(--txt);cursor:pointer;font:inherit}
-  .pre b{display:block;color:var(--accent);font-size:.9rem;margin-bottom:2px}
-  .pre span{color:var(--mut);font-size:.78rem;line-height:1.35;display:block}
+  .acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 12px}
+  @media (max-width:860px){.acts{grid-template-columns:1fr}}
+  .act{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 11px;display:flex;flex-direction:column;gap:6px}
+  .act h3{margin:0;font-size:.95rem;font-weight:650}
+  .act h3 i{font-style:normal;color:var(--accent);margin-right:6px}
+  .act .q{margin:0;font-size:.82rem;color:var(--mut);line-height:1.45}
+  .act .ans{margin:2px 0 0;font-size:.82rem;line-height:1.45;border-top:1px dashed var(--line);padding-top:6px;color:var(--mut)}
+  .act .ans b{color:var(--txt)} .act .ans .g{color:var(--green);font-weight:650} .act .ans .r{color:var(--red);font-weight:650}
+  .pre{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;text-align:left;color:var(--txt);cursor:pointer;font:inherit;width:100%}
+  .pre b{display:block;color:var(--accent);font-size:.86rem;margin-bottom:1px}
+  .pre span{color:var(--mut);font-size:.76rem;line-height:1.35;display:block}
   .pre:hover{border-color:var(--accent)}
   .pre.on{border-color:var(--accent);box-shadow:0 0 0 2px #cfe0f4 inset;background:#f5f9fe}
+  #tlWrap{margin:10px 0 0;border:1px solid var(--line);border-radius:10px;padding:6px 8px 4px;background:#fff}
+  #tlWrap .tlh{display:flex;justify-content:space-between;font-size:.76rem;color:var(--mut);gap:10px;flex-wrap:wrap}
+  #tl{display:block;width:100%;height:96px}
+  .tlleg{display:flex;flex-wrap:wrap;gap:12px;font-size:.74rem;color:var(--mut);margin:2px 0 2px}
 
   .stage{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:10px}
   @media (max-width:900px){.stage{grid-template-columns:1fr}}
@@ -54,7 +64,9 @@
   .eyecap{font-size:.76rem;color:var(--mut);margin:6px 0 0;line-height:1.4}
   .gauge{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:.82rem;align-items:center}
   .gauge b{font-family:var(--mono);font-weight:600}
-  .meter{grid-column:1/3;height:6px;border-radius:3px;background:#eef0f3;overflow:hidden;margin:0 0 6px}
+  .meter{grid-column:1/3;height:6px;border-radius:3px;background:#eef0f3;margin:0 0 6px;position:relative}
+  .meter i{border-radius:3px} .meter u{position:absolute;top:-3px;bottom:-3px;width:2px;background:#1d1d1f}
+  .why{font-size:.76rem;color:var(--mut);margin:0 0 8px;line-height:1.45}
   .meter i{display:block;height:100%;background:var(--green);width:0%}
   .meter.warn i{background:var(--red)}
   .chk{display:flex;gap:6px;align-items:center;font-size:.82rem;margin:2px 0}
@@ -97,9 +109,9 @@
   <p class="crumb"><a href="../research/oracle-free.html">← No oracle in the loop: memory and verification on a Panda</a></p>
   <h1>Live demo · nothing in the decision loop reads the simulator's ground truth</h1>
   <p class="meta">Juhyeok Park · 2026.10 · MuJoCo physics in your browser · scripted stand-in planner (the LLM results are on the study page)</p>
-  <p class="ko">상자는 이미지에서 찾고, 손끝은 잡음 있는 거리 추적으로, 손 기울기는 IMU 로 잽니다. 관절이 틀리게 읽히는 고장을 켜고, 보정과 '쥐기 전 관문'을 하나씩 더해 보세요.</p>
+  <p class="ko">상자는 이미지에서 찾고, 손끝은 잡음 있는 거리 추적, 손 기울기는 IMU 로 잽니다. 세 질문을 차례로 눌러 보세요. 각 질문은 설정 두 개를 같은 18번 방문으로 비교하고, 답은 아래에서 돌아가는 비교로 채워집니다.</p>
 
-  <div class="presets" id="presets"></div>
+  <div class="acts" id="acts"></div>
 
   <div class="stage">
     <div>
@@ -113,9 +125,18 @@
       <div class="bar">
         <button id="play" disabled>▶ Play</button>
         <button id="restart" class="ghost" disabled>Restart</button>
-        <span class="lbl">memory</span><div class="seg" id="memSeg"><button data-v="0">off</button><button data-v="1" class="on">on</button></div>
         <span class="spacer"></span>
         <span class="lbl">speed</span><div class="seg" id="speed"><button data-v="1">1×</button><button data-v="3" class="on">3×</button><button data-v="8">8×</button></div>
+      </div>
+      <div id="tlWrap">
+        <div class="tlh"><span><b>Who decided each step</b> · 걸음마다 기억이 했는지 플래너(실험에선 LLM)가 했는지</span><span id="tlCount"></span></div>
+        <canvas id="tl"></canvas>
+        <div class="tlleg">
+          <span><span class="sw" style="background:#8a8f98"></span>planner call</span>
+          <span><span class="sw" style="background:#2f6fd6"></span>step from memory (no call)</span>
+          <span><span class="sw" style="background:transparent;border:2px solid #c0392b"></span>rejected by the gate</span>
+          <span><span class="sw" style="background:#b7791f"></span>extra look before grasping</span>
+        </div>
       </div>
     </div>
     <div class="side">
@@ -125,15 +146,16 @@
         <p class="eyecap" id="eyecap">The target is chosen by its <b>measured</b> top face: 32 × 40 mm, while the look-alike is 40 × 40 mm. The renderer's object ids are never used.</p>
       </div>
       <div class="panel">
-        <h3>Do the sensors agree? <span>tracker vs joint reading</span></h3>
+        <h3>Where is my hand? <span>joint reading vs tracker</span></h3>
+        <p class="why">The gate, the memory and the planner all compute the hand from the joint readings. The tracker measures it without them. A gap over 5 cm (black line) means the reading is wrong, and the robot should fix it before it acts.</p>
         <div class="gauge">
-          <span>fingertip disagreement</span><b id="gDis">–</b>
-          <div class="meter" id="mDis"><i></i></div>
+          <span>gap between the two</span><b id="gDis">–</b>
+          <div class="meter" id="mDis"><i></i><u style="left:33.3%"></u></div>
           <span>observations for calibration</span><b id="gObs">–</b>
           <div class="meter" id="mObs"><i></i></div>
           <span>offset estimate error <small style="color:#6b6b70">(sim only)</small></span><b id="gErr">–</b>
         </div>
-        <div class="chk" id="cReady"><i></i><span>pre-grasp gate: calibrated and in agreement</span></div>
+        <div class="chk" id="cReady"><i></i><span>pre-grasp check: off</span></div>
       </div>
     </div>
   </div>
@@ -153,7 +175,7 @@
     <span><span class="sw" style="background:#2fa65a;opacity:.6"></span>goal zone</span>
   </div>
 
-  <h2>The four settings on the same 18 visits <span>같은 18번 방문, 네 설정</span></h2>
+  <h2>All five settings on the same 18 visits <span>같은 18번 방문, 다섯 설정</span></h2>
   <div style="overflow-x:auto"><table id="cmp"></table></div>
   <p class="note" id="cmpNote"></p>
 
@@ -184,20 +206,27 @@ const $ = id => document.getElementById(id);
 // The oracle-free world used in the study (MJ_WORLD=mid): any box orientation, image-based vision, wrist alignment, touch check, rough range tracker.
 const WORLD = { gate: true, pMistake: 0.3, yaw: 90, vision: { frame: true }, yawAlign: true, touch: true,
   tracker: { sigma: 0.02, pNlos: 0.1, nlosMax: 0.15 }, stepPhases: ['lift', 'carry', 'place', 'retreat'] };
-const PRESETS = [
-  { k: 1, title: 'Healthy robot', sub: 'joint readings are correct', cfg: {} },
-  { k: 2, title: 'Joint fault', sub: 'shoulder reads 0.15 rad off · no fix', cfg: { bias: true } },
-  { k: 3, title: '+ online calibration', sub: 'tracker + IMU estimate the offset', cfg: { bias: true, calib: true } },
-  { k: 4, title: '+ pre-grasp gate', sub: 'observe → verify → act', cfg: { bias: true, calib: true, calibGate: { delta: 0.05 } } },
+// Five settings, each differing from its neighbour by one switch. Memory = the verified-experience bank of the 32B planner.
+const SETTINGS = [
+  { k: 'A', title: 'Planner every step', sub: 'healthy robot · no memory', cfg: {}, mem: false },
+  { k: 'B', title: 'With verified memory', sub: "healthy robot · replays a 32B model's checked steps", cfg: {}, mem: true },
+  { k: 'C', title: 'Joint fault, memory only', sub: 'shoulder reads 0.15 rad off · nothing checks the reading', cfg: { bias: true }, mem: true },
+  { k: 'D', title: '+ independent sensors', sub: 'tracker + IMU correct the reading while it moves', cfg: { bias: true, calib: true }, mem: true },
+  { k: 'E', title: '+ observe → verify → act', sub: 'grasp only once calibrated and the hand position agrees', cfg: { bias: true, calib: true, calibGate: { delta: 0.05 } }, mem: true },
+];
+const SI = Object.fromEntries(SETTINGS.map((x, i) => [x.k, i]));
+const ACTS = [
+  { n: 1, h: 'Can memory stand in for the big model?', q: 'Every step normally asks a planner (an LLM in the study). Memory replays steps that already passed the checks, re-solved for the current pose.', ks: ['A', 'B'] },
+  { n: 2, h: 'The joint reading lies. Who notices?', q: 'The gate, the memory and the planner all trust the joint reading, so a wrong reading fools all three at once. Only a sensor that does not use it can tell.', ks: ['C', 'D'] },
+  { n: 3, h: 'When is it safe to act?', q: 'Calibration needs observations first. Grasping before it has them is how the first visit fails. Observe, verify, then act.', ks: ['D', 'E'] },
 ];
 const SEED = 507, SCENE = 507;   // a held-out scene seed from the study (eval 507)
-let memOn = true;
 // Memory = the verified-experience bank the 32B planner (qwen2.5-coder) built on two other scene seeds in the study (644 steps that passed the gate and made progress).
 //   Replayed as a fingertip displacement solved by IK from the current pose, only when it is close enough (d ≤ 0.5 × remaining distance).
 const BANK = await (await fetch('mj/bank_v6_qwen_mid.json')).json(), RECALL = makeRecall(BANK.candidates, 0.5);
-const cfgOf = p => ({ ...WORLD, ...p.cfg, ...(memOn ? { recall: RECALL } : {}), sceneSeed: SCENE });
-
-$('presets').innerHTML = PRESETS.map(p => `<button class="pre" data-k="${p.k}"><b>${p.k} · ${p.title}</b><span>${p.sub}</span></button>`).join('');
+const cfgOf = x => ({ ...WORLD, ...x.cfg, ...(x.mem ? { recall: RECALL } : {}), sceneSeed: SCENE });
+const btn = x => `<button class="pre" data-k="${x.k}"><b>${x.k} · ${x.title}</b><span>${x.sub}</span></button>`;
+$('acts').innerHTML = ACTS.map(a => `<div class="act"><h3><i>${a.n}</i>${a.h}</h3><p class="q">${a.q}</p>${a.ks.map(k => btn(SETTINGS[SI[k]])).join('')}<p class="ans" id="ans${a.n}">The answer appears when the comparison below has run (about a minute).</p></div>`).join('');
 
 // ---------- MuJoCo ----------
 const mj = await loadMujoco();
@@ -304,11 +333,46 @@ function gauges() {
   $('gErr').textContent = cfg && cfg.calib ? (run.calErr == null ? '–' : `${run.calErr.toFixed(3)} rad`) : cfg && cfg.bias ? '0.150 rad' : '0';
   const ready = cfg && cfg.calibGate ? (n >= 10 && dis != null && dis <= 0.05) : null;
   $('cReady').className = 'chk ' + (ready === null ? '' : ready ? 'ok' : 'no');
-  $('cReady').lastChild.textContent = cfg && cfg.calibGate ? (ready ? 'pre-grasp gate: ready to grasp' : 'pre-grasp gate: not yet — look again first') : 'pre-grasp gate: off';
+  $('cReady').lastChild.textContent = cfg && cfg.calibGate ? (ready ? 'pre-grasp check: ready to grasp' : 'pre-grasp check: not yet, look again first') : 'pre-grasp check: off in this setting';
 }
 
+// ---------- timeline: who decided each step ----------
+const tlc = $('tl'), tctx = tlc.getContext('2d');
+let TL = null;
+function tlReset() { TL = { items: [], slot: 0, nCalls: 0, nMem: 0, nLook: 0, lastCall: null }; tlDraw(); }
+function tlEvent(k, x) {
+  if (!TL) return;
+  const add = it => { it.x = TL.slot++; TL.items.push(it); return it; };
+  if (k === 'belief') { if (TL.items.length) TL.slot += 1; add({ t: 'visit', n: x.task.visit * 6 + x.task.key + 1 }); }
+  else if (k === 'call') { TL.lastCall = add({ t: 'call' }); TL.nCalls++; }
+  else if (k === 'reject') { if (x.src === 'mem') add({ t: 'mem', rej: true }); else if (TL.lastCall) TL.lastCall.rej = true; }
+  else if (k === 'step') { if (x.mem) { add({ t: 'mem' }); TL.nMem++; } }
+  else if (k === 'active-sense') { add({ t: 'look' }); TL.nLook += x.probes; }
+  else return;
+  tlDraw();
+}
+function tlDraw() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1), W = tlc.clientWidth, H = tlc.clientHeight;
+  if (tlc.width !== W * dpr || tlc.height !== H * dpr) { tlc.width = W * dpr; tlc.height = H * dpr; }
+  const g = tctx; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const L = 62, Rr = W - 6, yC = 28, yS = 70, hb = 13;
+  g.font = '11px -apple-system,Segoe UI,sans-serif'; g.fillStyle = '#6b6b70'; g.textBaseline = 'middle';
+  g.fillText('planner', 4, yC); g.fillText('memory', 4, yS);
+  g.strokeStyle = '#e3e3e6'; g.lineWidth = 1; g.beginPath(); g.moveTo(L, yC); g.lineTo(Rr, yC); g.moveTo(L, yS); g.lineTo(Rr, yS); g.stroke();
+  if (!TL || !TL.items.length) { g.fillText('press Play: every planner call and every step from memory appears here', L + 6, (yC + yS) / 2); $('tlCount').textContent = ''; return; }
+  const sp = Math.min(10, (Rr - L) / Math.max(40, TL.slot)), X = i => L + (i + 0.5) * sp, w = Math.max(2, sp * 0.72);
+  for (const it of TL.items) {
+    if (it.t === 'visit') { g.strokeStyle = '#d5d9df'; g.beginPath(); g.moveTo(X(it.x), 8); g.lineTo(X(it.x), H - 4); g.stroke(); if (sp * 6 > 18 || it.n % 6 === 1) { g.fillStyle = '#6b6b70'; g.fillText(String(it.n), X(it.x) + 2, 9); } continue; }
+    const y = it.t === 'call' ? yC : yS, fill = it.t === 'call' ? '#8a8f98' : it.t === 'look' ? '#b7791f' : '#2f6fd6';
+    g.globalAlpha = it.rej ? 0.35 : 1; g.fillStyle = fill; g.fillRect(X(it.x) - w / 2, y - hb / 2, w, hb); g.globalAlpha = 1;
+    if (it.rej) { g.strokeStyle = '#c0392b'; g.lineWidth = 1.3; g.strokeRect(X(it.x) - w / 2, y - hb / 2, w, hb); }
+  }
+  $('tlCount').textContent = `${TL.nCalls} planner calls · ${TL.nMem} steps from memory · ${TL.nLook} extra looks`;
+}
+new ResizeObserver(() => tlDraw()).observe(tlc);
+
 // ---------- live run ----------
-let preset = null, run = null, playing = false, speed = 3, acc = 0;
+let setting = null, run = null, playing = false, speed = 3, acc = 0;
 const TICK = 5 * model.opt.timestep;
 function say(text, kind = '') { const e = $('event'); e.innerHTML = text; e.className = 'ov ' + kind; }
 function verdict(text, ok) { const v = $('verdict'); v.textContent = text; v.className = 'ov ' + (ok === null ? '' : ok ? 'ok' : 'bad'); }
@@ -318,9 +382,10 @@ function outline(g, color) {
   const fade = color === '#c0392b'; box.material.transparent = fade; box.material.opacity = fade ? 0.4 : 1; box.material.needsUpdate = true;
 }
 function onEvent(k, x) {
+  tlEvent(k, x);
   if (k === 'belief') {
     outline(gTarget, null); outline(gLook, null); verdict('', null);
-    $('where').innerHTML = `visit <b>${x.task.visit + 1}/3</b> · scene <b>${x.task.key + 1}/6</b> · ${preset.title}`;
+    $('where').innerHTML = `visit <b>${x.task.visit + 1}/3</b> · scene <b>${x.task.key + 1}/6</b> · ${setting.k} · ${setting.title}`;
   }
   else if (k === 'vision') { drawEye(x); say(x.ok ? `camera: target found from the image (${(1000 * x.short).toFixed(0)} mm short side)` : 'camera: no target-shaped box', x.ok ? '' : 'bad'); }
   else if (k === 'track') {}
@@ -347,10 +412,10 @@ function stats() {
   gauges();
 }
 function newRun() {
-  const cfg = cfgOf(preset);
+  const cfg = cfgOf(setting);
   hideGhost(); outline(gTarget, null); outline(gLook, null); verdict('', null);
   run = { cfg, tasks: E.tasks(false, SCENE), i: 0, st: E.newStats(), mem: { scene: new Map(), act: new Map() }, gen: null, looks: 0, calErr: null, dis: null, disT: 0 };
-  C.reset(); say('press Play to run 18 visits (6 scenes × 3)'); $('where').textContent = preset.title; stats();
+  C.reset(); say('press Play to run 18 visits (6 scenes × 3)'); $('where').textContent = `${setting.k} · ${setting.title}`; tlReset(); stats();
 }
 function stepRun() {
   if (!run.gen) {
@@ -374,15 +439,15 @@ function liveDis() {
 }
 
 // ---------- background comparison: the four settings, same 18 visits ----------
-let ROWS = PRESETS.map(() => null), cmp = null;
-function startCompare() { ROWS = PRESETS.map(() => null); cmp = { pi: 0, ti: 0, st: null, mem: null, gen: null, tasks: null, looks: 0 }; renderCmp(); }
+let ROWS = SETTINGS.map(() => null), cmp = null;
+function startCompare() { ROWS = SETTINGS.map(() => null); cmp = { pi: 0, ti: 0, st: null, mem: null, gen: null, tasks: null, looks: 0 }; renderCmp(); }
 function compareSlice(budgetMs) {
   const t0 = performance.now();
   while (cmp && performance.now() - t0 < budgetMs) {
-    const cfg = { ...cfgOf(PRESETS[cmp.pi]), vision: true };   // no image frames in the background
+    const cfg = { ...cfgOf(SETTINGS[cmp.pi]), vision: true };   // no image frames in the background
     if (!cmp.gen) {
       if (!cmp.st) { cmp.st = EB.newStats(); cmp.mem = { scene: new Map(), act: new Map() }; cmp.tasks = EB.tasks(false, SCENE); cmp.ti = 0; cmp.looks = 0; }
-      if (cmp.ti >= cmp.tasks.length) { ROWS[cmp.pi] = { ...cmp.st, looks: cmp.looks }; cmp.st = null; cmp.pi++; if (cmp.pi >= PRESETS.length) cmp = null; renderCmp(); continue; }
+      if (cmp.ti >= cmp.tasks.length) { ROWS[cmp.pi] = { ...cmp.st, looks: cmp.looks }; cmp.st = null; cmp.pi++; if (cmp.pi >= SETTINGS.length) cmp = null; renderCmp(); renderAnswers(); continue; }
       cmp.gen = EB.episode(cmp.tasks[cmp.ti], cfg, cmp.mem, cmp.st, SEED, (k, x) => { if (k === 'active-sense') cmp.looks += x.probes; });
     }
     for (let k = 0; k < 120; k++) if (cmp.gen.next().done) { cmp.gen = null; cmp.ti++; break; }
@@ -390,25 +455,31 @@ function compareSlice(budgetMs) {
 }
 function renderCmp() {
   $('cmp').innerHTML = '<tr><th>setting</th><th>placed and standing</th><th>missed / wrong</th><th>planner calls</th><th>steps from memory</th><th>extra looks</th></tr>' +
-    PRESETS.map((p, i) => { const r = ROWS[i], busy = cmp && cmp.pi === i;
-      return `<tr class="${preset && preset.k === p.k ? 'mine' : ''}"><td><b>${p.k}</b> ${p.title} <span style="color:#6b6b70">· ${p.sub}</span></td>` + (r
+    SETTINGS.map((x, i) => { const r = ROWS[i], busy = cmp && cmp.pi === i;
+      return `<tr class="${setting && setting.k === x.k ? 'mine' : ''}"><td><b>${x.k}</b> ${x.title} <span style="color:#6b6b70">· ${x.sub}</span></td>` + (r
         ? `<td class="${r.standing === r.n ? 'g' : r.standing < r.n / 2 ? 'r' : ''}">${r.standing}/${r.n}</td><td class="${r.wrong + r.miss ? 'r' : ''}">${r.wrong + r.miss}</td><td>${r.calls}</td><td>${r.memSteps}/${r.steps}</td><td>${r.looks}</td>`
         : `<td colspan="5" style="text-align:left;color:#6b6b70">${busy ? 'running in the background…' : '—'}</td>`) + '</tr>'; }).join('');
-  $('cmpNote').textContent = `Same 18 visits (scene seed ${SCENE}, 6 scenes × 3) for every row, memory ${memOn ? 'on' : 'off'}, stand-in planner. With local LLMs on held-out seeds the study measured 0/108 → 100/108 → 108/108 for settings 2 → 3 → 4.`;
+  $('cmpNote').textContent = `Same 18 visits (scene seed ${SCENE}, 6 scenes × 3) for every row, stand-in planner. With local LLMs on held-out seeds the study measured: 32B planner alone 36/36 with 793 large-model calls vs small model + memory 36/36 with 0; joint fault 0/108 → 100/108 (sensors) → 108/108 (observe → verify → act).`;
 }
+const R = k => ROWS[SI[k]];
+const ANSWER = {
+  1: () => `Yes. Both place <b>${R('A').standing}/18</b> and <b>${R('B').standing}/18</b>, but planner calls fall <span class="g">${R('A').calls} → ${R('B').calls}</span>: ${R('B').memSteps} of ${R('B').steps} steps came from memory.`,
+  2: () => `Memory alone cannot help: <span class="r">${R('C').standing}/18</span>. With the tracker and IMU correcting the reading, <span class="g">${R('D').standing}/18</span>, and memory works again (${R('D').memSteps}/${R('D').steps} steps, ${R('D').calls} calls).`,
+  3: () => `<span class="g">${R('D').standing} → ${R('E').standing}/18</span>, missed ${R('D').miss + R('D').wrong} → ${R('E').miss + R('E').wrong}. The robot looked again <b>${R('E').looks}</b> times, almost all before its very first grasp, then stopped needing to.`,
+};
+function renderAnswers() { for (const a of ACTS) $('ans' + a.n).innerHTML = a.ks.every(k => R(k)) ? ANSWER[a.n]() : 'The answer appears when the comparison below has run (about a minute).'; }
 
 // ---------- controls ----------
-function selectPreset(k) {
-  preset = PRESETS.find(p => p.k === k); playing = false; $('play').textContent = '▶ Play';
-  for (const b of document.querySelectorAll('.pre')) b.classList.toggle('on', +b.dataset.k === k);
+function selectSetting(k) {
+  setting = SETTINGS[SI[k]]; playing = false; $('play').textContent = '▶ Play';
+  for (const b of document.querySelectorAll('.pre')) b.classList.toggle('on', b.dataset.k === k);
   $('play').disabled = false; $('restart').disabled = false; newRun(); renderCmp();
 }
-for (const b of document.querySelectorAll('.pre')) b.onclick = () => selectPreset(+b.dataset.k);
+for (const b of document.querySelectorAll('.pre')) b.onclick = () => selectSetting(b.dataset.k);
 $('play').onclick = () => { if (run.i >= run.tasks.length) newRun(); playing = !playing; $('play').textContent = playing ? '❚❚ Pause' : '▶ Play'; };
 $('restart').onclick = () => { playing = false; $('play').textContent = '▶ Play'; newRun(); };
-for (const b of $('memSeg').children) b.onclick = () => { memOn = b.dataset.v === '1'; for (const o of $('memSeg').children) o.classList.toggle('on', o === b); playing = false; $('play').textContent = '▶ Play'; newRun(); startCompare(); };
 for (const b of $('speed').children) b.onclick = () => { speed = +b.dataset.v; for (const o of $('speed').children) o.classList.toggle('on', o === b); };
-selectPreset(4); startCompare();
+selectSetting('B'); startCompare();
 
 // ---------- loop ----------
 let last = performance.now();
