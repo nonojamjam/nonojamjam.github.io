@@ -11,7 +11,7 @@ export const TARGET_W = 0.032, LOOK_W = 0.040;     // 손가락이 닫힌 폭: �
 const SUB = 5, PRE = 0.08, ABOVE = 0.15, GRASP_Z = 0.035, PLACE_Z = 0.037;
 const BIAS_JOINT = 1, TOUCH_TOL = 0.006, CAM_NOISE = 0.003, SENSOR_NOISE = 0.002;
 const STEP = 0.06, SUCC = 0.025, PROG = 0.005, JERK = 0.4, MAX_STEPS = 12, MAX_REPLAN = 3, UNSAFE = 0.005, TILT = 0.25;
-const CAL = { k: 5, window: 20, min: 10, every: 5, sigI: Math.PI / 180, prior: 0.3 };   // B′2: 온라인 보정 — 추적 k 회 중앙값 + IMU σ 1°, 최근 20 관측, 10개부터 5개마다 재추정
+const CAL = { k: 5, window: 20, min: 10, every: 5, sigI: Math.PI / 180, prior: 0.3 };   // V7: cfg.calib = { maxStd } 이면 관측 안 되는 방향은 고치지 않는다   // B′2: 온라인 보정 — 추적 k 회 중앙값 + IMU σ 1°, 최근 20 관측, 10개부터 5개마다 재추정
 const FLOOR_EPS = 0.003;   // P1(10/9): 쥔 상자를 들고 걸을 때 손끝이 PLACE_Z(상자가 탁자에 닿는 높이)보다 이만큼 아래로 내려가는 제안은 거절
 
 export const SCENES = [
@@ -214,7 +214,7 @@ export function makeEngine(mj, model, data, C, goal) {
       cal.obs.push({ qr, pm, gm: gn.map(v => v / nn) }); if (cal.obs.length > CAL.window) cal.obs.shift();
       cal.n++;
       if (cal.obs.length >= CAL.min && cal.n % CAL.every === 0) {
-        cal.D = estimateOffset(cal.obs, handPose, { sigP: TR.sigma * 1.5, sigI: CAL.sigI, prior: CAL.prior });
+        cal.D = estimateOffset(cal.obs, handPose, { sigP: TR.sigma * 1.5, sigI: CAL.sigI, prior: CAL.prior, maxStd: cfg.calib?.maxStd ?? null });
         const truth = cal.D.map((v, i) => v - (i === BIAS_JOINT ? bias : 0));   // 시뮬이라 참 오프셋을 안다 — 기록 전용
         ev('calib', { n: cal.n, D: cal.D.slice(), err: Math.hypot(...truth) });
       }
