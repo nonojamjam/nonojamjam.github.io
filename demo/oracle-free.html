@@ -177,7 +177,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import loadMujoco from 'https://cdn.jsdelivr.net/npm/@mujoco/mujoco@3.15.0/mujoco.js';
 import { makeController } from './mj/pickplace_ctrl.mjs';
-import { makeEngine, rangeTrack, makeRng } from './mj/scenarios.mjs';
+import { makeEngine, rangeTrack, makeRng, TRACKER_DEFAULT } from './mj/scenarios.mjs';
 import { makeRecall } from './mj/recall.mjs';
 
 const $ = id => document.getElementById(id);
@@ -278,7 +278,9 @@ const eye = $('eye'), ectx = eye.getContext('2d');
 function drawEye(x) {
   const f = x.frame; if (!f) return;
   if (eye.width !== f.W * 4) { eye.width = f.W * 4; eye.height = f.H * 4; }
-  const tmp = new ImageData(f.rgba, f.W, f.H), off = new OffscreenCanvas(f.W, f.H); off.getContext('2d').putImageData(tmp, 0, 0);
+  const px = new Uint8ClampedArray(f.rgba);   // display only: dim unsaturated pixels (floor, arm) so the boxes stand out; noise and dropped pixels stay
+  for (let i = 0; i < px.length; i += 4) { const mx = Math.max(px[i], px[i + 1], px[i + 2]), mn = Math.min(px[i], px[i + 1], px[i + 2]); if (mx - mn < 60) { px[i] *= 0.62; px[i + 1] *= 0.64; px[i + 2] *= 0.68; } }
+  const tmp = new ImageData(px, f.W, f.H), off = new OffscreenCanvas(f.W, f.H); off.getContext('2d').putImageData(tmp, 0, 0);
   ectx.imageSmoothingEnabled = false; ectx.drawImage(off, 0, 0, eye.width, eye.height);
   const s = eye.width / f.W;
   f.boxes.forEach((b, i) => {
@@ -359,14 +361,14 @@ function stepRun() {
 }
 // Display only: the same quantity the gate uses — median of 5 tracker reads vs the fingertip computed from the (corrected) joint reading.
 //   Its own random stream, so it never changes what the robot does.
-const rDisp = makeRng(424242);
+const rDisp = makeRng(424242), TR_DISP = { ...TRACKER_DEFAULT, ...WORLD.tracker };   // 엔진과 같게 기본 앵커와 합친다
 function liveDis() {
   if (!run) return null;
   const D = run.mem.cal ? run.mem.cal.D : [0, 0, 0, 0, 0, 0, 0];
   const q = Array.from(data.qpos.slice(0, 7)).map((v, i) => v + (run.cfg.bias && i === 1 ? 0.15 : 0) - D[i]);
   for (let i = 0; i < 7; i++) ghostData.qpos[i] = q[i]; mj.mj_kinematics(model, ghostData);
   const fk = Array.from(ghostData.site_xpos.slice(3 * C.site, 3 * C.site + 3)), t = C.sitePos(), reads = [];
-  for (let i = 0; i < 5; i++) reads.push(rangeTrack(t, rDisp, WORLD.tracker, fk));
+  for (let i = 0; i < 5; i++) reads.push(rangeTrack(t, rDisp, TR_DISP, fk));
   const m = [0, 1, 2].map(j => reads.map(r => r[j]).sort((a, b) => a - b)[2]);
   return Math.hypot(m[0] - fk[0], m[1] - fk[1], m[2] - fk[2]);
 }
