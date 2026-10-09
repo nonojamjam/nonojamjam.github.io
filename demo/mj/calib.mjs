@@ -54,13 +54,20 @@ export function estimateOffset(obs, pose, { P = true, I = true, sigP, sigI, prio
     for (let i = 0; i < 7; i++) { const Dh = D.slice(); Dh[i] += 1e-5; const r1 = resid(Dh); J.push(r1.slice(0, nData).map((v, k) => (v - r0[k]) / 1e-5)); }
     const H = [...Array(7)].map((_, a) => [...Array(7)].map((_, b) => J[a].reduce((s, v, k) => s + v * J[b][k], 0)));
     const { vals, vecs } = eigSym(H), lamMin = 1 / (maxStd * maxStd);
-    let Dk = new Array(7).fill(0);
-    for (let k = 0; k < 7; k++) {
-      if (vals[k] < lamMin) continue;   // 정보가 없는 방향 = 고치지 않는다
-      const u = vecs.map(r => r[k]), c = u.reduce((s, v, i) => s + v * D[i], 0);
-      Dk = Dk.map((v, i) => v + c * u[i]);
+    // V7b(10/9): 정보가 없는 방향을 잘라내기만 하면 그 몫이 다른 관절로 샌다 (실측: 관절 4 가 −0.035~−0.044 rad 로 틀어짐, 새 seed 서 있음 104 → 100).
+    //   그래서 정보가 있는 고유벡터들이 이루는 부분공간 U 안에서 다시 가우스-뉴턴으로 푼다: Δ = U z (U 는 정규직교라 |Δ| = |z|, 능선 사전도 그대로)
+    const U = [...Array(7).keys()].filter(k => vals[k] >= lamMin).map(k => vecs.map(r => r[k]));
+    if (!U.length) return new Array(7).fill(0);
+    const toD = z => [...Array(7)].map((_, i) => U.reduce((s, u, k) => s + z[k] * u[i], 0));
+    let z = U.map(u => u.reduce((s, v, i) => s + v * D[i], 0));
+    for (let it = 0; it < iters; it++) {
+      const r0z = resid(toD(z)), Jz = [];
+      for (let k = 0; k < U.length; k++) { const zh = z.slice(); zh[k] += 1e-5; const r1 = resid(toD(zh)); Jz.push(r1.map((v, q) => (v - r0z[q]) / 1e-5)); }
+      const A = Jz.map(a => Jz.map(b => a.reduce((s, v, q) => s + v * b[q], 0))), g = Jz.map(a => a.reduce((s, v, q) => s + v * r0z[q], 0));
+      const dz = solve(A, g); z = z.map((v, k) => v - dz[k]);
+      if (Math.hypot(...dz) < 1e-7) break;
     }
-    return Dk;
+    return toD(z);
   }
   return D;
 }
