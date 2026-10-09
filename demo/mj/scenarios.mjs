@@ -238,7 +238,9 @@ export function makeEngine(mj, model, data, C, goal) {
     if (cfg.l2?.oracle && cfg.l2?.measure) throw new Error('L2: oracle 과 measure 는 함께 쓸 수 없다');
     // L2-자유(10/10, 사전등록 '레벨 2-자유'): 들기·운반 경유점 없이 쥔 뒤 곧장 놓을 곳 위(놓는 높이 + 3 cm) 한 점으로 걷는다.
     //   벽은 게이트만 안다(플래너 프롬프트에 벽 없음, 거절은 제약 진술만). 측정판 + 운반 걸음 단위에서만
-    const FREE = cfg.l2?.free ? { maxSteps: 40, ...(cfg.l2.free === true ? {} : cfg.l2.free) } : null;
+    // 절제(10/10 패널): fb = 'full'(제약+여유 수치) | 'noclear'(수치 없음) | 'blank'(벽 이유 없이 거절만) — 플래너 문장만 바꾼다 · exempt = false 면 진척 면제 끔(통과 규칙이 교사인지 가르는 조건)
+    const FREE = cfg.l2?.free ? { maxSteps: 40, fb: 'full', exempt: true, ...(cfg.l2.free === true ? {} : cfg.l2.free) } : null;
+    if (FREE && (!['full', 'noclear', 'blank'].includes(FREE.fb) || typeof FREE.exempt !== 'boolean')) throw new Error(`L2-자유: fb 는 full|noclear|blank, exempt 는 boolean (${JSON.stringify(FREE)})`);
     if (FREE && !(cfg.l2.measure && cfg.stepPhases?.includes('carry'))) throw new Error('L2-자유는 measure 와 걸음 단계 carry 가 필요하다');
     const l2Truth = cfg.l2 ? placeL2(cfg, task) : null;   // L2: 채점·기록 전용 (결정 경로에서 읽지 않는다)
     if (l2Truth) ev('l2-scene', l2Truth);
@@ -398,12 +400,12 @@ export function makeEngine(mj, model, data, C, goal) {
           const t0 = performance.now(), g = cfg.gate ? gateCheck(qB, tipB, dq, target, floorZ, obst) : null; gateUs += performance.now() - t0;
           if (FREE && g && l2Wall) {   // L2-자유: 면제 판단 (다른 검사는 그대로 — 진척만 면제)
             if (g.reason === 'wall' && clearOf(tipB[2]) < WALL_MARGIN) wallEx = true;   // 검수 Astra(2차): 이미 여유 ≥ 2 cm 면 켜지 않는다 (사전등록 '여유 +2 cm 면 소멸')
-            else if (g.reason === 'progress' && wallEx && clearOf(tipB[2] + g.dtip[2]) > clearOf(tipB[2]) + PROG) { g.ok = true; g.reason = null; g.values.exempt = 1; }
+            else if (FREE.exempt && g.reason === 'progress' && wallEx && clearOf(tipB[2] + g.dtip[2]) > clearOf(tipB[2]) + PROG) { g.ok = true; g.reason = null; g.values.exempt = 1; }
           }
           lastExempt = !!g?.values?.exempt;
           const dtip = g ? g.dtip : (() => { const a = C.fkTip(qB), b = C.fkTip(qB.map((x, i) => x + dq[i])); return [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; })();
           ev('proposal', { step, attempt: attemptNo++, phase, src, call, from, dq: dq.slice(), dtipPred: dtip, gate: g && { ok: g.ok, reason: g.reason, values: g.values } });
-          if (g && !g.ok) lastRej = { reason: g.reason, src, dtip, ...(FREE ? { free: true, values: g.values } : {}) };   // L2-자유: 플래너는 제약 진술(여유 수치)만 받는다
+          if (g && !g.ok) lastRej = { reason: g.reason, src, dtip, ...(FREE ? { free: FREE.fb, values: g.values } : {}) };   // L2-자유: 플래너는 제약 진술(여유 수치)만 받는다
           return g ? g.ok : true;
         };
         if (!cfg.gate) judge();
