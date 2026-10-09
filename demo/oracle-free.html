@@ -125,9 +125,11 @@
       <div class="bar">
         <button id="play" disabled>▶ Play</button>
         <button id="restart" class="ghost" disabled>Restart</button>
+        <span class="lbl">difficulty</span><div class="seg" id="lvlSeg"><button data-v="easy">easy</button><button data-v="medium" class="on">medium</button><button data-v="hard">hard</button></div>
         <span class="spacer"></span>
         <span class="lbl">speed</span><div class="seg" id="speed"><button data-v="1">1×</button><button data-v="3" class="on">3×</button><button data-v="8">8×</button></div>
       </div>
+      <p class="note" id="lvlNote" style="margin:6px 0 0"></p>
       <div id="tlWrap">
         <div class="tlh"><span><b>Who decided each step</b> · 걸음마다 기억이 했는지 플래너(실험에선 LLM)가 했는지</span><span id="tlCount"></span></div>
         <canvas id="tl"></canvas>
@@ -136,6 +138,7 @@
           <span><span class="sw" style="background:#2f6fd6"></span>step from memory (no call)</span>
           <span><span class="sw" style="background:transparent;border:2px solid #c0392b"></span>rejected by the gate</span>
           <span><span class="sw" style="background:#b7791f"></span>extra look before grasping</span>
+          <span><b style="color:#2f6fd6">⌒</b> line: this memory step reuses the step that planner call produced earlier (to the left edge: from the 32B model's memory)</span>
         </div>
       </div>
     </div>
@@ -200,31 +203,39 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import loadMujoco from 'https://cdn.jsdelivr.net/npm/@mujoco/mujoco@3.15.0/mujoco.js';
 import { makeController } from './mj/pickplace_ctrl.mjs';
 import { makeEngine, rangeTrack, makeRng, TRACKER_DEFAULT } from './mj/scenarios.mjs';
-import { makeRecall } from './mj/recall.mjs';
+import { makeLiveMemory } from './mj/recall.mjs';
 
 const $ = id => document.getElementById(id);
 // The oracle-free world used in the study (MJ_WORLD=mid): any box orientation, image-based vision, wrist alignment, touch check, rough range tracker.
 const WORLD = { gate: true, pMistake: 0.3, yaw: 90, vision: { frame: true }, yawAlign: true, touch: true,
   tracker: { sigma: 0.02, pNlos: 0.1, nlosMax: 0.15 }, stepPhases: ['lift', 'carry', 'place', 'retreat'] };
+const LEVELS = {
+  easy:   { label: 'easy', note: 'boxes upright and square to the table', cfg: { yaw: 0 } },
+  medium: { label: 'medium', note: 'boxes in any orientation (the study)', cfg: {} },
+  hard:   { label: 'hard', note: 'any orientation, planner wrong 50 % of the time, noisier tracker (not run in the study)', cfg: { pMistake: 0.5, tracker: { sigma: 0.03, pNlos: 0.2, nlosMax: 0.2 } } },
+};
+let level = 'medium';
 // Five settings, each differing from its neighbour by one switch. Memory = the verified-experience bank of the 32B planner.
 const SETTINGS = [
-  { k: 'A', title: 'Planner every step', sub: 'healthy robot · no memory', cfg: {}, mem: false },
-  { k: 'B', title: 'With verified memory', sub: "healthy robot · replays a 32B model's checked steps", cfg: {}, mem: true },
-  { k: 'C', title: 'Joint fault, memory only', sub: 'shoulder reads 0.15 rad off · nothing checks the reading', cfg: { bias: true }, mem: true },
-  { k: 'D', title: '+ independent sensors', sub: 'tracker + IMU correct the reading while it moves', cfg: { bias: true, calib: true }, mem: true },
-  { k: 'E', title: '+ observe → verify → act', sub: 'grasp only once calibrated and the hand position agrees', cfg: { bias: true, calib: true, calibGate: { delta: 0.05 } }, mem: true },
+  { k: 'A', title: 'Planner every step', sub: 'healthy robot · no memory', cfg: {}, mem: 'none' },
+  { k: 'B', title: 'Memory that grows', sub: 'starts empty · saves every planner step that passed the checks', cfg: {}, mem: 'learn' },
+  { k: 'B2', title: "Start with a 32B model's memory", sub: '644 checked steps it saved on other scenes', cfg: {}, mem: 'bank' },
+  { k: 'C', title: 'Joint fault, memory only', sub: 'shoulder reads 0.15 rad off · nothing checks the reading', cfg: { bias: true }, mem: 'learn' },
+  { k: 'D', title: '+ independent sensors', sub: 'tracker + IMU correct the reading while it moves', cfg: { bias: true, calib: true }, mem: 'learn' },
+  { k: 'E', title: '+ observe → verify → act', sub: 'grasp only once calibrated and the hand position agrees', cfg: { bias: true, calib: true, calibGate: { delta: 0.05 } }, mem: 'learn' },
 ];
 const SI = Object.fromEntries(SETTINGS.map((x, i) => [x.k, i]));
 const ACTS = [
-  { n: 1, h: 'Can memory stand in for the big model?', q: 'Every step normally asks a planner (an LLM in the study). Memory replays steps that already passed the checks, re-solved for the current pose.', ks: ['A', 'B'] },
+  { n: 1, h: 'Can memory stand in for the planner?', q: 'Every step normally asks a planner (an LLM in the study). Memory keeps the steps that passed the checks and replays them in similar situations, re-solved for the current pose. Watch the calls fade as it fills up.', ks: ['A', 'B', 'B2'] },
   { n: 2, h: 'The joint reading lies. Who notices?', q: 'The gate, the memory and the planner all trust the joint reading, so a wrong reading fools all three at once. Only a sensor that does not use it can tell.', ks: ['C', 'D'] },
   { n: 3, h: 'When is it safe to act?', q: 'Calibration needs observations first. Grasping before it has them is how the first visit fails. Observe, verify, then act.', ks: ['D', 'E'] },
 ];
 const SEED = 507, SCENE = 507;   // a held-out scene seed from the study (eval 507)
 // Memory = the verified-experience bank the 32B planner (qwen2.5-coder) built on two other scene seeds in the study (644 steps that passed the gate and made progress).
 //   Replayed as a fingertip displacement solved by IK from the current pose, only when it is close enough (d ≤ 0.5 × remaining distance).
-const BANK = await (await fetch('mj/bank_v6_qwen_mid.json')).json(), RECALL = makeRecall(BANK.candidates, 0.5);
-const cfgOf = x => ({ ...WORLD, ...x.cfg, ...(x.mem ? { recall: RECALL } : {}), sceneSeed: SCENE });
+const BANK = await (await fetch('mj/bank_v6_qwen_mid.json')).json();
+const memOf = x => x.mem === 'none' ? null : makeLiveMemory(x.mem === 'bank' ? BANK.candidates : [], 0.5);
+const cfgOf = (x, M) => ({ ...WORLD, ...LEVELS[level].cfg, ...x.cfg, ...(M ? { recall: M.recall } : {}), sceneSeed: SCENE });
 const btn = x => `<button class="pre" data-k="${x.k}"><b>${x.k} · ${x.title}</b><span>${x.sub}</span></button>`;
 $('acts').innerHTML = ACTS.map(a => `<div class="act"><h3><i>${a.n}</i>${a.h}</h3><p class="q">${a.q}</p>${a.ks.map(k => btn(SETTINGS[SI[k]])).join('')}<p class="ans" id="ans${a.n}">The answer appears when the comparison below has run (about a minute).</p></div>`).join('');
 
@@ -317,7 +328,8 @@ function drawEye(x) {
     ectx.strokeStyle = pick ? '#36d27a' : '#ffd166'; ectx.lineWidth = pick ? 3 : 2; ectx.beginPath();
     b.corners.forEach(([c, r], j) => { const X = (c + 0.5) * s, Y = (r + 0.5) * s; j ? ectx.lineTo(X, Y) : ectx.moveTo(X, Y); }); ectx.closePath(); ectx.stroke();
     const [c0, r0] = b.corners[0]; ectx.font = 'bold 22px -apple-system,sans-serif'; ectx.fillStyle = pick ? '#36d27a' : '#ffd166';
-    ectx.fillText(`${(1000 * b.short).toFixed(0)}×${(1000 * b.long).toFixed(0)}${pick ? ' target' : ''}`, (c0 + 0.5) * s + 4, (r0 + 0.5) * s - 6);
+    const label = `${(1000 * b.short).toFixed(0)}×${(1000 * b.long).toFixed(0)} mm${pick ? ' · target' : ''}`, lx = (c0 + 0.5) * s + 4, ly = (r0 + 0.5) * s - 6;
+    ectx.lineWidth = 4; ectx.strokeStyle = 'rgba(0,0,0,.75)'; ectx.strokeText(label, lx, ly); ectx.fillText(label, lx, ly);
   });
   $('eyecap').innerHTML = x.ok ? `Found ${f.boxes.length} boxes. Target = short side <b>${(1000 * x.short).toFixed(1)} mm</b>, orientation ${(x.yaw * 180 / Math.PI).toFixed(0)}° · position error ${(1000 * x.err).toFixed(1)} mm <small>(sim only)</small>.` : 'No box matched the target shape.';
 }
@@ -339,14 +351,14 @@ function gauges() {
 // ---------- timeline: who decided each step ----------
 const tlc = $('tl'), tctx = tlc.getContext('2d');
 let TL = null;
-function tlReset() { TL = { items: [], slot: 0, nCalls: 0, nMem: 0, nLook: 0, lastCall: null }; tlDraw(); }
+function tlReset() { TL = { items: [], slot: 0, nCalls: 0, nMem: 0, nLook: 0, lastCall: null, calls: new Map(), round: 0, rounds: [0, 0, 0] }; tlDraw(); }
 function tlEvent(k, x) {
   if (!TL) return;
   const add = it => { it.x = TL.slot++; TL.items.push(it); return it; };
-  if (k === 'belief') { if (TL.items.length) TL.slot += 1; add({ t: 'visit', n: x.task.visit * 6 + x.task.key + 1 }); }
-  else if (k === 'call') { TL.lastCall = add({ t: 'call' }); TL.nCalls++; }
-  else if (k === 'reject') { if (x.src === 'mem') add({ t: 'mem', rej: true }); else if (TL.lastCall) TL.lastCall.rej = true; }
-  else if (k === 'step') { if (x.mem) { add({ t: 'mem' }); TL.nMem++; } }
+  if (k === 'belief') { if (TL.items.length) TL.slot += 1; add({ t: 'visit', n: x.task.visit * 6 + x.task.key + 1 }); TL.round = x.task.visit; }
+  else if (k === 'call') { TL.lastCall = add({ t: 'call' }); TL.calls.set(x.id, TL.lastCall); TL.nCalls++; TL.rounds[TL.round]++; }
+  else if (k === 'reject') { if (x.src === 'mem') add({ t: 'mem', rej: true, from: x.from }); else if (TL.lastCall) TL.lastCall.rej = true; }
+  else if (k === 'step') { if (x.mem) { add({ t: 'mem', from: x.from }); TL.nMem++; } }
   else if (k === 'active-sense') { add({ t: 'look' }); TL.nLook += x.probes; }
   else return;
   tlDraw();
@@ -361,13 +373,20 @@ function tlDraw() {
   g.strokeStyle = '#e3e3e6'; g.lineWidth = 1; g.beginPath(); g.moveTo(L, yC); g.lineTo(Rr, yC); g.moveTo(L, yS); g.lineTo(Rr, yS); g.stroke();
   if (!TL || !TL.items.length) { g.fillText('press Play: every planner call and every step from memory appears here', L + 6, (yC + yS) / 2); $('tlCount').textContent = ''; return; }
   const sp = Math.min(10, (Rr - L) / Math.max(40, TL.slot)), X = i => L + (i + 0.5) * sp, w = Math.max(2, sp * 0.72);
+  // arcs: a memory step → the planner call that first produced it (bank steps → left edge)
+  for (const it of TL.items) if (it.t === 'mem' && it.from != null) {
+    const src = typeof it.from === 'string' && it.from.startsWith('call') ? TL.calls.get(+it.from.slice(4)) : null;
+    const x0 = X(it.x), x1 = src ? X(src.x) : L - 4, top = yC + hb / 2 + 2, bot = yS - hb / 2 - 2;
+    g.strokeStyle = it.rej ? 'rgba(192,57,43,.5)' : src ? 'rgba(47,111,214,.35)' : 'rgba(47,111,214,.12)'; g.lineWidth = 1.1;
+    g.beginPath(); g.moveTo(x0, bot); g.bezierCurveTo(x0, (top + bot) / 2, x1, (top + bot) / 2, x1, src ? top : (top + bot) / 2); g.stroke();
+  }
   for (const it of TL.items) {
     if (it.t === 'visit') { g.strokeStyle = '#d5d9df'; g.beginPath(); g.moveTo(X(it.x), 8); g.lineTo(X(it.x), H - 4); g.stroke(); if (sp * 6 > 18 || it.n % 6 === 1) { g.fillStyle = '#6b6b70'; g.fillText(String(it.n), X(it.x) + 2, 9); } continue; }
     const y = it.t === 'call' ? yC : yS, fill = it.t === 'call' ? '#8a8f98' : it.t === 'look' ? '#b7791f' : '#2f6fd6';
     g.globalAlpha = it.rej ? 0.35 : 1; g.fillStyle = fill; g.fillRect(X(it.x) - w / 2, y - hb / 2, w, hb); g.globalAlpha = 1;
     if (it.rej) { g.strokeStyle = '#c0392b'; g.lineWidth = 1.3; g.strokeRect(X(it.x) - w / 2, y - hb / 2, w, hb); }
   }
-  $('tlCount').textContent = `${TL.nCalls} planner calls · ${TL.nMem} steps from memory · ${TL.nLook} extra looks`;
+  $('tlCount').innerHTML = `planner calls per round of 6 visits: <b>${TL.rounds.join(' → ')}</b> · ${TL.nMem} steps from memory · ${TL.nLook} extra looks`;
 }
 new ResizeObserver(() => tlDraw()).observe(tlc);
 
@@ -382,6 +401,7 @@ function outline(g, color) {
   const fade = color === '#c0392b'; box.material.transparent = fade; box.material.opacity = fade ? 0.4 : 1; box.material.needsUpdate = true;
 }
 function onEvent(k, x) {
+  if (run && run.M) run.M.onEvent(k, x);
   tlEvent(k, x);
   if (k === 'belief') {
     outline(gTarget, null); outline(gLook, null); verdict('', null);
@@ -412,9 +432,9 @@ function stats() {
   gauges();
 }
 function newRun() {
-  const cfg = cfgOf(setting);
+  const M = memOf(setting), cfg = cfgOf(setting, M);
   hideGhost(); outline(gTarget, null); outline(gLook, null); verdict('', null);
-  run = { cfg, tasks: E.tasks(false, SCENE), i: 0, st: E.newStats(), mem: { scene: new Map(), act: new Map() }, gen: null, looks: 0, calErr: null, dis: null, disT: 0 };
+  run = { cfg, M, tasks: E.tasks(false, SCENE), i: 0, st: E.newStats(), mem: { scene: new Map(), act: new Map() }, gen: null, looks: 0, calErr: null, dis: null, disT: 0 };
   C.reset(); say('press Play to run 18 visits (6 scenes × 3)'); $('where').textContent = `${setting.k} · ${setting.title}`; tlReset(); stats();
 }
 function stepRun() {
@@ -444,26 +464,27 @@ function startCompare() { ROWS = SETTINGS.map(() => null); cmp = { pi: 0, ti: 0,
 function compareSlice(budgetMs) {
   const t0 = performance.now();
   while (cmp && performance.now() - t0 < budgetMs) {
-    const cfg = { ...cfgOf(SETTINGS[cmp.pi]), vision: true };   // no image frames in the background
+    if (!cmp.M) cmp.M = memOf(SETTINGS[cmp.pi]);
+    const cfg = { ...cfgOf(SETTINGS[cmp.pi], cmp.M), vision: true };   // no image frames in the background
     if (!cmp.gen) {
-      if (!cmp.st) { cmp.st = EB.newStats(); cmp.mem = { scene: new Map(), act: new Map() }; cmp.tasks = EB.tasks(false, SCENE); cmp.ti = 0; cmp.looks = 0; }
-      if (cmp.ti >= cmp.tasks.length) { ROWS[cmp.pi] = { ...cmp.st, looks: cmp.looks }; cmp.st = null; cmp.pi++; if (cmp.pi >= SETTINGS.length) cmp = null; renderCmp(); renderAnswers(); continue; }
-      cmp.gen = EB.episode(cmp.tasks[cmp.ti], cfg, cmp.mem, cmp.st, SEED, (k, x) => { if (k === 'active-sense') cmp.looks += x.probes; });
+      if (!cmp.st) { cmp.st = EB.newStats(); cmp.mem = { scene: new Map(), act: new Map() }; cmp.tasks = EB.tasks(false, SCENE); cmp.ti = 0; cmp.looks = 0; cmp.pv = []; cmp.c0 = 0; }
+      if (cmp.ti >= cmp.tasks.length) { const pv = cmp.pv; ROWS[cmp.pi] = { ...cmp.st, looks: cmp.looks, bank: cmp.M ? cmp.M.size - (SETTINGS[cmp.pi].mem === 'bank' ? BANK.candidates.length : 0) : 0, rounds: [0, 1, 2].map(i => pv.slice(6 * i, 6 * i + 6).reduce((a, b) => a + b, 0)) }; cmp.st = null; cmp.M = null; cmp.pi++; if (cmp.pi >= SETTINGS.length) cmp = null; renderCmp(); renderAnswers(); continue; }
+      const M = cmp.M; cmp.gen = EB.episode(cmp.tasks[cmp.ti], cfg, cmp.mem, cmp.st, SEED, (k, x) => { if (M) M.onEvent(k, x); if (k === 'active-sense') cmp.looks += x.probes; });
     }
-    for (let k = 0; k < 120; k++) if (cmp.gen.next().done) { cmp.gen = null; cmp.ti++; break; }
+    for (let k = 0; k < 120; k++) if (cmp.gen.next().done) { cmp.gen = null; cmp.ti++; cmp.pv.push(cmp.st.calls - cmp.c0); cmp.c0 = cmp.st.calls; break; }
   }
 }
 function renderCmp() {
-  $('cmp').innerHTML = '<tr><th>setting</th><th>placed and standing</th><th>missed / wrong</th><th>planner calls</th><th>steps from memory</th><th>extra looks</th></tr>' +
+  $('cmp').innerHTML = '<tr><th>setting</th><th>placed and standing</th><th>missed / wrong</th><th>planner calls</th><th>calls per round</th><th>steps from memory</th><th>memory saved</th><th>extra looks</th></tr>' +
     SETTINGS.map((x, i) => { const r = ROWS[i], busy = cmp && cmp.pi === i;
       return `<tr class="${setting && setting.k === x.k ? 'mine' : ''}"><td><b>${x.k}</b> ${x.title} <span style="color:#6b6b70">· ${x.sub}</span></td>` + (r
-        ? `<td class="${r.standing === r.n ? 'g' : r.standing < r.n / 2 ? 'r' : ''}">${r.standing}/${r.n}</td><td class="${r.wrong + r.miss ? 'r' : ''}">${r.wrong + r.miss}</td><td>${r.calls}</td><td>${r.memSteps}/${r.steps}</td><td>${r.looks}</td>`
-        : `<td colspan="5" style="text-align:left;color:#6b6b70">${busy ? 'running in the background…' : '—'}</td>`) + '</tr>'; }).join('');
-  $('cmpNote').textContent = `Same 18 visits (scene seed ${SCENE}, 6 scenes × 3) for every row, stand-in planner. With local LLMs on held-out seeds the study measured: 32B planner alone 36/36 with 793 large-model calls vs small model + memory 36/36 with 0; joint fault 0/108 → 100/108 (sensors) → 108/108 (observe → verify → act).`;
+        ? `<td class="${r.standing === r.n ? 'g' : r.standing < r.n / 2 ? 'r' : ''}">${r.standing}/${r.n}</td><td class="${r.wrong + r.miss ? 'r' : ''}">${r.wrong + r.miss}</td><td>${r.calls}</td><td>${r.rounds.join(' / ')}</td><td>${r.memSteps}/${r.steps}</td><td>${r.bank}${SETTINGS[i].mem === 'bank' ? ' + 644' : ''}</td><td>${r.looks}</td>`
+        : `<td colspan="7" style="text-align:left;color:#6b6b70">${busy ? 'running in the background…' : '—'}</td>`) + '</tr>'; }).join('');
+  $('cmpNote').textContent = `Same 18 visits (scene seed ${SCENE}, 6 scenes × 3, difficulty: ${LEVELS[level].label}) for every row, stand-in planner. A round = the 6 scenes once. With local LLMs on held-out seeds the study measured: 32B planner alone 36/36 with 793 large-model calls vs small model + memory 36/36 with 0; joint fault 0/108 → 100/108 (sensors) → 108/108 (observe → verify → act).`;
 }
 const R = k => ROWS[SI[k]];
 const ANSWER = {
-  1: () => `Yes. Both place <b>${R('A').standing}/18</b> and <b>${R('B').standing}/18</b>, but planner calls fall <span class="g">${R('A').calls} → ${R('B').calls}</span>: ${R('B').memSteps} of ${R('B').steps} steps came from memory.`,
+  1: () => `Yes. All place ${R('A').standing}/18 · ${R('B').standing}/18 · ${R('B2').standing}/18. Planner calls per round of 6 visits: no memory <b>${R('A').rounds.join(' / ')}</b>; growing memory <span class="g">${R('B').rounds.join(' → ')}</span> (it saved ${R('B').bank} steps); starting from the 32B model's memory <span class="g">${R('B2').calls}</span> in total.`,
   2: () => `Memory alone cannot help: <span class="r">${R('C').standing}/18</span>. With the tracker and IMU correcting the reading, <span class="g">${R('D').standing}/18</span>, and memory works again (${R('D').memSteps}/${R('D').steps} steps, ${R('D').calls} calls).`,
   3: () => `<span class="g">${R('D').standing} → ${R('E').standing}/18</span>, missed ${R('D').miss + R('D').wrong} → ${R('E').miss + R('E').wrong}. The robot looked again <b>${R('E').looks}</b> times, almost all before its very first grasp, then stopped needing to.`,
 };
@@ -479,6 +500,9 @@ for (const b of document.querySelectorAll('.pre')) b.onclick = () => selectSetti
 $('play').onclick = () => { if (run.i >= run.tasks.length) newRun(); playing = !playing; $('play').textContent = playing ? '❚❚ Pause' : '▶ Play'; };
 $('restart').onclick = () => { playing = false; $('play').textContent = '▶ Play'; newRun(); };
 for (const b of $('speed').children) b.onclick = () => { speed = +b.dataset.v; for (const o of $('speed').children) o.classList.toggle('on', o === b); };
+const showLevel = () => { $('lvlNote').textContent = `Difficulty: ${LEVELS[level].note}.`; };
+for (const b of $('lvlSeg').children) b.onclick = () => { level = b.dataset.v; for (const o of $('lvlSeg').children) o.classList.toggle('on', o === b); showLevel(); playing = false; $('play').textContent = '▶ Play'; newRun(); startCompare(); renderAnswers(); };
+showLevel();
 selectSetting('B'); startCompare();
 
 // ---------- loop ----------

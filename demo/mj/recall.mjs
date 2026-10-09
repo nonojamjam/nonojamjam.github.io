@@ -26,3 +26,27 @@ export function makeRecall(cands, kappa = 0.5, pol = POLICY) {
     return rank(byPhase.get(phase) ?? [], { tip_to_target: v }, pol).filter(o => o.mode === 'replay' && o.d <= kappa * r).map(o => ({ id: o.id, dtip: o.cand.act.dtip }));
   };
 }
+
+// 10/9 데모: 실행하면서 쌓이는 기억. 게이트를 통과하고 전진한 '플래너' 걸음을 그 자리에서 후보로 저장한다
+//   (상황 = 손끝→목표 벡터, 행동 = 믿는 관절로 예측한 손끝 이동 — 실험의 --dtip pred 와 같은 정의). 처음 pr = 2/3 (재생 문턱 0.6 위).
+//   그 기억을 재생했는데 게이트가 거절하거나 전진이 없으면 실패 1 을 더해 pr 이 0.5 로 내려가 다시 꺼내지 않는다. 시작은 빈 기억 또는 미리 준 묶음.
+export function makeLiveMemory(seedCands = [], kappa = 0.5, pol = POLICY) {
+  const cands = seedCands.map(c => ({ ...c, stats: { ...c.stats }, origin: 'bank' })), byId = new Map(cands.map(c => [c.id, c])), pred = new Map();
+  const recall = ({ phase, tip, target }) => {
+    const v = [target[0] - tip[0], target[1] - tip[1], target[2] - tip[2]], r = Math.hypot(...v);
+    return rank(cands.filter(c => c.phase === phase), { tip_to_target: v }, pol).filter(o => o.mode === 'replay' && o.d <= kappa * r).map(o => ({ id: o.id, dtip: o.cand.act.dtip }));
+  };
+  const onEvent = (k, x) => {   // 엔진 이벤트를 받아 기억을 갱신한다 (proposal 의 예측 손끝 이동을 걸음 저장에 쓴다)
+    if (k === 'proposal') pred.set(`${x.step}:${x.attempt}`, x.dtipPred);
+    else if (k === 'reject' && x.src === 'mem' && byId.has(x.from)) byId.get(x.from).stats.r++;
+    else if (k === 'step') {
+      if (x.mem) { const c = byId.get(x.from); if (c && !(x.progressed && !x.unsafe)) c.stats.r++; else if (c) c.stats.p++; }
+      else if (x.progressed && !x.unsafe) {
+        const d = pred.get(`${x.step}:${x.attempt}`); if (!d) return;
+        const c = { id: `call${x.call}`, phase: x.phase, ctx: { tip_to_target: x.tipToTarget }, stats: { p: 1, r: 0 }, act: { dtip: d }, origin: 'live', call: x.call };
+        cands.push(c); byId.set(c.id, c);
+      }
+    }
+  };
+  return { recall, onEvent, cands, get size() { return cands.length; } };
+}
