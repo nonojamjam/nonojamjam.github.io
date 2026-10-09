@@ -72,10 +72,10 @@ export function makeEngine(mj, model, data, C, goal) {
   }
 
   // 플래너(대역): 믿는 손끝에서 목표 쪽으로 최대 6 cm 가는 관절 이동을 낸다. 확률 pm 으로 관절 두 개를 크게 틀리게 낸다
-  function planStep(qB, tipB, target, cfg, st, rng) {
+  function planStep(qB, tipB, target, cfg, st, rng, rej = null) {   // L10: rej = 이 걸음에서 마지막으로 거절된 제안 {reason, src, dtip} (진짜 LLM 만 쓴다, 대역은 무시)
     st.calls++;
     if (cfg.planner) {   // L1: 진짜 LLM(파일럿) — 손끝 이동량 [m] 배열이나 {dq} 를 받는다. 대역의 실수 주입·난수는 쓰지 않는다
-      const d = cfg.planner({ tip: tipB, target, q: qB });
+      const d = cfg.planner({ tip: tipB, target, q: qB, reject: rej });
       if (!d) return qB.map(() => 0);   // 못 읽은 응답 = 움직이지 않음 (게이트가 전진 없음으로 거절)
       if (d.dq) return d.dq.slice();
       const f = C.fkTip(qB);
@@ -139,7 +139,8 @@ export function makeEngine(mj, model, data, C, goal) {
         const step = stepNo++;
         const key = (phase === 'approach' ? '' : phase + ':') + situationKey(tipB, target, qB);   // E2: 접근 밖 단계는 키에 단계를 붙인다 (접근 기억을 운반에서 꺼내지 않게)
         // 타임라인용: 플래너 호출마다 번호(call)를 붙이고, 기억에는 그 걸음을 낸 호출 번호(from)를 함께 저장한다
-        const ask = () => { const d = planStep(qB, tipB, target, cfg, st, rPlan); ev('call', { id: st.calls, vars: { q: qB, tip: tipB, target: target }, dq: d.slice() }); return d; };
+        let lastRej = null;   // L10: 게이트가 마지막으로 거절한 제안 — 다음 플래너 호출에 이유를 넘긴다
+        const ask = () => { const d = planStep(qB, tipB, target, cfg, st, rPlan, lastRej); ev('call', { id: st.calls, vars: { q: qB, tip: tipB, target: target }, dq: d.slice() }); return d; };
         let dq = null, src = 'plan', call = 0, from = 0;
         // L6c: cfg.recall = 실행 밖 기억 묶음(DB). 재생 후보 [{id, dtip}] 를 점수순으로 게이트에 넣고, 없거나 다 거절되면 플래너.
         //   손끝 변위 → 지금 자세에서 IK 로 관절 이동 (R2: 관절 증분 그대로보다 쓸 수 있는 거리가 두 배). 엔진 Map 기억(cfg.mem)과 함께 쓰지 않는다
@@ -158,6 +159,7 @@ export function makeEngine(mj, model, data, C, goal) {
           const t0 = performance.now(), g = cfg.gate ? gateCheck(qB, tipB, dq, target, floorZ) : null; gateUs += performance.now() - t0;
           const dtip = g ? g.dtip : (() => { const a = C.fkTip(qB), b = C.fkTip(qB.map((x, i) => x + dq[i])); return [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; })();
           ev('proposal', { step, attempt: attemptNo++, phase, src, call, from, dq: dq.slice(), dtipPred: dtip, gate: g && { ok: g.ok, reason: g.reason, values: g.values } });
+          if (g && !g.ok) lastRej = { reason: g.reason, src, dtip };
           return g ? g.ok : true;
         };
         if (!cfg.gate) judge();
