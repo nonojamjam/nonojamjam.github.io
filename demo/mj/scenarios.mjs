@@ -149,9 +149,20 @@ export function makeEngine(mj, model, data, C, goal) {
     const TR = cfg.tracker ? (cfg.tracker === true ? TRACKER_DEFAULT : { ...TRACKER_DEFAULT, ...cfg.tracker }) : null;
     const sense = qB => {   // O1: 손끝 '센서' 한 번 읽기 — 추적 모형이면 거리 삼변측량, 아니면 예전 참값+잡음
       if (!TR) return tipNow().map(v => v + SENSOR_NOISE * gauss(rSen));
-      const t = tipNow(), est = rangeTrack(t, rSen, TR, C.fkTip(qB));
-      ev('track', { err: Math.hypot(est[0] - t[0], est[1] - t[1], est[2] - t[2]) });
-      return est;
+      const t = tipNow();
+      if (!cfg.trustRoute) {
+        const est = rangeTrack(t, rSen, TR, C.fkTip(qB));
+        ev('track', { err: Math.hypot(est[0] - t[0], est[1] - t[1], est[2] - t[2]) });
+        return est;
+      }
+      // G3: 인식 = 라우팅. 추적을 k 번 읽어 좌표별 중앙값(가려짐 바이어스에 강함)을 내고, 믿는 관절의 FK 와 δ 넘게 어긋날 때만 추적을 믿는다.
+      //   어긋나지 않으면 FK(오독이 없으면 정밀)를 쓴다. 비용 = 읽기 k 번
+      const { k = 5, delta = 0.05 } = cfg.trustRoute, fk = C.fkTip(qB), reads = [];
+      for (let i = 0; i < k; i++) reads.push(rangeTrack(t, rSen, TR, fk));
+      const med = [0, 1, 2].map(j => reads.map(r => r[j]).sort((a, b) => a - b)[k >> 1]);
+      const dis = Math.hypot(med[0] - fk[0], med[1] - fk[1], med[2] - fk[2]), useTrack = dis > delta, out = useTrack ? med : fk;
+      ev('track', { err: Math.hypot(out[0] - t[0], out[1] - t[1], out[2] - t[2]), dis, src: useTrack ? 'tracker' : 'fk', reads: k });
+      return out;
     };
     const believedTip = qB => cfg.sensor ? sense(qB) : C.fkTip(qB);
     data.ctrl[7] = OPEN;
