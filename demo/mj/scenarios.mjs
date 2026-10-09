@@ -129,10 +129,10 @@ export function makeEngine(mj, model, data, C, goal) {
   }
 
   // 플래너(대역): 믿는 손끝에서 목표 쪽으로 최대 6 cm 가는 관절 이동을 낸다. 확률 pm 으로 관절 두 개를 크게 틀리게 낸다
-  function planStep(qB, tipB, target, cfg, st, rng, rej = null) {   // L10: rej = 이 걸음에서 마지막으로 거절된 제안 {reason, src, dtip} (진짜 LLM 만 쓴다, 대역은 무시)
+  function planStep(qB, tipB, target, cfg, st, rng, rej = null, scene = null) {   // L2 S4: scene = 잰 장애물 (진짜 LLM 프롬프트에만, 대역은 무시)   // L10: rej = 이 걸음에서 마지막으로 거절된 제안 {reason, src, dtip} (진짜 LLM 만 쓴다, 대역은 무시)
     st.calls++;
     if (cfg.planner) {   // L1: 진짜 LLM(파일럿) — 손끝 이동량 [m] 배열이나 {dq} 를 받는다. 대역의 실수 주입·난수는 쓰지 않는다
-      const d = cfg.planner({ tip: tipB, target, q: qB, reject: rej });
+      const d = cfg.planner(scene ? { tip: tipB, target, q: qB, reject: rej, scene } : { tip: tipB, target, q: qB, reject: rej });
       if (!d) return qB.map(() => 0);   // 못 읽은 응답 = 움직이지 않음 (게이트가 전진 없음으로 거절)
       if (d.dq) return d.dq.slice();
       const f = C.fkTip(qB);
@@ -150,15 +150,34 @@ export function makeEngine(mj, model, data, C, goal) {
   // 게이트: 이 이동 뒤 손끝(읽은 관절값 기준, 센서가 있으면 잰 손끝 기준)이 목표에 다가가는지, 급하지 않은지, 관절 한계 안인지, 손이 계속 아래를 향하는지
   // S5a: 같은 순서로 검사하되 처음 걸린 이유와 수치를 함께 돌려준다 (로그 스키마 proposal.gate). 난수를 쓰지 않는다
   // P1: floorZ 를 주면(쥔 채 걷는 단계) 예측 손끝 높이가 그보다 낮은 제안을 'floor' 로 거절 — 게이트가 쥔 물체·탁자 충돌을 안 보던 구멍(10/9 패널)
-  function gateCheck(qB, tipB, dq, target, floorZ = null) {
+  // L2 S3: 잰 벽(사각형 c·long·short·yaw=짧은 변 축)과의 여유. 지금 손끝 → 예측 손끝 선분 위 점들에서, 벽 발자국(+여유) 안이면
+  //   (손끝 − below) 가 벽 윗면 + WALL_MARGIN 보다 높아야 한다. below = 쥔 상자 바닥까지(쥔 단계) 또는 손가락 끝까지.
+  //   선분은 5 mm 간격 이하로 짚는다 (검수 Flash: 5점 고정이면 긴 걸음이 모서리를 건너뛸 수 있다 — 재현은 안 됐지만 비용 0)
+  const WALL_MARGIN = 0.02;
+  const segPts = (a, b) => { const n = Math.max(4, Math.ceil(d3(a, b) / 0.005)); return Array.from({ length: n + 1 }, (_, k) => { const t = k / n; return [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]), a[2] + t * (b[2] - a[2])]; }); };
+  function wallClear(a, b, w, below) {
+    const ca = Math.cos(w.yaw), sa = Math.sin(w.yaw); let worst = Infinity;
+    for (const p of segPts(a, b)) {
+      const dx = p[0] - w.c[0], dy = p[1] - w.c[1], us = dx * ca + dy * sa, ul = -dx * sa + dy * ca;   // 짧은 변 축·긴 변 축 좌표
+      if (Math.abs(us) < w.short / 2 + WALL_MARGIN && Math.abs(ul) < w.long / 2 + WALL_MARGIN) worst = Math.min(worst, p[2] - below - w.top);
+    }
+    return worst;   // Infinity = 발자국 밖
+  }
+  function gateCheck(qB, tipB, dq, target, floorZ = null, obst = null) {
     const q1 = qB.map((x, i) => x + dq[i]);
     const maxDq = Math.max(...dq.map(Math.abs)), handErr = C.handErr(q1);
     let margin = Infinity; for (let j = 0; j < 7; j++) { const [lo, hi] = jr(j); margin = Math.min(margin, q1[j] - lo, hi - q1[j]); }
     const f0 = C.fkTip(qB), f1 = C.fkTip(q1), dtip = [f1[0] - f0[0], f1[1] - f0[1], f1[2] - f0[2]];
     const pred = [tipB[0] + dtip[0], tipB[1] + dtip[1], tipB[2] + dtip[2]], progress = d3(tipB, target) - d3(pred, target);
-    const floorHit = floorZ !== null && pred[2] < floorZ;
-    const reason = maxDq > JERK ? 'jerk' : handErr > TILT ? 'tilt' : margin < 0 ? 'limit' : floorHit ? 'floor' : progress > PROG ? null : 'progress';
+    // L2: 받침 발자국(+2 cm) 위를 지나는 점은 받침 윗면이 바닥이다 (밖에서는 탁자 — 들어 올릴 때 막히지 않게).
+    //   끝점만이 아니라 선분 위 점 전부 (검수 Flash: 받침 위를 낮게 지나 밖에서 끝나는 걸음)
+    const overSup = p => Math.abs(p[0] - obst.sup.xy[0]) < obst.sup.half && Math.abs(p[1] - obst.sup.xy[1]) < obst.sup.half;
+    const supHit = floorZ !== null && !!obst?.sup && segPts(tipB, pred).some(p => overSup(p) && p[2] < obst.sup.z);
+    const floorHit = floorZ !== null && (pred[2] < floorZ || supHit);
+    const wallC = obst?.wall ? wallClear(tipB, pred, obst.wall, obst.below) : Infinity, wallHit = wallC < WALL_MARGIN;
+    const reason = maxDq > JERK ? 'jerk' : handErr > TILT ? 'tilt' : margin < 0 ? 'limit' : floorHit ? 'floor' : wallHit ? 'wall' : progress > PROG ? null : 'progress';
     const values = { max_dq: maxDq, hand_err: handErr, limit_margin: margin, progress };
+    if (obst?.wall && wallC < Infinity) values.wall_clear = wallC;   // L2 S3: 벽 발자국 위일 때만 기록 (L2 끄면 기록이 예전과 같다)
     if (floorZ !== null) values.pred_z = pred[2];   // 바닥 검사를 켰을 때만 (끄면 기록이 예전과 같다)
     return { ok: reason === null, reason, dtip, values };
   }
@@ -191,6 +210,17 @@ export function makeEngine(mj, model, data, C, goal) {
         wallTop: e(l2Meas.wall, l2Truth.wall, (m, t) => m.top - t.top),
         supXY: e(l2Meas.support, l2Truth.support, (m, t) => Math.hypot(m.xy[0] - t.xy[0], m.xy[1] - t.xy[1])),
         supTop: e(l2Meas.support, l2Truth.support, (m, t) => m.top - t.top) } });
+    }
+    // L2: 운반 높이·놓을 점·놓는 높이 + 게이트·플래너에 줄 벽. 기본은 레벨 1 그대로(고정 놓을 곳, 탁자 높이, 벽 없음).
+    //   cfg.l2.oracle = 의도적 대조군: 벽·받침 참값 (풀 수 있는 과제인지 + 측정판의 상한).
+    //   cfg.l2.measure = 측정판: 장면 카메라가 잰 값(l2Meas). 못 찾으면 레벨 1 기본값(실패로 이어지게 — 참값으로 되돌리지 않는다)
+    let carryZ = GRASP_Z + ABOVE, dst = goal, placeZ = PLACE_Z, l2Wall = null, l2Sup = null;
+    const l2Src = cfg.l2?.oracle ? l2Truth : cfg.l2?.measure ? l2Meas : null;
+    if (l2Src) {
+      if (l2Src.wall) { carryZ = Math.max(carryZ, l2Src.wall.top + L2_CLEAR);
+        l2Wall = cfg.l2.oracle ? { c: l2Src.wall.xy, top: l2Src.wall.top, long: 2 * WALL_HALF[0], short: 2 * WALL_HALF[1], yaw: Math.PI / 2 } : l2Src.wall; }
+      if (l2Src.support) { dst = l2Src.support.xy; placeZ = PLACE_Z + l2Src.support.top; carryZ = Math.max(carryZ, placeZ + ABOVE);
+        l2Sup = { xy: l2Src.support.xy, half: (cfg.l2.oracle ? SUP_HALF[0] : l2Src.support.long / 2) + 0.02 }; }
     }
     const truth = C.bodyPos(C.bTarget);
     const cam = () => [truth[0] + CAM_NOISE * gauss(rCam), truth[1] + CAM_NOISE * gauss(rCam)];
@@ -288,7 +318,7 @@ export function makeEngine(mj, model, data, C, goal) {
         const key = (phase === 'approach' ? '' : phase + ':') + situationKey(tipB, target, qB);   // E2: 접근 밖 단계는 키에 단계를 붙인다 (접근 기억을 운반에서 꺼내지 않게)
         // 타임라인용: 플래너 호출마다 번호(call)를 붙이고, 기억에는 그 걸음을 낸 호출 번호(from)를 함께 저장한다
         let lastRej = null;   // L10: 게이트가 마지막으로 거절한 제안 — 다음 플래너 호출에 이유를 넘긴다
-        const ask = () => { const d = planStep(qB, tipB, target, cfg, st, rPlan, lastRej); ev('call', { id: st.calls, vars: { q: qB, tip: tipB, target: target }, dq: d.slice() }); return d; };
+        const ask = () => { const d = planStep(qB, tipB, target, cfg, st, rPlan, lastRej, l2Wall ? { wall: l2Wall } : null); ev('call', { id: st.calls, vars: { q: qB, tip: tipB, target: target }, dq: d.slice() }); return d; };
         let dq = null, src = 'plan', call = 0, from = 0;
         // L6c: cfg.recall = 실행 밖 기억 묶음(DB). 재생 후보 [{id, dtip}] 를 점수순으로 게이트에 넣고, 없거나 다 거절되면 플래너.
         //   손끝 변위 → 지금 자세에서 IK 로 관절 이동 (R2: 관절 증분 그대로보다 쓸 수 있는 거리가 두 배). 엔진 Map 기억(cfg.mem)과 함께 쓰지 않는다
@@ -305,8 +335,10 @@ export function makeEngine(mj, model, data, C, goal) {
         else { dq = ask(); call = st.calls; }
         let attemptNo = 0, gateUs = 0;
         const judge = () => {   // 제안 하나를 게이트에 넣고 proposal 이벤트를 남긴다 (게이트 꺼짐이면 판정 없이 기록만)
-          const floorZ = cfg.stepPhases && ['lift', 'carry', 'place'].includes(phase) ? PLACE_Z - FLOOR_EPS : null;   // P1: 걸음 단계 옵션일 때 쥔 채 걷는 단계만
-          const t0 = performance.now(), g = cfg.gate ? gateCheck(qB, tipB, dq, target, floorZ) : null; gateUs += performance.now() - t0;
+          const holding = ['lift', 'carry', 'place'].includes(phase);
+          const floorZ = cfg.stepPhases && holding ? PLACE_Z - FLOOR_EPS : null;   // P1: 걸음 단계 옵션일 때 쥔 채 걷는 단계만
+          const obst = l2Wall || l2Sup ? { wall: l2Wall, below: holding ? 0.035 : 0.01, sup: l2Sup && { xy: l2Sup.xy, half: l2Sup.half, z: placeZ - FLOOR_EPS } } : null;   // L2 S3: 쥔 상자 바닥(3.5 cm 아래) 또는 손가락 끝 · 받침 위 바닥
+          const t0 = performance.now(), g = cfg.gate ? gateCheck(qB, tipB, dq, target, floorZ, obst) : null; gateUs += performance.now() - t0;
           const dtip = g ? g.dtip : (() => { const a = C.fkTip(qB), b = C.fkTip(qB.map((x, i) => x + dq[i])); return [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; })();
           ev('proposal', { step, attempt: attemptNo++, phase, src, call, from, dq: dq.slice(), dtipPred: dtip, gate: g && { ok: g.ok, reason: g.reason, values: g.values } });
           if (g && !g.ok) lastRej = { reason: g.reason, src, dtip };
@@ -402,15 +434,6 @@ export function makeEngine(mj, model, data, C, goal) {
         if (cfg.stepPhases?.includes(p) && !(yield* stepTo(pt))) ev('phase-not-reached', { phase: p });
         yield* corrected(pt);
       };
-      // L2: 운반 높이·놓을 점·놓는 높이. 기본은 레벨 1 그대로(고정 놓을 곳, 탁자 높이).
-      //   cfg.l2.oracle = 의도적 대조군: 벽·받침 참값으로 정한다 (풀 수 있는 과제인지 + 측정판의 상한). 측정판은 S2 에서 카메라 값으로 같은 자리를 채운다.
-      //   cfg.l2.measure = 측정판: 장면 카메라가 잰 벽·받침(l2Meas)으로 같은 자리를 채운다. 못 찾으면 레벨 1 기본값(실패로 이어지게 — 참값으로 되돌리지 않는다)
-      let carryZ = GRASP_Z + ABOVE, dst = goal, placeZ = PLACE_Z;
-      const l2Src = cfg.l2?.oracle ? l2Truth : cfg.l2?.measure ? l2Meas : null;
-      if (l2Src) {
-        if (l2Src.wall) carryZ = Math.max(carryZ, l2Src.wall.top + L2_CLEAR);
-        if (l2Src.support) { dst = l2Src.support.xy; placeZ = PLACE_Z + l2Src.support.top; carryZ = Math.max(carryZ, placeZ + ABOVE); }
-      }
       yield* go('lift', [g[0], g[1], carryZ]);
       const over = [dst[0], dst[1], carryZ];
       yield* go('carry', over);

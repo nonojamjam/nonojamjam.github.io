@@ -94,7 +94,7 @@ export const SCENE_VISION_DEFAULT = {
   fovy: 30, W: 128, H: 128,                             // 화소 하나 ≈ 4 mm
   sigD: 0.002, pDrop: 0.03, sigC: 0.05,
   zMin: 0.012, zMaxScene: 0.34, minPx: 12, topQ: 0.9, topBand: 0.008,
-  wallLong: 0.15, supMin: 0.04, supMax: 0.085,
+  wallLong: 0.15, supMin: 0.04, supMax: 0.085, edgeLong: 1.0,
 };
 export function makeSceneVision(mj, model, data, opt = {}) {
   const S = { ...SCENE_VISION_DEFAULT, ...opt };
@@ -123,12 +123,15 @@ export function makeSceneVision(mj, model, data, opt = {}) {
       let best = null;
       for (let k = 0; k < 45; k++) { const a = k * Math.PI / 90, e1 = ext(a), e2 = ext(a + Math.PI / 2); if (!best || e1 * e2 < best.area) best = { area: e1 * e2, a, e1, e2 }; }
       const [short, long, shortAng] = best.e1 < best.e2 ? [best.e1, best.e2, best.a] : [best.e2, best.e1, best.a + Math.PI / 2];
-      blobs.push({ c: [mx, my], top: zTop, short, long, yaw: shortAng, n: mem.length });
+      const edge = mem.some(i => { const r = (i / W) | 0, c = i % W; return r === 0 || c === 0 || r === H - 1 || c === W - 1; });
+      blobs.push({ c: [mx, my], top: zTop, short, long, yaw: shortAng, n: mem.length, edge });
     }
     const bs = blobs.filter(Boolean);
     const wall = bs.filter(b => b.long >= S.wallLong).sort((a, b) => b.n - a.n)[0] ?? null;
     const sup = bs.filter(b => b.short >= S.supMin && b.long <= S.supMax).sort((a, b) => b.n - a.n)[0] ?? null;
-    return { wall: wall && { top: wall.top, c: wall.c, short: wall.short, long: wall.long, yaw: wall.yaw },
+    // 시야 가장자리에 닿은 벽은 안 보이는 쪽으로 이어진다고 본다 (긴 변을 edgeLong 으로) — 보이는 만큼만 벽으로 치면 게이트가 잘린 끝을 모른다
+    //   (실측 10/9: 잰 벽 x 34~65 cm, 참 33~69 cm. 검수 GPT·Flash 가 짚은 '가장자리 잘림'을 문턱 판정으로만 보고 기각했던 것을 바로잡음)
+    return { wall: wall && { top: wall.top, c: wall.c, short: wall.short, long: wall.edge ? Math.max(wall.long, S.edgeLong) : wall.long, yaw: wall.yaw, edge: wall.edge },
              support: sup && { xy: sup.c, top: sup.top, short: sup.short, long: sup.long }, blobs: bs.length };
   }
   return { measure, cam, S };
