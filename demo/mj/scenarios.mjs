@@ -167,7 +167,7 @@ export function makeEngine(mj, model, data, C, goal) {
       if (!cfg.vision) return cam();
       vis ??= makeVision(mj, model, data, cfg.vision === true ? {} : cfg.vision);
       const L = vis.look(rVis), now = C.bodyPos(C.bTarget);
-      ev('vision', { ok: L.ok, xy: L.xy, yaw: L.yaw, short: L.short ?? null, cands: L.cands.length, err: L.ok ? Math.hypot(L.xy[0] - now[0], L.xy[1] - now[1]) : null });
+      ev('vision', { ok: L.ok, xy: L.xy, yaw: L.yaw, short: L.short ?? null, cands: L.cands.length, err: L.ok ? Math.hypot(L.xy[0] - now[0], L.xy[1] - now[1]) : null, ...(L.frame ? { frame: L.frame, pick: L.pick } : {}) });   // frame: 데모가 cfg.vision={frame:true} 일 때만
       if (!L.ok) { st.visionMiss = (st.visionMiss || 0) + 1; return [0.525, 0.09]; }
       beliefYaw = L.yaw; return L.xy;
     };
@@ -176,6 +176,7 @@ export function makeEngine(mj, model, data, C, goal) {
     let belief, source;
     if (cfg.mem && mem.scene.has(task.key)) {
       belief = mem.scene.get(task.key); source = 'memory';
+      if (cfg.yawAlign && belief.length > 2) { beliefYaw = belief[2]; belief = belief.slice(0, 2); }   // V8b: 기억한 상자 방향도 꺼낸다 (아무 방향 세계에서 기억을 쓰면 손목이 0° 로 돌아가던 결함)
       if (cfg.camCheck) { const c = see(); if (d2(belief, c) > 0.02) { mem.scene.delete(task.key); belief = c; source = 'camera'; st.dropped++; ev('drop'); } }
     } else { belief = see(); source = 'camera'; }
     ev('belief', { belief, source, task });
@@ -373,7 +374,7 @@ export function makeEngine(mj, model, data, C, goal) {
       data.ctrl[7] = OPEN; yield* hold(40);
       yield* go('retreat', over);
       for (let t = 0; t < 40; t++) { physicsTick(); yield; }
-      if (cfg.mem) mem.scene.set(task.key, belief);
+      if (cfg.mem) mem.scene.set(task.key, cfg.yawAlign ? [belief[0], belief[1], beliefYaw] : belief);   // V8b: 방향도 함께 (정렬 끔이면 예전 그대로)
       break;
     }
     const inGoal = b => { const p = C.bodyPos(b); return Math.abs(p[0] - goal[0]) < 0.06 && Math.abs(p[1] - goal[1]) < 0.06; };

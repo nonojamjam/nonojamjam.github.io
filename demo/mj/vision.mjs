@@ -64,10 +64,23 @@ export function makeVision(mj, model, data, opt = {}) {
     }
     return out.filter(Boolean);
   }
+  function project(p) {   // 월드 점 → 화소 (열, 행). 데모의 '로봇이 보는 것' 패널이 찾은 상자를 그리는 데 쓴다
+    const d = sub(p, V.pos), z = d[0] * fwd[0] + d[1] * fwd[1] + d[2] * fwd[2];
+    const u = (d[0] * right[0] + d[1] * right[1] + d[2] * right[2]) / z / th, v = (d[0] * up[0] + d[1] * up[1] + d[2] * up[2]) / z / th;
+    return [(u + 1) / 2 * V.W - 0.5, (1 - v) / 2 * V.H - 0.5];
+  }
+  function frameOf(img, cands) {   // 화면용 RGBA (잡음 포함 그대로, 미스·탈락 화소는 검정) + 찾은 상자의 꼭짓점(화소)
+    const rgba = new Uint8ClampedArray(V.W * V.H * 4);
+    img.forEach((px, i) => { if (px.rgb) { rgba[4 * i] = 255 * px.rgb[0]; rgba[4 * i + 1] = 255 * px.rgb[1]; rgba[4 * i + 2] = 255 * px.rgb[2]; } rgba[4 * i + 3] = 255; });
+    const boxes = cands.map(b => { const a = b.yaw, ca = Math.cos(a), sa = Math.sin(a), hs = b.short / 2, hl = b.long / 2;
+      return { short: b.short, long: b.long, corners: [[hs, hl], [-hs, hl], [-hs, -hl], [hs, -hl]].map(([x, y]) => project([b.c[0] + x * ca - y * sa, b.c[1] + x * sa + y * ca, b.top])) }; });
+    return { W: V.W, H: V.H, rgba, boxes };
+  }
   function look(rng) {   // → 목표 추정 { ok, xy, yaw, cands }. 목표 = 짧은 변이 가장 짧은 후보, 단 짧은 변 < shortMax 이고 직사각(긴 변 − 짧은 변 > rectMin)일 때만
     //   검수 반영: 문턱 하나(34 mm)는 양쪽 여유가 1.6 mm 뿐이었다 → 폭 + 모양 두 기준으로 (목표 32×40 직사각 · 닮은 40×40 정사각)
-    const cands = detect(capture(rng)), tgt = cands.slice().sort((a, b) => a.short - b.short).find(b => b.short < V.shortMax && b.long - b.short > V.rectMin);
-    return tgt ? { ok: true, xy: tgt.c, yaw: tgt.yaw, short: tgt.short, cands } : { ok: false, xy: null, yaw: 0, cands };
+    const img = capture(rng), cands = detect(img), tgt = cands.slice().sort((a, b) => a.short - b.short).find(b => b.short < V.shortMax && b.long - b.short > V.rectMin);
+    const frame = V.frame ? frameOf(img, cands) : null;   // 데모 전용 (opt.frame) — 실험 경로는 만들지 않는다
+    return tgt ? { ok: true, xy: tgt.c, yaw: tgt.yaw, short: tgt.short, cands, frame, pick: cands.indexOf(tgt) } : { ok: false, xy: null, yaw: 0, cands, frame, pick: -1 };
   }
-  return { capture, detect, look, V };
+  return { capture, detect, look, project, V };
 }
