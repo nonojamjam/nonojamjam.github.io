@@ -148,6 +148,14 @@ export function makeEngine(mj, model, data, C, goal) {
     const rCam = makeRng(base + 1), rPlan = makeRng(base + 2), rSen = makeRng(base + 3);
     const bias = cfg.bias ? 0.15 : 0;
     C.reset([0, 0], task.place);
+    // V3: cfg.yaw = 상자 회전 범위(±도). 회전값은 장면 seed·장면 번호로만 정한다 (조건이 달라도 같은 세계). 끄면 회전 없음
+    let trueYaw = 0;
+    if (cfg.yaw) {
+      const ry = makeRng(((cfg.sceneSeed || 0) * 7919 + task.key * 104729 + 13) >>> 0), yaws = [0, 1].map(() => (2 * ry() - 1) * cfg.yaw * Math.PI / 180);
+      const [yT, yL] = task.place === null ? yaws : (cfg.swap && task.visit > 0 ? [yaws[1], yaws[0]] : yaws);
+      for (const [a, t] of [[12, yT], [19, yL]]) { data.qpos[a] = Math.cos(t / 2); data.qpos[a + 1] = 0; data.qpos[a + 2] = 0; data.qpos[a + 3] = Math.sin(t / 2); }
+      mj.mj_forward(model, data); trueYaw = yT;
+    }
     for (let t = 0; t < 40; t++) { physicsTick(); yield; }
     const truth = C.bodyPos(C.bTarget);
     const cam = () => [truth[0] + CAM_NOISE * gauss(rCam), truth[1] + CAM_NOISE * gauss(rCam)];
@@ -163,6 +171,8 @@ export function makeEngine(mj, model, data, C, goal) {
       if (!L.ok) { st.visionMiss = (st.visionMiss || 0) + 1; return [0.525, 0.09]; }
       beliefYaw = L.yaw; return L.xy;
     };
+    // V3: 비전이 없으면(가짜 카메라 대조군) 방향도 참값 + 2° 잡음 (오라클 상한). yawAlign 이 꺼져 있으면 손목은 늘 0
+    if (cfg.yawAlign && !cfg.vision) beliefYaw = trueYaw + (2 * Math.PI / 180) * gauss(makeRng(base + 6));
     let belief, source;
     if (cfg.mem && mem.scene.has(task.key)) {
       belief = mem.scene.get(task.key); source = 'memory';
@@ -309,6 +319,7 @@ export function makeEngine(mj, model, data, C, goal) {
       };
       const g = [belief[0], belief[1], GRASP_Z];
       setPhase('grasp');
+      if (cfg.yawAlign) { C.setYaw(beliefYaw); ev('yaw-align', { belief: beliefYaw, truth: trueYaw }); }   // V3: 쥐기 전에 손목을 짧은 변 축에 맞춘다
       yield* corrected([g[0], g[1], g[2] + PRE]);
       yield* corrected([g[0], g[1], g[2] + 0.03]);
       yield* corrected(g);

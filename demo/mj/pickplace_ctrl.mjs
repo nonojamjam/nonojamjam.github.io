@@ -27,6 +27,11 @@ export function makeController(mj, model, data) {
     // 손을 정확히 아래로(집게 z축 = -세계 z), 손가락은 세계 x 방향으로 벌어지게 고정. 기본 자세는 7° 기울어 있어 상자를 밀었다
     Rdes = [0, 1, 0, 1, 0, 0, 0, 0, -1];
   }
+  // V3(10/9): 손을 세계 z 축으로 ψ 만큼 돌린 방향을 목표로 (Rdes = Rz(ψ)·R0). 손가락이 벌어지는 축이 (cos ψ, sin ψ) 가 된다. reset 이 다시 0 으로
+  function setYaw(psi) {
+    const c = Math.cos(psi), s = Math.sin(psi), R0 = [0, 1, 0, 1, 0, 0, 0, 0, -1], Rz = [c, -s, 0, s, c, 0, 0, 0, 1];
+    Rdes = [0, 1, 2].flatMap(i => [0, 1, 2].map(j => Rz[3 * i] * R0[j] + Rz[3 * i + 1] * R0[3 + j] + Rz[3 * i + 2] * R0[6 + j]));
+  }
 
   const sitePos = () => Array.from(data.site_xpos.slice(3 * site, 3 * site + 3));
   const bodyPos = b => Array.from(data.xpos.slice(3 * b, 3 * b + 3));
@@ -102,7 +107,7 @@ export function makeController(mj, model, data) {
 
   function free() { scratch.delete(); jacp.delete(); jacr.delete(); }
 
-  return { reset, solveIK, moveToward, gravComp, sitePos, bodyPos, fkTip, handErr, bTarget, bLook, site, free };
+  return { reset, setYaw, solveIK, moveToward, gravComp, sitePos, bodyPos, fkTip, handErr, bTarget, bLook, site, free };
 }
 
 function solve(A, b) {   // 가우스 소거 (6×6)
