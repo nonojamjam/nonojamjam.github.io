@@ -94,10 +94,16 @@ export function makeEngine(mj, model, data, C, goal) {
   //   위치·높이는 장면 seed·장면 번호로만 정한다(조건이 달라도 같은 세계). 둘 다 늘 뽑아서 l2a·l2b·l2ab 가 같은 수를 공유한다.
   //   ⚠️ 여기서 정한 참값은 채점·기록 전용이다. 결정 경로(계획·게이트·기억)는 측정값만 쓴다 — 오라클 회귀 방지 (패널 Kimi).
   const WALL_HALF = [0.18, 0.01, 0.15], SUP_HALF = [0.03, 0.03, 0.05];
+  const L2_CLEAR = 0.035 + 0.04;   // 벽 넘을 때 손끝 높이 = 벽 윗면 + (쥔 점→상자 바닥 3.5 cm) + 여유 4 cm
   const mocapOf = n => { const b = mj.mj_name2id(model, mj.mjtObj.mjOBJ_BODY.value, n), m = b >= 0 ? model.body_mocapid[b] : -1; if (m < 0) throw new Error(`L2: 모델에 mocap '${n}' 없음 — pickplace_l2.mjb 를 쓰세요`); return m; };
   function placeL2(cfg, task) {
-    const r = makeRng(((cfg.sceneSeed || 0) * 7919 + task.key * 104729 + 29) >>> 0), u = (lo, hi) => lo + (hi - lo) * r();
-    const wall = { xy: [u(0.50, 0.54), u(-0.14, -0.08)], top: u(0.20, 0.26) }, support = { xy: [u(0.40, 0.55), u(-0.36, -0.24)], top: u(0.04, 0.08) };
+    // 씨앗을 해시로 섞는다 — 섞지 않으면 장면 번호에 따라 위치·높이가 거의 직선으로 변한다 (실측: 벽 윗면 0.245→0.233→0.222, scenesFor 와 같은 문제)
+    let h = (((cfg.sceneSeed || 0) * 7919 + task.key * 104729 + 29) ^ 0x9e3779b9) >>> 0;
+    h = Math.imul(h ^ (h >>> 16), 0x85ebca6b); h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35); h = (h ^ (h >>> 16)) >>> 0;
+    const r = makeRng(h), u = (lo, hi) => lo + (hi - lo) * r();
+    // 벽 y 는 카메라 시선 밖으로 (−0.14~−0.08 은 가까운 상자를 가렸다: 대조군 s514 비전 44회 중 14 실패·21 오차 >1 cm [실측]. 가림은 레벨 3 재료).
+    //   시선 높이 ≈ 0.72 − 0.66·(y+0.42)/0.42 → 벽 앞면 y ≤ −0.16 이면 시선이 0.31 이상으로 윗면 0.26 위를 지난다. 받침은 벽과 3 cm 이상 띄운다.
+    const wall = { xy: [u(0.50, 0.54), u(-0.20, -0.17)], top: u(0.20, 0.26) }, support = { xy: [u(0.40, 0.55), u(-0.38, -0.27)], top: u(0.04, 0.08) };
     const put = (n, xy, z) => { const m = mocapOf(n); data.mocap_pos[3 * m] = xy[0]; data.mocap_pos[3 * m + 1] = xy[1]; data.mocap_pos[3 * m + 2] = z; };
     if (cfg.l2.wall) put('wall', wall.xy, wall.top - WALL_HALF[2]);
     if (cfg.l2.support) put('support', support.xy, support.top - SUP_HALF[2]);
@@ -383,10 +389,17 @@ export function makeEngine(mj, model, data, C, goal) {
         if (cfg.stepPhases?.includes(p) && !(yield* stepTo(pt))) ev('phase-not-reached', { phase: p });
         yield* corrected(pt);
       };
-      yield* go('lift', [g[0], g[1], GRASP_Z + ABOVE]);
-      const over = [goal[0], goal[1], GRASP_Z + ABOVE];
+      // L2: 운반 높이·놓을 점·놓는 높이. 기본은 레벨 1 그대로(고정 놓을 곳, 탁자 높이).
+      //   cfg.l2.oracle = 의도적 대조군: 벽·받침 참값으로 정한다 (풀 수 있는 과제인지 + 측정판의 상한). 측정판은 S2 에서 카메라 값으로 같은 자리를 채운다.
+      let carryZ = GRASP_Z + ABOVE, dst = goal, placeZ = PLACE_Z;
+      if (cfg.l2?.oracle && l2Truth) {
+        if (l2Truth.wall) carryZ = Math.max(carryZ, l2Truth.wall.top + L2_CLEAR);
+        if (l2Truth.support) { dst = l2Truth.support.xy; placeZ = PLACE_Z + l2Truth.support.top; carryZ = Math.max(carryZ, placeZ + ABOVE); }
+      }
+      yield* go('lift', [g[0], g[1], carryZ]);
+      const over = [dst[0], dst[1], carryZ];
       yield* go('carry', over);
-      yield* go('place', [goal[0], goal[1], PLACE_Z]);
+      yield* go('place', [dst[0], dst[1], placeZ]);
       data.ctrl[7] = OPEN; yield* hold(40);
       yield* go('retreat', over);
       for (let t = 0; t < 40; t++) { physicsTick(); yield; }
@@ -413,7 +426,7 @@ export function makeEngine(mj, model, data, C, goal) {
     ev('settle', { result, tilt, tiltLook: tiltOf(C.bLook), fallen: tilt >= FALL_DEG, settled: still >= 10, ticks });
     // S2b: 지표 S1 = 목표 칸 + 서 있음. success(S0) 는 그대로 두고 병기한다. fallen = 목표 상자가 45° 이상 (결과와 무관하게 셈)
     if (tilt >= FALL_DEG) st.fallen++;
-    else if (result === 'success') st.standing++;
+    else if (result === 'success' && (!l2Truth?.support || onSupport(C.bodyPos(C.bTarget)))) st.standing++;   // L2: 받침 세계는 멈춘 뒤에도 받침 위여야
     return result;
   }
 
