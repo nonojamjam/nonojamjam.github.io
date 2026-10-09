@@ -47,6 +47,30 @@ export function tiltDegFromXmat(m) { return Math.acos(Math.min(1, Math.abs(m[8])
 
 export function makeRng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 const gauss = rng => Math.sqrt(-2 * Math.log(rng() + 1e-12)) * Math.cos(2 * Math.PI * rng());
+// O1 (10/9): 오라클 손끝 센서 대신 '거리 기반 외부 추적' 모형 (UWB 같은 거리 측정 방식, 하드웨어 없이 센서 모형만).
+//   앵커 4개(높이가 달라 한 평면에 있지 않음)까지 거리 = 참 거리 + N(0, σ) + 확률 pNlos 로 양의 바이어스 U(0, nlosMax)(가려짐),
+//   믿는 손끝에서 시작하는 가우스-뉴턴 삼변측량으로 위치를 추정한다. cfg.tracker 가 있을 때만 (없으면 예전 참값+잡음 센서)
+export const TRACKER_DEFAULT = { anchors: [[0.2, -0.6, 0.8], [1.0, -0.6, 0.1], [0.2, 0.6, 0.1], [1.0, 0.6, 0.8]], sigma: 0.02, pNlos: 0.1, nlosMax: 0.15 };
+function solve3(A, b) {   // 3×3 선형계 (크래머), 거의 특이면 감쇠
+  const M = A.map((r, i) => r.map((v, j) => v + (i === j ? 1e-9 : 0)));
+  const det = m => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  const D = det(M);
+  return [0, 1, 2].map(k => det(M.map((r, i) => r.map((v, j) => (j === k ? b[i] : v)))) / D);
+}
+export function rangeTrack(p, rng, tr, x0) {
+  const z = tr.anchors.map(a => Math.hypot(p[0] - a[0], p[1] - a[1], p[2] - a[2]) + tr.sigma * gauss(rng) + (rng() < tr.pNlos ? tr.nlosMax * rng() : 0));
+  let x = x0.slice();
+  for (let it = 0; it < 10; it++) {
+    const JTJ = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], JTr = [0, 0, 0];
+    tr.anchors.forEach((a, i) => {
+      const d = [x[0] - a[0], x[1] - a[1], x[2] - a[2]], n = Math.hypot(...d) || 1e-9, g = d.map(v => v / n), r = n - z[i];
+      for (let u = 0; u < 3; u++) { JTr[u] += g[u] * r; for (let v = 0; v < 3; v++) JTJ[u][v] += g[u] * g[v]; }
+    });
+    const dx = solve3(JTJ, JTr); x = x.map((v, i) => v - dx[i]);
+    if (Math.hypot(...dx) < 1e-6) break;
+  }
+  return x.every(Number.isFinite) ? x : x0.slice();   // 검수 반영: 발산(NaN)이면 믿는 손끝으로 되돌린다
+}
 const d2 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const d3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
@@ -122,7 +146,14 @@ export function makeEngine(mj, model, data, C, goal) {
     } else { belief = cam(); source = 'camera'; }
     ev('belief', { belief, source, task });
     const tipNow = () => C.sitePos();
-    const believedTip = qB => cfg.sensor ? tipNow().map(v => v + SENSOR_NOISE * gauss(rSen)) : C.fkTip(qB);
+    const TR = cfg.tracker ? (cfg.tracker === true ? TRACKER_DEFAULT : { ...TRACKER_DEFAULT, ...cfg.tracker }) : null;
+    const sense = qB => {   // O1: 손끝 '센서' 한 번 읽기 — 추적 모형이면 거리 삼변측량, 아니면 예전 참값+잡음
+      if (!TR) return tipNow().map(v => v + SENSOR_NOISE * gauss(rSen));
+      const t = tipNow(), est = rangeTrack(t, rSen, TR, C.fkTip(qB));
+      ev('track', { err: Math.hypot(est[0] - t[0], est[1] - t[1], est[2] - t[2]) });
+      return est;
+    };
+    const believedTip = qB => cfg.sensor ? sense(qB) : C.fkTip(qB);
     data.ctrl[7] = OPEN;
     // S4: phase 태그 — 추론하지 않고 제어 코드가 지금 하는 일을 그대로 적는다 (approach·grasp·lift·carry·place·retreat)
     let phase = null;
@@ -210,7 +241,7 @@ export function makeEngine(mj, model, data, C, goal) {
         yield* moveJoints(C.solveIK([pt[0] + off[0], pt[1] + off[1], pt[2] + off[2]], 150, readJoints(bias)).q, bias);
         if (!cfg.sensor) return;
         for (let k = 0; k < 3; k++) {
-          const m = tipNow().map(v => v + SENSOR_NOISE * gauss(rSen)), e = [pt[0] - m[0], pt[1] - m[1], pt[2] - m[2]];
+          const m = sense(readJoints(bias)), e = [pt[0] - m[0], pt[1] - m[1], pt[2] - m[2]];
           if (Math.hypot(...e) < 0.004) return;
           off = [off[0] + e[0], off[1] + e[1], off[2] + e[2]]; ev('sensor-fix');
           yield* moveJoints(C.solveIK([pt[0] + off[0], pt[1] + off[1], pt[2] + off[2]], 150, readJoints(bias)).q, bias);
