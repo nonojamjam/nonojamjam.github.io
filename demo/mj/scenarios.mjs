@@ -90,6 +90,20 @@ export function makeEngine(mj, model, data, C, goal) {
   function* hold(ticks) { for (let t = 0; t < ticks; t++) { physicsTick(); yield; } }
   const readJoints = bias => Array.from(data.qpos.slice(0, 7)).map((v, i) => v + (i === BIAS_JOINT ? bias : 0));
   let vis = null;   // V2: 이미지 기반 비전 (cfg.vision 일 때만 만든다)
+  // L2(10/9): 레벨 2 장면 — 장애물 벽(cfg.l2.wall) · 받침 상자(cfg.l2.support). pickplace_l2.mjb 의 mocap 몸체를 장면마다 옮긴다.
+  //   위치·높이는 장면 seed·장면 번호로만 정한다(조건이 달라도 같은 세계). 둘 다 늘 뽑아서 l2a·l2b·l2ab 가 같은 수를 공유한다.
+  //   ⚠️ 여기서 정한 참값은 채점·기록 전용이다. 결정 경로(계획·게이트·기억)는 측정값만 쓴다 — 오라클 회귀 방지 (패널 Kimi).
+  const WALL_HALF = [0.18, 0.01, 0.15], SUP_HALF = [0.03, 0.03, 0.05];
+  const mocapOf = n => { const b = mj.mj_name2id(model, mj.mjtObj.mjOBJ_BODY.value, n), m = b >= 0 ? model.body_mocapid[b] : -1; if (m < 0) throw new Error(`L2: 모델에 mocap '${n}' 없음 — pickplace_l2.mjb 를 쓰세요`); return m; };
+  function placeL2(cfg, task) {
+    const r = makeRng(((cfg.sceneSeed || 0) * 7919 + task.key * 104729 + 29) >>> 0), u = (lo, hi) => lo + (hi - lo) * r();
+    const wall = { xy: [u(0.50, 0.54), u(-0.14, -0.08)], top: u(0.20, 0.26) }, support = { xy: [u(0.40, 0.55), u(-0.36, -0.24)], top: u(0.04, 0.08) };
+    const put = (n, xy, z) => { const m = mocapOf(n); data.mocap_pos[3 * m] = xy[0]; data.mocap_pos[3 * m + 1] = xy[1]; data.mocap_pos[3 * m + 2] = z; };
+    if (cfg.l2.wall) put('wall', wall.xy, wall.top - WALL_HALF[2]);
+    if (cfg.l2.support) put('support', support.xy, support.top - SUP_HALF[2]);
+    mj.mj_forward(model, data);
+    return { wall: cfg.l2.wall ? wall : null, support: cfg.l2.support ? support : null };
+  }
   let kd = null;   // B′2: 보정용 운동학 전용 MjData (cfg.calib 일 때만 만든다)
   function handPose(q) {   // 손끝 위치 + 손 좌표계에서 본 중력 방향 (R 행 우선: Rᵀ·[0,0,-1] = −(셋째 행))
     kd ??= new mj.MjData(model);
@@ -156,6 +170,8 @@ export function makeEngine(mj, model, data, C, goal) {
       for (const [a, t] of [[12, yT], [19, yL]]) { data.qpos[a] = Math.cos(t / 2); data.qpos[a + 1] = 0; data.qpos[a + 2] = 0; data.qpos[a + 3] = Math.sin(t / 2); }
       mj.mj_forward(model, data); trueYaw = yT;
     }
+    const l2Truth = cfg.l2 ? placeL2(cfg, task) : null;   // L2: 채점·기록 전용 (결정 경로에서 읽지 않는다)
+    if (l2Truth) ev('l2-scene', l2Truth);
     for (let t = 0; t < 40; t++) { physicsTick(); yield; }
     const truth = C.bodyPos(C.bTarget);
     const cam = () => [truth[0] + CAM_NOISE * gauss(rCam), truth[1] + CAM_NOISE * gauss(rCam)];
@@ -377,7 +393,9 @@ export function makeEngine(mj, model, data, C, goal) {
       if (cfg.mem) mem.scene.set(task.key, cfg.yawAlign ? [belief[0], belief[1], beliefYaw] : belief);   // V8b: 방향도 함께 (정렬 끔이면 예전 그대로)
       break;
     }
-    const inGoal = b => { const p = C.bodyPos(b); return Math.abs(p[0] - goal[0]) < 0.06 && Math.abs(p[1] - goal[1]) < 0.06; };
+    // L2: 받침이 있으면 성공 = 상자 중심이 받침 윗면 안쪽 위 (참값 채점). 없으면 예전 그대로 놓을 곳 12 cm 칸
+    const onSupport = p => { const s = l2Truth.support; return Math.abs(p[0] - s.xy[0]) < SUP_HALF[0] && Math.abs(p[1] - s.xy[1]) < SUP_HALF[1] && p[2] > s.top + 0.02; };
+    const inGoal = b => { const p = C.bodyPos(b); return l2Truth?.support ? onSupport(p) : Math.abs(p[0] - goal[0]) < 0.06 && Math.abs(p[1] - goal[1]) < 0.06; };
     const result = inGoal(C.bTarget) ? 'success' : inGoal(C.bLook) ? 'wrong' : 'miss';
     st[result]++; st.n++;
     if (cfg.monitor) ev('monitor', { ...monAgg });   // V4: 이 에피소드의 독립 감각 불일치 요약
