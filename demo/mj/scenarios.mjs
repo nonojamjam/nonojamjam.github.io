@@ -13,6 +13,10 @@ const BIAS_JOINT = 1, TOUCH_TOL = 0.006, CAM_NOISE = 0.003, SENSOR_NOISE = 0.002
 const STEP = 0.06, SUCC = 0.025, PROG = 0.005, JERK = 0.4, MAX_STEPS = 12, MAX_REPLAN = 3, UNSAFE = 0.005, TILT = 0.25;
 const CAL = { k: 5, window: 20, min: 10, every: 5, sigI: Math.PI / 180, prior: 0.3 };   // V7: cfg.calib = { maxStd } 이면 관측 안 되는 방향은 고치지 않는다   // B′2: 온라인 보정 — 추적 k 회 중앙값 + IMU σ 1°, 최근 20 관측, 10개부터 5개마다 재추정
 const FLOOR_EPS = 0.003;   // P1(10/9): 쥔 상자를 들고 걸을 때 손끝이 PLACE_Z(상자가 탁자에 닿는 높이)보다 이만큼 아래로 내려가는 제안은 거절
+// L2-자유(10/10): 손 충돌 캡슐(모델 실측: 반지름 0.04, 반길이 0.06, 손끝 7 cm 위, 축 = 손가락 여는 방향, 수평)이 벽에 닿는 수평 거리.
+//   게이트가 손끝 한 점만 보면 축이 벽을 향할 때 손끝이 벽 면에서 8 cm 인데도 캡슐이 걸려 멈춘다 (대역 시험 실측: 명령 관절 변화의 ~10 % 만 실행, 30 걸음 넘게 제자리).
+//   벽 축마다 반폭 = 반길이·|축·그 축| + 반지름 + 여유 5 mm. 손 방향은 지금 읽은 관절로 (한 걸음 안에서 손목은 거의 안 돈다)
+const HAND_CAP = { half: 0.06, r: 0.04, pad: 0.005 };
 
 export const SCENES = [
   { target: [0.55, 0.10], look: [0.45, 0.20] }, { target: [0.50, 0.18], look: [0.60, 0.05] },
@@ -120,6 +124,18 @@ export function makeEngine(mj, model, data, C, goal) {
     return { p: Array.from(kd.site_xpos.slice(3 * C.site, 3 * C.site + 3)), g: [-R[6], -R[7], -R[8]] };
   }
 
+  let capG = null;   // L2-자유: 손 충돌 캡슐 geom 번호 (처음 쓸 때 찾는다)
+  function handReach(q) {   // 지금 관절에서 손 캡슐의 벽 축별 수평 반폭 [짧은 변 축, 긴 변 축] (잰 벽 yaw 기준)
+    if (capG === null) { const hb = mj.mj_name2id(model, mj.mjtObj.mjOBJ_BODY.value, 'hand'); capG = -1;
+      for (let g = 0; g < model.ngeom; g++) if (model.geom_bodyid[g] === hb && model.geom_type[g] === 3 && model.geom_conaffinity[g]) capG = g;
+      if (capG < 0) throw new Error('L2-자유: 손 충돌 캡슐을 모델에서 못 찾음'); }
+    handPose(q);   // kd 에 운동학 (geom 자세 포함)
+    const R = kd.geom_xmat.slice(9 * capG, 9 * capG + 9), ax = [R[2], R[5], R[8]];
+    const ca = Math.cos(handReach.yaw), sa = Math.sin(handReach.yaw);
+    return [ax[0] * ca + ax[1] * sa, -ax[0] * sa + ax[1] * ca].map(c => HAND_CAP.half * Math.abs(c) + HAND_CAP.r + HAND_CAP.pad);
+  }
+  handReach.yaw = 0;
+
   // 상황 키: 목표까지 방향(x·y·z 부호, 1 cm 불감대) + 거리 구간 + 큰 관절 3개(1·2·4)의 구간
   function situationKey(tip, target, q) {
     const sg = v => (Math.abs(v) < 0.01 ? 0 : Math.sign(v));
@@ -138,7 +154,15 @@ export function makeEngine(mj, model, data, C, goal) {
       const f = C.fkTip(qB);
       return C.solveIK([f[0] + d[0], f[1] + d[1], f[2] + d[2]], 60, qB).q.map((x, i) => x - qB[i]);
     }
-    const fk = C.fkTip(qB), v = [target[0] - tipB[0], target[1] - tipB[1], target[2] - tipB[2]];
+    const fk = C.fkTip(qB);
+    // L2-자유 시험 전용: cfg.l2.free.standinClimb 이면 대역이 'wall' 거절 직후 — 거절된 걸음이 내려가던 것이면 높이를 지킨 수평 걸음, 아니면 위로 5 cm
+    //   (면제·빠져나오기 경로 확인용. 진짜 LLM 실행에는 쓰지 않는다)
+    if (cfg.l2?.free?.standinClimb && rej?.reason === 'wall') {
+      const h = [target[0] - tipB[0], target[1] - tipB[1]], hn = Math.hypot(...h) || 1;
+      const d = rej.dtip[2] < -0.005 ? [STEP * h[0] / hn, STEP * h[1] / hn, 0] : [0, 0, 0.05];
+      return C.solveIK([fk[0] + d[0], fk[1] + d[1], fk[2] + d[2]], 60, qB).q.map((x, i) => x - qB[i]);
+    }
+    const v = [target[0] - tipB[0], target[1] - tipB[1], target[2] - tipB[2]];
     const n = Math.hypot(...v), k = n > STEP ? STEP / n : 1;
     const way = [fk[0] + k * v[0], fk[1] + k * v[1], fk[2] + k * v[2]];   // 센서가 있으면 tipB 는 잰 손끝 → 오차만큼 목표를 옮겨 낸다
     const q = C.solveIK(way, 60, qB).q, dq = q.map((x, i) => x - qB[i]);
@@ -155,11 +179,11 @@ export function makeEngine(mj, model, data, C, goal) {
   //   선분은 5 mm 간격 이하로 짚는다 (검수 Flash: 5점 고정이면 긴 걸음이 모서리를 건너뛸 수 있다 — 재현은 안 됐지만 비용 0)
   const WALL_MARGIN = 0.02;
   const segPts = (a, b) => { const n = Math.max(4, Math.ceil(d3(a, b) / 0.005)); return Array.from({ length: n + 1 }, (_, k) => { const t = k / n; return [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]), a[2] + t * (b[2] - a[2])]; }); };
-  function wallClear(a, b, w, below) {
+  function wallClear(a, b, w, below, reach = null) {   // reach = [짧은 변 축, 긴 변 축] 손 반폭 (L2-자유만, 없으면 예전 그대로)
     const ca = Math.cos(w.yaw), sa = Math.sin(w.yaw); let worst = Infinity;
     for (const p of segPts(a, b)) {
       const dx = p[0] - w.c[0], dy = p[1] - w.c[1], us = dx * ca + dy * sa, ul = -dx * sa + dy * ca;   // 짧은 변 축·긴 변 축 좌표
-      if (Math.abs(us) < w.short / 2 + WALL_MARGIN && Math.abs(ul) < w.long / 2 + WALL_MARGIN) worst = Math.min(worst, p[2] - below - w.top);
+      if (Math.abs(us) < w.short / 2 + WALL_MARGIN + (reach ? reach[0] : 0) && Math.abs(ul) < w.long / 2 + WALL_MARGIN + (reach ? reach[1] : 0)) worst = Math.min(worst, p[2] - below - w.top);
     }
     return worst;   // Infinity = 발자국 밖
   }
@@ -174,7 +198,22 @@ export function makeEngine(mj, model, data, C, goal) {
     const overSup = p => Math.abs(p[0] - obst.sup.xy[0]) < obst.sup.half && Math.abs(p[1] - obst.sup.xy[1]) < obst.sup.half;
     const supHit = floorZ !== null && !!obst?.sup && segPts(tipB, pred).some(p => overSup(p) && p[2] < obst.sup.z);
     const floorHit = floorZ !== null && (pred[2] < floorZ || supHit);
-    const wallC = obst?.wall ? wallClear(tipB, pred, obst.wall, obst.below) : Infinity, wallHit = wallC < WALL_MARGIN;
+    // 검수 Flash(2차): 손목이 돌면 반폭이 바뀐다 → 걸음 앞뒤 관절의 반폭 중 큰 쪽으로 선분을 보고, 빠져나오기 판정은 앞뒤 각각으로
+    const r0 = obst?.wall && obst.reach ? obst.reach(qB) : null, r1 = r0 ? obst.reach(q1) : null;
+    const reachNow = r0 ? [Math.max(r0[0], r1[0]), Math.max(r0[1], r1[1])] : null;
+    const wallC = obst?.wall ? wallClear(tipB, pred, obst.wall, obst.below, reachNow) : Infinity;
+    let wallHit = wallC < WALL_MARGIN;
+    // L2-자유: 출발점이 이미 (넓힌) 발자국 안 여유 부족이면 — 추적 잡음·손 방향 변화로 들어올 수 있다 — 더 나빠지지 않는 걸음은 통과.
+    //   더 나빠짐 = 벽 면 쪽으로 다가감(짧은 변 축 |us| 감소) 또는 내려감. 대역 시험 실측: 이 규칙 없이 바로 위 5 cm 걸음까지 'wall' 로 거절돼 갇힘
+    if (wallHit && reachNow) {
+      const startC = wallClear(tipB, tipB, obst.wall, obst.below, r0);
+      if (startC < WALL_MARGIN) {
+        // 검수 Astra(2차): 절댓값 비교는 벽 면을 가로지르는 걸음(us +2 cm → −2 cm)도 통과시킨다 → 출발한 쪽 기준 부호 있는 거리로
+        const w = obst.wall, side = Math.sign((tipB[0] - w.c[0]) * Math.cos(w.yaw) + (tipB[1] - w.c[1]) * Math.sin(w.yaw)) || 1;
+        const away = p => side * ((p[0] - w.c[0]) * Math.cos(w.yaw) + (p[1] - w.c[1]) * Math.sin(w.yaw));
+        wallHit = away(pred) - r1[0] < away(tipB) - r0[0] - 0.001 || pred[2] < tipB[2] - 0.001;   // 손 가장자리가 벽 면에 다가가거나(넘어가거나) 내려가면 거절
+      }
+    }
     const reason = maxDq > JERK ? 'jerk' : handErr > TILT ? 'tilt' : margin < 0 ? 'limit' : floorHit ? 'floor' : wallHit ? 'wall' : progress > PROG ? null : 'progress';
     const values = { max_dq: maxDq, hand_err: handErr, limit_margin: margin, progress };
     if (obst?.wall && wallC < Infinity) values.wall_clear = wallC;   // L2 S3: 벽 발자국 위일 때만 기록 (L2 끄면 기록이 예전과 같다)
@@ -197,6 +236,10 @@ export function makeEngine(mj, model, data, C, goal) {
       mj.mj_forward(model, data); trueYaw = yT;
     }
     if (cfg.l2?.oracle && cfg.l2?.measure) throw new Error('L2: oracle 과 measure 는 함께 쓸 수 없다');
+    // L2-자유(10/10, 사전등록 '레벨 2-자유'): 들기·운반 경유점 없이 쥔 뒤 곧장 놓을 곳 위(놓는 높이 + 3 cm) 한 점으로 걷는다.
+    //   벽은 게이트만 안다(플래너 프롬프트에 벽 없음, 거절은 제약 진술만). 측정판 + 운반 걸음 단위에서만
+    const FREE = cfg.l2?.free ? { maxSteps: 40, ...(cfg.l2.free === true ? {} : cfg.l2.free) } : null;
+    if (FREE && !(cfg.l2.measure && cfg.stepPhases?.includes('carry'))) throw new Error('L2-자유는 measure 와 걸음 단계 carry 가 필요하다');
     const l2Truth = cfg.l2 ? placeL2(cfg, task) : null;   // L2: 채점·기록 전용 (결정 경로에서 읽지 않는다)
     if (l2Truth) ev('l2-scene', l2Truth);
     for (let t = 0; t < 40; t++) { physicsTick(); yield; }
@@ -222,6 +265,7 @@ export function makeEngine(mj, model, data, C, goal) {
       if (l2Src.support) { dst = l2Src.support.xy; placeZ = PLACE_Z + l2Src.support.top; carryZ = Math.max(carryZ, placeZ + ABOVE);
         l2Sup = { xy: l2Src.support.xy, half: (cfg.l2.oracle ? SUP_HALF[0] : l2Src.support.long / 2) + 0.02 }; }
     }
+    if (l2Wall) handReach.yaw = l2Wall.yaw;   // L2-자유: 손 반폭을 잰 벽 축으로 투영
     const truth = C.bodyPos(C.bTarget);
     const cam = () => [truth[0] + CAM_NOISE * gauss(rCam), truth[1] + CAM_NOISE * gauss(rCam)];
     // V2: cfg.vision 이면 상자 위치를 참값 + 잡음 대신 ray 렌더 이미지에서 찾는다 (vision.mjs — 목표 판별은 측정 폭·모양으로만).
@@ -307,24 +351,37 @@ export function makeEngine(mj, model, data, C, goal) {
     // L5(E1): 경유점까지 걸음 단위로 가기 — 예전 접근 루프를 그대로 함수로 뺐다 (동작·난수 불변). 걸음 번호는 에피소드 전체에서 이어진다
     //   (재시도마다 0 으로 돌아가면 기록의 (ep, step, attempt) 짝이 겹친다)
     let stepNo = 0;
-    function* stepTo(target) {
+    // L2-자유: 벽 여유(수직) = 쥔 상자 바닥 − 잰 벽 윗면. 직전 거절이 'wall' 이면 이 여유를 늘리는 걸음은 진척 없어도 통과(면제),
+    //   여유가 WALL_MARGIN(+2 cm) 이상이 되면 면제 소멸. 벽 기준 특징 wallRel = [벽 면까지 수평 거리(+ = 아직 넘지 않은 쪽), 여유]
+    const freeHold = () => ['lift', 'carry', 'place'].includes(phase);
+    const clearOf = z => z - (freeHold() ? 0.035 : 0.01) - l2Wall.top;
+    const wallRel = tip => {
+      if (!FREE || !l2Wall) return null;
+      const ca = Math.cos(l2Wall.yaw), sa = Math.sin(l2Wall.yaw), us = p => (p[0] - l2Wall.c[0]) * ca + (p[1] - l2Wall.c[1]) * sa;
+      const side = Math.sign(us(dst)) || 1;
+      return [-us(tip) * side, clearOf(tip[2])];
+    };
+    let wallEx = false;
+    function* stepTo(target, maxSteps = MAX_STEPS) {
       let reached = false;
-      for (let n = 0; n < MAX_STEPS; n++) {
+      wallEx = false;
+      for (let n = 0; n < maxSteps; n++) {
         const dis = cal ? calObserve() : rMon ? monitorDis() : 0; lastDis = dis;   // B′2: 관측은 읽기 전에 (방금 갱신된 Δ̂ 로 이 걸음을 읽는다) · V4: 감시만
         if (cfg.monitor) { monAgg.n++; monAgg.max = Math.max(monAgg.max, dis); if (dis > (cfg.monitor.delta ?? 0.05)) monAgg.over++; }
         const qB = rd(), tipB = believedTip(qB);
         if (d3(tipB, target) < SUCC) { reached = true; break; }
+        if (wallEx && clearOf(tipB[2]) >= WALL_MARGIN) wallEx = false;   // L2-자유: 여유 +2 cm 에 닿으면 면제 소멸
         const step = stepNo++;
         const key = (phase === 'approach' ? '' : phase + ':') + situationKey(tipB, target, qB);   // E2: 접근 밖 단계는 키에 단계를 붙인다 (접근 기억을 운반에서 꺼내지 않게)
         // 타임라인용: 플래너 호출마다 번호(call)를 붙이고, 기억에는 그 걸음을 낸 호출 번호(from)를 함께 저장한다
         let lastRej = null;   // L10: 게이트가 마지막으로 거절한 제안 — 다음 플래너 호출에 이유를 넘긴다
-        const ask = () => { const d = planStep(qB, tipB, target, cfg, st, rPlan, lastRej, l2Wall ? { wall: l2Wall } : null); ev('call', { id: st.calls, vars: { q: qB, tip: tipB, target: target }, dq: d.slice() }); return d; };
+        const ask = () => { const d = planStep(qB, tipB, target, cfg, st, rPlan, lastRej, l2Wall && !FREE ? { wall: l2Wall } : null); ev('call', { id: st.calls, vars: { q: qB, tip: tipB, target: target }, dq: d.slice() }); return d; };
         let dq = null, src = 'plan', call = 0, from = 0;
         // L6c: cfg.recall = 실행 밖 기억 묶음(DB). 재생 후보 [{id, dtip}] 를 점수순으로 게이트에 넣고, 없거나 다 거절되면 플래너.
         //   손끝 변위 → 지금 자세에서 IK 로 관절 이동 (R2: 관절 증분 그대로보다 쓸 수 있는 거리가 두 배). 엔진 Map 기억(cfg.mem)과 함께 쓰지 않는다
         const quarantined = !!cfg.quarantine && dis > cfg.quarantine.delta;   // B′2(D2): 독립 감각과 어긋나는 동안은 기억을 꺼내지 않는다
         if (quarantined) ev('quarantine', { dis });
-        const memQ = cfg.recall && !quarantined ? cfg.recall({ phase, tip: tipB, target, q: qB }).slice() : [];
+        const memQ = cfg.recall && !quarantined ? cfg.recall({ phase, tip: tipB, target, q: qB, ...(FREE ? { wallRel: wallRel(tipB) } : {}) }).slice() : [];
         const nextMem = () => {
           const m = memQ.shift(), f = C.fkTip(qB);
           dq = C.solveIK([f[0] + m.dtip[0], f[1] + m.dtip[1], f[2] + m.dtip[2]], 60, qB).q.map((x, i) => x - qB[i]);
@@ -333,15 +390,20 @@ export function makeEngine(mj, model, data, C, goal) {
         if (cfg.mem && mem.act.has(key)) { const m = mem.act.get(key); dq = m.dq.slice(); from = m.from; src = 'mem'; st.replays++; }
         else if (memQ.length) nextMem();
         else { dq = ask(); call = st.calls; }
-        let attemptNo = 0, gateUs = 0;
+        let attemptNo = 0, gateUs = 0, lastExempt = false;   // lastExempt: 마지막 판정(= 실행할 제안)이 진척 면제로 통과했나
         const judge = () => {   // 제안 하나를 게이트에 넣고 proposal 이벤트를 남긴다 (게이트 꺼짐이면 판정 없이 기록만)
           const holding = ['lift', 'carry', 'place'].includes(phase);
           const floorZ = cfg.stepPhases && holding ? PLACE_Z - FLOOR_EPS : null;   // P1: 걸음 단계 옵션일 때 쥔 채 걷는 단계만
-          const obst = l2Wall || l2Sup ? { wall: l2Wall, below: holding ? 0.035 : 0.01, sup: l2Sup && { xy: l2Sup.xy, half: l2Sup.half, z: placeZ - FLOOR_EPS } } : null;   // L2 S3: 쥔 상자 바닥(3.5 cm 아래) 또는 손가락 끝 · 받침 위 바닥
+          const obst = l2Wall || l2Sup ? { wall: l2Wall, below: holding ? 0.035 : 0.01, sup: l2Sup && { xy: l2Sup.xy, half: l2Sup.half, z: placeZ - FLOOR_EPS }, ...(FREE ? { reach: handReach } : {}) } : null;   // L2 S3: 쥔 상자 바닥(3.5 cm 아래) 또는 손가락 끝 · 받침 위 바닥
           const t0 = performance.now(), g = cfg.gate ? gateCheck(qB, tipB, dq, target, floorZ, obst) : null; gateUs += performance.now() - t0;
+          if (FREE && g && l2Wall) {   // L2-자유: 면제 판단 (다른 검사는 그대로 — 진척만 면제)
+            if (g.reason === 'wall' && clearOf(tipB[2]) < WALL_MARGIN) wallEx = true;   // 검수 Astra(2차): 이미 여유 ≥ 2 cm 면 켜지 않는다 (사전등록 '여유 +2 cm 면 소멸')
+            else if (g.reason === 'progress' && wallEx && clearOf(tipB[2] + g.dtip[2]) > clearOf(tipB[2]) + PROG) { g.ok = true; g.reason = null; g.values.exempt = 1; }
+          }
+          lastExempt = !!g?.values?.exempt;
           const dtip = g ? g.dtip : (() => { const a = C.fkTip(qB), b = C.fkTip(qB.map((x, i) => x + dq[i])); return [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; })();
           ev('proposal', { step, attempt: attemptNo++, phase, src, call, from, dq: dq.slice(), dtipPred: dtip, gate: g && { ok: g.ok, reason: g.reason, values: g.values } });
-          if (g && !g.ok) lastRej = { reason: g.reason, src, dtip };
+          if (g && !g.ok) lastRej = { reason: g.reason, src, dtip, ...(FREE ? { free: true, values: g.values } : {}) };   // L2-자유: 플래너는 제약 진술(여유 수치)만 받는다
           return g ? g.ok : true;
         };
         if (!cfg.gate) judge();
@@ -360,10 +422,10 @@ export function makeEngine(mj, model, data, C, goal) {
         const realBefore = d3(tipNow(), target), qTrue0 = Array.from(data.qpos.slice(0, 7)), tip0 = tipNow();
         yield* mv(qB.map((x, i) => x + dq[i]));
         const qB2 = rd(), tipB2 = believedTip(qB2);
-        const unsafe = d3(tipNow(), target) > realBefore + UNSAFE;   // 실제 손끝이 향하던 지점에서 멀어졌다
+        const unsafe = d3(tipNow(), target) > realBefore + UNSAFE && !lastExempt;   // L2-자유: 면제 걸음(위로 비켜 감)은 멀어지는 게 정상   // 실제 손끝이 향하던 지점에서 멀어졌다
         if (unsafe) st.unsafe++;
         st.steps++; if (src === 'mem') st.memSteps++;
-        const progressed = d3(tipB2, target) < d3(tipB, target) - PROG;
+        const progressed = d3(tipB2, target) < d3(tipB, target) - PROG || (lastExempt && clearOf(tipB2[2]) > clearOf(tipB[2]) + PROG);   // L2-자유: 면제 걸음은 여유가 늘면 전진으로 친다
         if (cfg.mem) {
           if (src === 'plan' && progressed) { mem.act.set(key, { dq, from: call }); ev('store', { call }); }
           if (src === 'mem' && !progressed) { mem.act.delete(key); st.memDeleted++; ev('forget', { from }); }
@@ -372,7 +434,7 @@ export function makeEngine(mj, model, data, C, goal) {
         ev('step', { src: unsafe ? 'unsafe' : src, mem: src === 'mem', tip: tip1, belief: tipB2, key, call, from, phase,
           step, attempt: attemptNo - 1, qRead: qB, qTrue: qTrue0, tipToTarget: [target[0] - tipB[0], target[1] - tipB[1], target[2] - tipB[2]],
           dqCmd: dq.slice(), dqActual: qTrue1.map((v, i) => v - qTrue0[i]), dtipActual: [tip1[0] - tip0[0], tip1[1] - tip0[1], tip1[2] - tip0[2]],
-          distDelta: d3(tip1, target) - realBefore, progressed, unsafe, gateUs });
+          distDelta: d3(tip1, target) - realBefore, progressed, unsafe, gateUs, ...(FREE ? { exempt: lastExempt, wallRel: wallRel(tipB) } : {}) });
       }
       if (!reached) { const qB = rd(); reached = d3(believedTip(qB), target) < SUCC; }
       return reached;
@@ -434,12 +496,30 @@ export function makeEngine(mj, model, data, C, goal) {
         if (cfg.stepPhases?.includes(p) && !(yield* stepTo(pt))) ev('phase-not-reached', { phase: p });
         yield* corrected(pt);
       };
+      if (FREE) {
+        // L2-자유: 들기·운반 경유점 없이 놓을 곳 위 한 점으로. 못 닿으면 IK 마무리를 하지 않는다 — 직선 IK 가 벽을 뚫거나
+        //   '코드가 대신 넘겨 주는' 길이 되지 않게. 그 자리에서 놓고 끝(실패로 채점된다)
+        setPhase('carry');
+        const above = [dst[0], dst[1], placeZ + 0.03];
+        const ok = yield* stepTo(above, FREE.maxSteps);
+        if (!ok) {   // 못 닿았어도 손이 이미 벽을 넘어(벽 발자국 + 손 반폭 바깥, 놓을 곳 쪽) 있으면 IK 마무리 — 남은 길에 벽이 없다. 아니면 그 자리에서 놓고 끝
+          ev('phase-not-reached', { phase: 'carry' });
+          const qN = rd(), crossed = wallRel(believedTip(qN))[0] < -(l2Wall.short / 2 + WALL_MARGIN + handReach(qN)[0]);
+          ev('free-finish', { crossed });
+          if (!crossed) { data.ctrl[7] = OPEN; yield* hold(40); break; }
+        }
+        yield* corrected(above);
+        yield* go('place', [dst[0], dst[1], placeZ]);
+        data.ctrl[7] = OPEN; yield* hold(40);
+        yield* go('retreat', [dst[0], dst[1], placeZ + ABOVE]);
+      } else {
       yield* go('lift', [g[0], g[1], carryZ]);
       const over = [dst[0], dst[1], carryZ];
       yield* go('carry', over);
       yield* go('place', [dst[0], dst[1], placeZ]);
       data.ctrl[7] = OPEN; yield* hold(40);
       yield* go('retreat', over);
+      }
       for (let t = 0; t < 40; t++) { physicsTick(); yield; }
       if (cfg.mem) mem.scene.set(task.key, cfg.yawAlign ? [belief[0], belief[1], beliefYaw] : belief);   // V8b: 방향도 함께 (정렬 끔이면 예전 그대로)
       break;
