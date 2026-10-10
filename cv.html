@@ -7,33 +7,43 @@
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
-<main class="wrap page">
+<main class="wrap page cv">
   <p class="crumb"><a href="index.html">← Juhyeok Park</a></p>
   <h1>Juhyeok Park <small style="font-size:1rem;color:var(--mut)">박주혁</small></h1>
-  <div class="btns"><a href="assets/cv/CV_JuhyeokPark_EN.pdf">CV (PDF, English)</a> <a href="assets/cv/CV_JuhyeokPark_2026-09.pdf">CV (PDF, Korean)</a></div>
-  <h2>Education <span class="ko">학력</span></h2>
-  <p><b>B.S. Electronic Engineering</b>, Chungbuk National University — GPA 3.80 / 4.5 (major 3.84) · expected Feb 2027</p>
-  <p class="meta">A+ in probability &amp; statistics, random processes, communication theory, digital communication, digital signal processing, signals &amp; systems, information &amp; communication engineering. Also: electronic circuits, digital/SoC design, computer architecture, AI systems, AI semiconductor design, automatic control.</p>
-  <h2 id="pubs">Publications &amp; talks <span class="ko">논문·발표</span></h2>
-  <p><b>Juhyeok Park</b>, Hogeon Seo. "An LLM Wiki System for High-Consequence Domain Knowledge Organization: Initial Feasibility for Space Operations and Nuclear Engineering." <i>3rd IAA Conference on AI for Space</i>, Jeju, Korea, Aug 2026. First author · oral · <a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">manuscript</a> · <a href="assets/talks/IAA2026_Park_talk_slides.pdf">slides</a></p>
-  <p><b>Juhyeok Park</b>, Hogeon Seo. "A VLM Robot Manipulation Pipeline for Mitigating Physical Hallucination" (in Korean). <i>Korea Society of Industrial Information Systems</i>, Spring 2026. First author · proceedings + oral · <a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">slides</a></p>
-  <p>D. Choi, <b>J. Park</b>, H. Seo. "Development of an AI Agent Framework for Autonomous Improvement of an Ultrasonic Imaging Algorithm." <i>Journal of the Korean Society for Nondestructive Testing</i>, 46(4):268–277, 2026 (KCI). <a href="https://doi.org/10.7779/JKSNT.2026.46.4.268">doi</a> · Co-author · benchmark task design and code documentation.</p>
-  <div class="duo">
-    <figure style="margin:0"><img src="assets/kci/saft_bscan.png" alt="Raw B-scan and SAFT-processed image of an internal defect"><figcaption>(a) raw B-scan, (b) SAFT-processed image of an internal defect — the imaging algorithm the agent improves.</figcaption></figure>
-    <figure style="margin:0"><img src="assets/kci/agent_loop.png" alt="Agent loop: LLM edits code, code runs, evaluator accepts or rejects"><figcaption>The loop: LLM edits code, an evaluator keeps or rejects each edit.</figcaption></figure>
+  <p class="role">Physical AI · when a robot can trust what its AI perceives and plans</p>
+  <div class="btns top"><a class="primary" href="assets/cv/CV_JuhyeokPark_EN.pdf">CV (PDF, English)</a><a href="assets/cv/CV_JuhyeokPark_2026-09.pdf">CV (PDF, Korean)</a><a href="https://github.com/nonojamjam">GitHub</a></div>
+  <div class="kpis">
+    <div class="kpi"><b>2</b><span>first-author talks with proceedings (IAA 2026 oral, KSIIS 2026)</span></div>
+    <div class="kpi"><b>1</b><span>KCI journal paper, co-author</span></div>
+    <div class="kpi"><b>1</b><span>patent pending, co-inventor</span></div>
+    <div class="kpi"><b>3.80 / 4.5</b><span>GPA (major 3.84), B.S. expected Feb 2027</span></div>
   </div>
-  <p>Patent pending, co-inventor — direction control in LLM embedding space with a human-in-the-loop. Korean application, 2026.</p>
-  <h2>Experience <span class="ko">경력</span></h2>
-  <p>KAERI research intern, 6 months, 2026 · NAVIS Lab undergraduate researcher, 2025.12 – 2026.02</p>
+
+  <h2>Education <span class="ko">학력</span></h2>
+  <div class="cvrow"><span class="d">2027.02 (exp.)</span><div><b>B.S. Electronic Engineering</b>, Chungbuk National University · GPA 3.80 / 4.5 (major 3.84)
+    <ul class="chips"><li>A+ probability &amp; statistics</li><li>A+ random processes</li><li>A+ communication theory</li><li>A+ digital communication</li><li>A+ digital signal processing</li><li>A+ signals &amp; systems</li><li>A+ information &amp; communication eng.</li></ul>
+    <p class="meta">Also: electronic circuits, digital/SoC design, computer architecture, AI systems, AI semiconductor design, automatic control.</p></div></div>
+
+  <h2 id="pubs">Publications &amp; talks <span class="ko">논문·발표</span></h2>
+  <div class="cvrow"><span class="d">2026.08</span><div><span class="tag">oral · 1st author</span> <b>Juhyeok Park</b>, Hogeon Seo. "An LLM Wiki System for High-Consequence Domain Knowledge Organization: Initial Feasibility for Space Operations and Nuclear Engineering." <i>3rd IAA Conference on AI for Space</i>, Jeju, Korea. <a href="assets/papers/IAA2026_Park_LLM_Wiki_System.pdf">manuscript</a> · <a href="assets/talks/IAA2026_Park_talk_slides.pdf">slides</a> · <a href="research/llm-wiki.html">page</a></div></div>
+  <div class="cvrow"><span class="d">2026.05</span><div><span class="tag">proceedings + oral · 1st author</span> <b>Juhyeok Park</b>, Hogeon Seo. "A VLM Robot Manipulation Pipeline for Mitigating Physical Hallucination" (in Korean). <i>Korea Society of Industrial Information Systems</i>, Spring 2026. <a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">slides</a> · <a href="research/fk-verifier.html">page</a></div></div>
+  <div class="cvrow"><span class="d">2026</span><div><span class="tag">journal (KCI) · co-author</span> D. Choi, <b>J. Park</b>, H. Seo. "Development of an AI Agent Framework for Autonomous Improvement of an Ultrasonic Imaging Algorithm." <i>Journal of the Korean Society for Nondestructive Testing</i>, 46(4):268–277. <a href="https://doi.org/10.7779/JKSNT.2026.46.4.268">doi</a> · <a href="research/kci.html">page</a><p class="meta">My part: benchmark task design and code documentation.</p></div></div>
+  <div class="cvrow"><span class="d">2026</span><div><span class="tag">patent pending · co-inventor</span> Direction control in LLM embedding space with a human in the loop. Korean application.</div></div>
+
+  <h2>Research experience <span class="ko">연구 경력</span></h2>
+  <div class="cvrow"><span class="d">2026.10</span><div><b>Preliminary study (self-initiated)</b>: memory and verification on a Panda, without an oracle. <a href="research/oracle-free.html">page</a> · <a href="demo/oracle-free.html">live demo</a></div></div>
+  <div class="cvrow"><span class="d">2026 · 6 months</span><div><b>KAERI research intern</b>: forward-kinematics gate for VLM robot commands; LLM wiki system, deployed as an internal service.</div></div>
+  <div class="cvrow"><span class="d">2025.11 – 2026.09</span><div><b>Capstone, team lead, sole ML code</b>: noise-robust object detection via relational KD. <a href="research/capstone.html">page</a></div></div>
+  <div class="cvrow"><span class="d">2025.12 – 2026.02</span><div><b>NAVIS Lab, undergraduate researcher</b>: eLoran time of arrival under random sample loss. <a href="research/eloran.html">page</a></div></div>
+
   <h2>Coursework implementations <span class="ko">교과 구현</span></h2>
-  <ul style="font-size:.93rem;padding-left:1.1em">
-    <li>Raspberry Pi real-time vision and voice integration.</li>
-    <li>Cortex-M3 secure OTP.</li>
-    <li>PPM modulation/demodulation with hard and soft decisions (MATLAB).</li>
-    <li>AES-128/CBC from scratch.</li>
-  </ul>
+  <ul class="chips"><li>Raspberry Pi real-time vision + voice</li><li>Cortex-M3 secure OTP</li><li>PPM mod/demod, hard &amp; soft decisions (MATLAB)</li><li>AES-128/CBC from scratch</li></ul>
+
   <h2>Skills <span class="ko">기술</span></h2>
-  <p style="font-size:.93rem">Python (main), C/C++, MATLAB · PyTorch, YOLOv8/Ultralytics, DINOv2, knowledge distillation · DSP, FFT, coherent accumulation, TOA · ARM Cortex-M3, Raspberry Pi, USART, TCP/IP</p>
+  <div class="cvrow"><span class="d">languages</span><div>Python (main), C/C++, MATLAB</div></div>
+  <div class="cvrow"><span class="d">ML</span><div>PyTorch, YOLOv8/Ultralytics, DINOv2, knowledge distillation</div></div>
+  <div class="cvrow"><span class="d">signals</span><div>DSP, FFT, coherent accumulation, TOA</div></div>
+  <div class="cvrow"><span class="d">embedded</span><div>ARM Cortex-M3, Raspberry Pi, USART, TCP/IP</div></div>
 </main>
 <footer class="wrap"><a href="index.html">← back</a></footer>
 </body>

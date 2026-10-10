@@ -71,20 +71,32 @@
   <figure><img src="../assets/poc/fig7_two_link_and_3d.png" alt="2-link and 3D arms: LLM calls and tasks solved with and without verified memory"><figcaption>2-link and 3D arms: same success with 60–64% fewer LLM calls.</figcaption></figure>
 
   <h2>2 · With a camera, touch and memory <span class="ko">카메라 · 촉각 · 기억을 한 고리로</span></h2>
-  <p>75 tasks × 7 conditions on the same frames. Familiar scenes became nearly free; unseen scenes reused actions verified elsewhere; when objects were swapped so that memory pointed at the wrong one, a touch-width check cut accepted wrong grasps 6 → 1, and a perception–memory conflict check removed the wrong grasps altogether (20 → 0) without extra LLM calls.</p>
+  <p class="point">Familiar scenes became nearly free, and a touch-width check caught most wrong grasps when memory pointed at the wrong object.</p>
+  <details class="more"><summary>Details</summary>
+    <p>75 tasks × 7 conditions on the same frames. Familiar scenes became nearly free; unseen scenes reused actions verified elsewhere; when objects were swapped so that memory pointed at the wrong one, a touch-width check cut accepted wrong grasps 6 → 1, and a perception–memory conflict check removed the wrong grasps altogether (20 → 0) without extra LLM calls.</p>
+  </details>
   <figure><img src="../assets/poc/fig10_integrated_headline_en.png" alt="LLM calls per task by visit for familiar, swapped and unseen-distractor scenes"><figcaption>LLM calls per task by visit (GPT-6.1 Pro). Labels mark accepted wrong grasps.</figcaption></figure>
   <figure><img src="../assets/poc/mujoco_demo_run.gif" alt="Example run in the MuJoCo demo"><figcaption>Example run in the MuJoCo demo (objects swapped since the last visit): steps replayed from memory (blue), a planner step the gate rejected (red ghost), the touch check catching the look-alike (40&nbsp;mm ≠ 32&nbsp;mm), then the real box carried to the goal.</figcaption></figure>
   <figure><img src="../assets/poc/fig13_compute_pareto_en.png" alt="Detection time per task for fixed 1 frame, adaptive and fixed 6 frames"><figcaption>Looking at six frames cost 6× detection time and prevented no error: the remaining errors came from objects that no available sense could tell apart.</figcaption></figure>
 
   <h2>3 · Before or after planning? <span class="ko">계획 전 검증 vs 계획 후 검증</span></h2>
-  <p>I compared a HEART-style check before planning (expert agents answer feasibility questions that are injected into the planner) with my forward-kinematics filter after planning, and then broke the assumption both rely on: a shoulder reading off by +0.15 rad.
+  <p class="point">A shoulder reading off by 0.15 rad fooled <b>both</b> checks, before and after planning. An independent fingertip sensor restored 7–8 of 8 tasks.</p>
+  <details class="more"><summary>Details</summary>
+    <p>I compared a HEART-style check before planning (expert agents answer feasibility questions that are injected into the planner) with my forward-kinematics filter after planning, and then broke the assumption both rely on: a shoulder reading off by +0.15 rad.
     Both were fooled — the kinematic filter rejected nothing across two task sets — and an independent fingertip sensor restored 7–8 of 8 tasks with about a third of the LLM calls.</p>
+  </details>
   <figure><img src="../assets/poc/fig14_prepost_error_state_en.png" alt="Success and fooled verifications under a wrong joint reading"><figcaption>Wrong joint reading: checks before and after planning share the same wrong state.</figcaption></figure>
   <figure><img src="../assets/poc/fig16_prepost_trajectory_en.png" alt="Believed vs actual fingertip path"><figcaption>Believed (dashed) vs actual fingertip path for a task fixed before the run.</figcaption></figure>
   <div class="box">My verification assumes the robot knows its own state. This study measured where that assumption breaks.</div>
 
   <h2>4 · Cloud memory, on-device planner <span class="ko">클라우드 기억 · 기기 위 작은 모델</span></h2>
-  <p>A 2B planner running on the laptop (gemma4:e2b) never passed the kinematic check on its own,<br>so it could not build any memory.</p>
+  <div class="finds">
+    <div class="neg"><b>2B planner alone</b><span>0/30: never passed the kinematic check, so it built no memory</span></div>
+    <div><b>+ cloud model's memory</b><span>17/30, every success one replayed action with no LLM call</span></div>
+    <div><b>Energy</b><span>memory lookup + check ≈ 0.015 mJ vs one 2B planning call ≈ 2.3 J</span></div>
+  </div>
+  <details class="more"><summary>Setup, controls and limits</summary>
+      <p>A 2B planner running on the laptop (gemma4:e2b) never passed the kinematic check on its own,<br>so it could not build any memory.</p>
   <p>I let GPT-6.1 Pro solve 10 practice tasks on the 3D arm and kept the 10–11 verified actions it left in memory.<br>Only that memory went to the 2B planner, on 10 similar evaluation tasks.<br>3 runs; pass/fail criteria fixed before the run.</p>
   <ul>
     <li>2B planner alone: <b>0/30</b>.</li>
@@ -95,6 +107,7 @@
     <li>New location: 0/10. The situation keys no longer matched.</li>
     <li>Energy (powermetrics, whole laptop, idle-subtracted):<br>memory lookup + kinematic check ≈ 0.015 mJ · one 2B planning call ≈ 2.3 J.<br>A first run was set aside because its idle window was noisy.</li>
   </ul>
+  </details>
   <figure><img src="../assets/poc/fig17_memory_transfer_ondevice_en.png" alt="Strict success and LLM calls per task for the on-device 2B planner with and without the cloud model's memory"><figcaption>On-device 2B planner (gemma4:e2b), 3 runs. Dashed line: the cloud model planning alone on the same tasks.</figcaption></figure>
   <div class="box">Evaluation tasks share centers with the practice tasks, so this is reuse in similar situations, not generalization; and a laptop is not an embedded board.</div>
 

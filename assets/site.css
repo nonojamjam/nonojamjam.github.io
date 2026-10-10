@@ -89,3 +89,10 @@ table.heat th:first-child{text-align:left} table.heat td.b{color:var(--mut)}
 .btns.top{margin:4px 0 10px} p.role{font-size:.88rem;margin:2px 0 6px}
 .item.feat .thumb{flex-basis:280px;height:176px}
 @media(max-width:640px){.item.feat{flex-direction:column}.item.feat .thumb{flex-basis:auto;width:100%;height:auto;aspect-ratio:16/10}}
+.cvrow{display:flex;gap:16px;padding:6px 0;border-bottom:1px solid var(--line);font-size:.92rem}
+.cvrow .d{flex:0 0 120px;color:var(--mut);font-variant-numeric:tabular-nums;font-size:.86rem}
+.cvrow p.meta{margin:3px 0 0}
+.tag{display:inline-block;font-size:.72rem;border:1px solid var(--link);color:var(--link);border-radius:999px;padding:0 7px;margin-right:4px;vertical-align:1px}
+ul.chips{display:flex;flex-wrap:wrap;gap:5px;list-style:none;padding:0;margin:6px 0}
+ul.chips li{font-size:.78rem;border:1px solid var(--line);background:var(--soft);border-radius:999px;padding:1px 9px}
+@media(max-width:560px){.cvrow{flex-direction:column;gap:2px}.cvrow .d{flex-basis:auto}}
