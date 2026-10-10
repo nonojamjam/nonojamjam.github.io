@@ -31,6 +31,7 @@
     <div class="kpi"><b>793 → 0</b><span>large-model calls, same 36/36 placed: a 4B planner with a 32B model's verified memory, held-out scenes</span></div>
     <div class="kpi"><b>0 → 108/108</b><span>with a shoulder that reads 0.15 rad off: independent sensors recalibrate, then the robot grasps only after observing and verifying</span></div>
     <div class="kpi"><b>8 of 108</b><span>episodes needed an extra look before grasping, almost all the very first one</span></div>
+    <div class="kpi"><b>−78 to −96&nbsp;%</b><span>large-model calls on a harder level (a wall, a box to stack on, both) when the memory from the easier level is reused; 36/36 placed in each</span></div>
   </div>
 
   <div class="demo" id="liveDemo">
@@ -76,6 +77,36 @@
     <tr><td>(no fault, same memory and cascade)</td><td>108/108</td><td>0/6</td><td>11</td></tr>
   </table></div>
 
+  <h2>3 · Harder levels <span class="ko">난이도를 올리면</span></h2>
+  <p>Everything above is level 1. I then made the task harder in steps, keeping all of level 1 (any orientation, camera only, touch) underneath, and asked whether memory built on the easier level still helps.</p>
+  <div class="tw"><table class="res">
+    <tr><th>Level</th><th style="text-align:left">What changes</th><th style="text-align:left">Status</th></tr>
+    <tr><td>1</td><td style="text-align:left">Boxes in any orientation, a look-alike box, camera only; a shoulder reading off by 0.15 rad</td><td style="text-align:left">done (sections 1–2)</td></tr>
+    <tr><td>2</td><td style="text-align:left">A tall block between the boxes and the goal; a support box, placed differently in every scene, that the target must be stood on and that the robot finds by camera; both together</td><td style="text-align:left">done (below)</td></tr>
+    <tr><td>3</td><td style="text-align:left">Five boxes including look-alikes, part of the view blocked, two boxes in a row, the shoulder fault starting in the middle of a run</td><td style="text-align:left">running</td></tr>
+  </table></div>
+
+  <h3>Level 2</h3>
+  <p>The level 1 system, unchanged, placed 0/18 with the wall, 3/18 with the support box and 0/18 with both (real LLMs, tuning seed). Level 2 adds a scene camera that measures the wall and the support from depth alone, gate checks for clearance over the measured wall and for the support as the new floor, the measured wall in the planner's prompt, and a carry waypoint above the measured wall.</p>
+  <div class="tw"><table class="res">
+    <tr><th>Held-out scenes (36 episodes each)</th><th>no memory</th><th>level 1 memory</th><th>memory grown on level 2</th></tr>
+    <tr><td>wall · placed</td><td>31/36</td><td>36/36</td><td>34/36</td></tr>
+    <tr class="hl"><td>wall · large-model calls</td><td>1245</td><td>262</td><td>404</td></tr>
+    <tr><td>support · placed</td><td>36/36</td><td>36/36</td><td>35/36</td></tr>
+    <tr class="hl"><td>support · large-model calls</td><td>308</td><td>13</td><td>2</td></tr>
+    <tr><td>both · placed</td><td>31/36</td><td>36/36</td><td>35/36</td></tr>
+    <tr class="hl"><td>both · large-model calls</td><td>706</td><td>155</td><td>99</td></tr>
+  </table></div>
+  <p>Memory from level 1 cut large-model calls by 79&nbsp;%, 96&nbsp;% and 78&nbsp;% and kept every box placed. What it reused were level 1's lifting and level carrying steps: the way over the wall was the waypoint, not something the robot found. When I removed the waypoint and left only the gate's rejection (clearance too small), the planners (4B, escalating to 32B) kept proposing the same level step and did not get over the wall in any of 18 episodes on a tuning seed. Whether a robot can find such a detour from its checks and memory is a question I leave for later.</p>
+
+  <h3>Level 3</h3>
+  <p>Built and checked with a stand-in planner; runs with the real LLMs are in progress. Results will be added here.</p>
+  <div class="tw"><table class="res">
+    <tr><th>Held-out scenes</th><th>placed</th><th>unsafe actions after the fault</th><th>large-model calls</th></tr>
+    <tr><td>level 1 memory</td><td>—</td><td>—</td><td>—</td></tr>
+    <tr><td>+ calibrate, set faulty memories aside, check before grasping</td><td>—</td><td>—</td><td>—</td></tr>
+  </table></div>
+
   <h2>What a fault does to memory <span class="ko">고장은 기억의 무엇을 더럽히나</span></h2>
   <p>I expected memories recorded under the fault to be geometrically wrong and planned to correct them. They were not: stored as task-space moves, they were consistent within the robot's own belief, and replayed steps worked as well as clean ones. What the fault corrupted was the <b>outcome label</b> — every episode failed, so every memory was marked bad and none was replayed. Marking only the fault period's outcomes as invalid, which the tracker–reading gap detects on its own, cut planner calls 89 % compared with resetting memory, on the easier task.
     On the harder task this helped much less (−23 %), because the faulty robot never got past grasping: all of its memories were approach steps. A fault spoils labels and also <b>leaves gaps in experience</b>, and fixing labels cannot fill them.</p>
@@ -85,12 +116,13 @@
     <li>Correcting faulty memories back into true coordinates made them worse: the faulty robot had never been near the goals, so none of the corrected situations were (0 % within 6 cm of a goal).</li>
     <li>Refusing to calibrate directions the sensors cannot observe (the wrist roll when the hand points down) cleaned up the estimate but placed fewer boxes than the usual calibration on the same seeds (100 vs 104/108) and shifted another joint. Dropped.</li>
     <li>Rotating boxes by up to ±45° did not make the task harder: the grip turned them square. Only any orientation did.</li>
+    <li>On level 2, the 32B planner alone placed 1/36 in the worlds with the wall. The cause was my prompt, not the model: the sentence "keep the gripper above the wall" was attached to every phase, and it kept the hand up even when it had to reach down to grasp. That comparison is left out.</li>
   </ul>
   <div class="box">Simulation only. Sensors are noise models, the camera has no shadows or reflections, one kind of fault (a fixed shoulder offset), and two to six held-out seeds per comparison. Memory helps here because evaluation scenes resemble the ones memory was built on; I have not tested a different kind of task.</div>
 
   <h2>What I want to study next <span class="ko">다음 연구</span></h2>
-  <p class="ko">쉬운 과제에서 쌓은 기억과 검증으로 더 어려운 과제를 넘을 수 있는지, 그리고 고장이 남긴 경험의 빈칸을 어떻게 채울지를 보고 싶습니다.</p>
-  <p>Two questions came out of this. Can memory and checks learned on an easy task carry a robot through a harder one, and what fills the <b>gaps a fault leaves in experience</b>? The rule I would keep regardless: <b>observe, verify, then act</b>, at every switch from one phase to the next, not only at every step.</p>
+  <p class="ko">쉬운 과제의 기억은 길이 주어지면 어려운 과제에서도 통했습니다. 길 자체를 검증과 기억으로 찾을 수 있는지, 그리고 고장이 남긴 경험의 빈칸을 어떻게 채울지를 보고 싶습니다.</p>
+  <p>Memory from an easy level carried over to a harder one when the route was given. Two questions remain: can a robot find the route itself from what its checks reject and what it remembers, and what fills the <b>gaps a fault leaves in experience</b>? The rule I would keep regardless: <b>observe, verify, then act</b>, at every switch from one phase to the next, not only at every step.</p>
 
   <h2>Setup <span class="ko">설정</span></h2>
   <p>MuJoCo 3.15, Franka Panda from MuJoCo Menagerie. Local models through Ollama at temperature 0 on an Apple M5 Pro laptop. Each comparison had its pass criteria written before running; selection was done on tuning seeds and judged once on seeds not used before. Code, logs and the pre-registrations are kept with the project.</p>
