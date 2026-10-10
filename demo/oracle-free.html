@@ -176,12 +176,7 @@
     <div><b id="kMem" class="mem">0/0</b><span>steps from memory / all</span></div>
     <div><b id="kLook" class="look">0</b><span>extra looks before grasping</span></div>
   </div>
-  <div class="legend">
-    <span><span class="sw" style="background:#d93636"></span>target box (32 × 40 mm), any orientation</span>
-    <span><span class="sw" style="background:#bf4a8c"></span>look-alike (40 × 40 mm)</span>
-    <span><span class="sw" style="background:#3b4a63;opacity:.45"></span>where the robot believes its arm is</span>
-    <span><span class="sw" style="background:#2fa65a;opacity:.6"></span>goal zone</span>
-  </div>
+  <div class="legend" id="legend"></div>
 
   <h2 id="cmpH">All settings on the same 18 visits <span>같은 18번 방문</span></h2>
   <div style="overflow-x:auto"><table id="cmp"></table></div>
@@ -231,17 +226,17 @@ const SETTINGS = [
   { lv: 1, k: 'C', title: 'Joint fault, memory only', sub: 'shoulder reads 0.15 rad off · nothing checks the reading', cfg: { bias: true }, mem: 'learn' },
   { lv: 1, k: 'D', title: '+ independent sensors', sub: 'tracker + IMU correct the reading while it moves', cfg: { bias: true, calib: true }, mem: 'learn' },
   { lv: 1, k: 'E', title: '+ observe → verify → act', sub: 'grasp only once calibrated and the hand position agrees', cfg: { bias: true, calib: true, calibGate: { delta: 0.05 } }, mem: 'learn' },
-  { lv: 2, k: 'F', title: 'Level 1 system as is', sub: "the 32B model's level 1 memory · nothing measures the wall or the support", cfg: { l2: L2W }, mem: 'bank' },
-  { lv: 2, k: 'G', title: 'Measure the wall and the support', sub: 'scene camera (depth) · gate checks clearance and the new floor · carry waypoint over the measured wall · no memory', cfg: { l2: L2M }, mem: 'none' },
-  { lv: 2, k: 'H', title: '+ level 1 memory', sub: "the same 644 steps, built before any wall existed", cfg: { l2: L2M }, mem: 'bank' },
-  { lv: 3, k: 'I', title: 'Level 1 memory only', sub: 'five boxes, part of the view blocked, two in a row · shoulder fault from visit 7', cfg: { ...L3W }, mem: 'bank' },
-  { lv: 3, k: 'J', title: '+ calibrate, set aside, check', sub: 'calibrate the observable joints · set memory aside while the sensors disagree · check before grasping', cfg: { ...L3W, calib: { maxStd: 0.02 }, quarantine: { delta: 0.05 }, calibGate: { delta: 0.05 } }, mem: 'bank' },
+  { lv: 2, k: 'F', title: 'Level 1 system as is', sub: "level 1 memory · nothing measures the wall or the support", cfg: { l2: L2W }, mem: 'bank' },
+  { lv: 2, k: 'G', title: 'Measure only, no memory', sub: 'a second camera measures the wall and the support · the gate checks clearance · the code gives a waypoint over the measured wall', cfg: { l2: L2M }, mem: 'none' },
+  { lv: 2, k: 'H', title: 'Measure + level 1 memory', sub: "same as G, plus the 644 steps from level 1 (built before any wall existed)", cfg: { l2: L2M }, mem: 'bank' },
+  { lv: 3, k: 'I', title: 'Memory only', sub: 'level 1 memory · shoulder fault from visit 7 · nothing checks the joint reading', cfg: { ...L3W }, mem: 'bank' },
+  { lv: 3, k: 'J', title: 'Memory + level 1 safeguards', sub: 'calibrate the joints from tracker and IMU · set memory aside while they disagree · check before every grasp', cfg: { ...L3W, calib: { maxStd: 0.02 }, quarantine: { delta: 0.05 }, calibGate: { delta: 0.05 } }, mem: 'bank' },
 ];
 const SI = Object.fromEntries(SETTINGS.map((x, i) => [x.k, i]));
 const LVS = {
   1: { name: 'Level 1', sub: 'any orientation · a lying joint', note: 'Boxes in any orientation, a look-alike box, camera only. Then the shoulder reading goes 0.15 rad off.' },
   2: { name: 'Level 2', sub: 'a wall · a box to stand it on', note: 'Level 1 underneath, plus a tall wall between the boxes and the goal and a support box, placed differently in every scene, that the target must be stood on.' },
-  3: { name: 'Level 3', sub: 'clutter · occlusion · two in a row · fault mid-run', note: 'Level 1 underneath, plus five boxes including look-alikes, part of the view blocked, two boxes to move in a row, and the shoulder fault starting in the middle of the run.' },
+  3: { name: 'Level 3 · next study', sub: 'clutter · occlusion · two in a row · fault mid-run', note: 'The test bed for my next study, not a result. Level 1 underneath, plus five boxes including look-alikes, part of the view blocked, two boxes to move in a row, and the shoulder fault starting in the middle of the run.' },
 };
 const ACTS = [
   { lv: 1, n: 1, h: 'Can memory stand in for the planner?', q: 'Every step normally asks a planner (an LLM in the study). Memory keeps the steps that passed the checks and replays them in similar situations, re-solved for the current pose. Watch the calls fade as it fills up.', ks: ['A', 'B', 'B2'] },
@@ -249,9 +244,15 @@ const ACTS = [
   { lv: 1, n: 3, h: 'When is it safe to act?', q: 'Calibration needs observations first. Grasping before it has them is how the first visit fails. Observe, verify, then act.', ks: ['D', 'E'] },
   { lv: 2, n: 4, h: 'Does the level 1 system cope?', q: 'A wall now stands in the way and the target must be stood on a support box. Nothing in the level 1 system knows either exists.', ks: ['F', 'G'] },
   { lv: 2, n: 5, h: 'Is level 1 memory still worth anything?', q: 'The memory was built before there was any wall. Can its lifting and carrying steps still stand in for the planner?', ks: ['G', 'H'] },
-  { lv: 3, n: 6, h: 'Clutter, occlusion and a fault mid-run', q: 'Memory alone, against memory plus the level 1 safeguards: calibrate from independent sensors, set memory aside while they disagree, and check before every grasp.', ks: ['I', 'J'] },
+  { lv: 3, n: 6, h: 'Next study: do the level 1 safeguards hold up?', q: 'A longer, messier task with the fault starting midway. Memory alone, against memory plus the level 1 safeguards unchanged: calibrate from independent sensors, set memory aside while they disagree, and check before every grasp.', ks: ['I', 'J'] },
 ];
 let LV = 1;
+const SW = (c, t, o = 1) => `<span><span class="sw" style="background:${c};opacity:${o}"></span>${t}</span>`;
+const LEGEND = {
+  1: SW('#d93636', 'target box (32 × 40 mm), any orientation') + SW('#bf4a8c', 'look-alike (40 × 40 mm)') + SW('#3b4a63', 'where the robot believes its arm is', .45) + SW('#2fa65a', 'goal zone', .6),
+  2: SW('#d93636', 'target box (32 × 40 mm)') + SW('#bf4a8c', 'look-alike (40 × 40 mm)') + SW('#8c9096', 'wall (moves with the scene)') + SW('#9e9a8f', 'support box: the target must stand on it') + SW('#2fa65a', 'goal zone', .6),
+  3: SW('#d93636', '1st box to move (32 mm wide) → 1st zone') + SW('#3fbf4d', '2nd box to move (26 mm wide) → 2nd zone, 14 cm to its side') + SW('#bf4a8c', 'look-alike (40 mm)') + SW('#3373d9', 'near miss (36 mm)') + SW('#d99a26', 'lying flat (21 mm)') + SW('#94949a', 'floating block that hides part of the view') + SW('#2fa65a', 'two goal zones, 12 cm squares', .6) + SW('#3b4a63', 'believed arm after the fault', .45),
+};
 const SEED = 507, SCENE = 507;   // a held-out scene seed from the study (eval 507)
 // Memory = the verified-experience bank the 32B planner (qwen2.5-coder) built on two other scene seeds in the study (644 steps that passed the gate and made progress).
 //   Replayed as a fingertip displacement solved by IK from the current pose, only when it is close enough (d ≤ 0.5 × remaining distance).
@@ -263,6 +264,7 @@ const btn = x => `<button class="pre" data-k="${x.k}"><b>${x.k} · ${x.title}</b
 function renderActs() {
 $('lvls').innerHTML = Object.entries(LVS).map(([n, v]) => `<button data-lv="${n}" class="${+n === LV ? 'on' : ''}">${v.name}<span>${v.sub}</span></button>`).join('');
 $('lvnote').textContent = LVS[LV].note;
+$('legend').innerHTML = LEGEND[LV];
 $('acts').innerHTML = ACTS.filter(a => a.lv === LV).map(a => `<div class="act"><h3><i>${a.n}</i>${a.h}</h3><p class="q">${a.q}</p>${a.ks.map(k => btn(SETTINGS[SI[k]])).join('')}<p class="ans" id="ans${a.n}">The answer appears when the comparison below has run (about a minute).</p></div>`).join('');
 }
 renderActs();
@@ -280,6 +282,7 @@ const ID = (t, n) => mj.mj_name2id(model, t.value, n);
 const gGoal = ID(mj.mjtObj.mjOBJ_GEOM, 'goal'), gTarget = ID(mj.mjtObj.mjOBJ_GEOM, 'target'), gLook = ID(mj.mjtObj.mjOBJ_GEOM, 'lookalike');
 C.reset(); CB.reset();
 const goal = Array.from(data.geom_xpos.slice(3 * gGoal, 3 * gGoal + 3));
+const G2_DX = 0.14;   // = scenarios.mjs G2 on the level 1 base (no support box in level 3)
 // A fresh engine for every run and every comparison row: the engine builds its camera once, with the options of the first setting it sees
 //   (level 3 uses its own vision options), so an engine reused across levels would look with the wrong camera settings.
 const newE = () => makeEngine(mj, model, data, C, goal), newEB = () => makeEngine(mj, modelB, dataB, CB, goal);
@@ -335,6 +338,8 @@ for (let g = 0; g < model.ngeom; g++) {
   }
   if (!objBodies.has(model.geom_bodyid[g])) { const gm = new THREE.Mesh(geo, grayMat); gm.matrixAutoUpdate = false; gm.visible = false; gm.renderOrder = 2; scene.add(gm); ghostGray.push([g, gm]); }
 }
+const zone2 = (() => { const geo = new THREE.BoxGeometry(0.12, 0.12, 0.003), m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x26a659, transparent: true, opacity: 0.45 }));
+  m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0x1e7d4f }))); m.position.set(goal[0] + G2_DX, goal[1], 0.0015); m.visible = false; scene.add(m); return m; })();
 const setM = (mesh, p, R, g) => { const i = 3 * g, k = 9 * g; mesh.matrix.set(R[k], R[k + 1], R[k + 2], p[i], R[k + 3], R[k + 4], R[k + 5], p[i + 1], R[k + 6], R[k + 7], R[k + 8], p[i + 2], 0, 0, 0, 1); };
 function syncMeshes() { for (const [g, m] of meshes) setM(m, data.geom_xpos, data.geom_xmat, g); }
 function placeGhost(q) {
@@ -390,6 +395,7 @@ function tlReset() { TL = { items: [], slot: 0, nCalls: 0, nMem: 0, nLook: 0, la
 function tlEvent(k, x) {
   if (!TL) return;
   const add = it => { it.x = TL.slot++; TL.items.push(it); return it; };
+  if (k === 'belief' && x.stage === 't2') return;
   if (k === 'belief') { if (TL.items.length) TL.slot += 1; add({ t: 'visit', n: x.task.visit * 6 + x.task.key + 1 }); TL.round = x.task.visit; }
   else if (k === 'call') { TL.lastCall = add({ t: 'call' }); TL.calls.set(x.id, TL.lastCall); TL.nCalls++; TL.rounds[TL.round]++; }
   else if (k === 'reject') { if (x.src === 'mem') add({ t: 'mem', rej: true, from: x.from }); else if (TL.lastCall) TL.lastCall.rej = true; }
@@ -439,18 +445,20 @@ function onEvent(k, x) {
   if (k === 'fault' && run) run.faultOn = x.on;
   if (run && run.M) run.M.onEvent(k, x);
   tlEvent(k, x);
+  if (k === 'belief' && x.stage === 't2') { say('box 1 is down · <b>stage 2: the green box (26 mm) → the 2nd zone</b>', 'good'); return stats(); }
+  if (k === 'fault' && x.on && !run.faultSaid) { run.faultSaid = true; say('<b>visit 7: the shoulder reading is now 0.15 rad off</b> (grey arm = where the robot believes its arm is)', 'bad'); }
   if (k === 'belief') {
     outline(gTarget, null); outline(gLook, null); verdict('', null);
-    $('where').innerHTML = `visit <b>${x.task.visit + 1}/3</b> · scene <b>${x.task.key + 1}/6</b> · ${setting.k} · ${setting.title}`;
+    $('where').innerHTML = `visit <b>${x.task.visit + 1}/3</b> · scene <b>${x.task.key + 1}/6</b> · ${setting.k} · ${setting.title}` + (run.faultOn ? ' · <b style="color:#c0392b">shoulder fault on</b>' : '');
   }
-  else if (k === 'vision') { drawEye(x); say(x.ok ? `camera: target found from the image (${(1000 * x.short).toFixed(0)} mm short side)` : 'camera: no target-shaped box', x.ok ? '' : 'bad'); }
+  else if (k === 'vision') { drawEye(x); const nm = x.want === 't2' ? 'green box (2nd)' : 'target'; say(x.ok ? `camera: ${nm} found from the image (${(1000 * x.short).toFixed(0)} mm short side)` : `camera: no box shaped like the ${nm}`, x.ok ? '' : 'bad'); }
   else if (k === 'track') {}
   else if (k === 'calib') { run.calErr = x.err; }
   else if (k === 'active-sense') { run.looks += x.probes; say(`pre-grasp gate: only ${x.before.n} observations, disagreement ${(100 * x.before.dis).toFixed(1)} cm → <b>looked from ${x.probes} more points</b>, now ${x.n} obs, ${(100 * x.dis).toFixed(1)} cm`, 'look'); }
   else if (k === 'yaw-align') {}
   else if (k === 'step') { say(x.mem ? 'step <b>replayed from memory</b> — no planner call' : x.src === 'unsafe' ? 'an <b>unsafe step</b> ran' : 'planner proposed the step — <b>1 call</b>', x.mem ? 'mem' : x.src === 'unsafe' ? 'bad' : ''); }
-  else if (k === 'touch') say(`touch: fingers closed at <b>${(1000 * x.width).toFixed(0)} mm</b> (target 32 mm)`, Math.abs(x.width - 0.032) > 0.006 ? 'bad' : 'good');
-  else if (k === 'caught') say(`touch check: ${(1000 * x.width).toFixed(0)} mm ≠ 32 mm → <b>let go and look again</b>`, 'bad');
+  else if (k === 'touch') say(`touch: fingers closed at <b>${(1000 * x.width).toFixed(0)} mm</b> (${x.want === 't2' ? 'green box 26' : 'target 32'} mm)`, Math.abs(x.width - (x.want === 't2' ? 0.026 : 0.032)) > 0.006 ? 'bad' : 'good');
+  else if (k === 'caught') say(`touch check: ${(1000 * x.width).toFixed(0)} mm ≠ ${x.want === 't2' ? 26 : 32} mm → <b>let go and look again</b>`, 'bad');
   else if (k === 'settle') { if (x.fallen && x.result === 'success') verdict('⚠ placed, but lying down', false); }
   else if (k === 'result') {
     if (x.result === 'success') { outline(gTarget, '#1e7d4f'); verdict('✓ target placed', true); }
@@ -469,7 +477,7 @@ function stats() {
 }
 function newRun() {
   const M = memOf(setting), cfg = cfgOf(setting, M);
-  E = newE();
+  E = newE(); zone2.visible = !!(cfg.l3 && cfg.l3.seq);
   hideGhost(); outline(gTarget, null); outline(gLook, null); verdict('', null);
   run = { cfg, M, tasks: E.tasks(false, SCENE), i: 0, st: E.newStats(), mem: { scene: new Map(), act: new Map() }, gen: null, looks: 0, calErr: null, dis: null, disT: 0 };
   C.reset(); say('press Play to run 18 visits (6 scenes × 3)'); $('where').textContent = `${setting.k} · ${setting.title}`; tlReset(); stats();
@@ -531,7 +539,7 @@ const ANSWER = {
   3: () => `<span class="g">${R('D').standing} → ${R('E').standing}/18</span>, missed ${R('D').miss + R('D').wrong} → ${R('E').miss + R('E').wrong}. The robot looked again <b>${R('E').looks}</b> times, almost all before its very first grasp, then stopped needing to.`,
   4: () => `No, <span class="r">${R('F').standing}/18</span>: nothing in it knows the wall or the support is there. Measuring both from a scene camera, checking clearance, and carrying over the measured wall: <span class="g">${R('G').standing}/18</span>.`,
   5: () => `Yes. Planner calls <b>${R('G').calls} → <span class="g">${R('H').calls}</span></b>, placed ${R('G').standing} → ${R('H').standing}/18: the lifting and level carrying steps from level 1 still fit. The way over the wall came from the waypoint, not from memory.`,
-  6: () => `Placed <span class="${R('J').standing > R('I').standing ? 'g' : ''}">${R('I').standing} → ${R('J').standing}/18</span>; wrong grasps caught by touch ${R('I').caught} → ${R('J').caught}; unsafe steps ${R('I').unsafe} → ${R('J').unsafe}. Stand-in planner only: level 3 has been tuned with the local LLMs but not yet judged on held-out scenes.`,
+  6: () => `Placed <span class="${R('J').standing > R('I').standing ? 'g' : ''}">${R('I').standing} → ${R('J').standing}/18</span>; wrong grasps caught by touch ${R('I').caught} → ${R('J').caught}; unsafe steps ${R('I').unsafe} → ${R('J').unsafe}. A preview with the stand-in planner, not a result: whether the safeguards hold up here with the LLMs is the next study.`,
 };
 function renderAnswers() { for (const a of ACTS.filter(a => a.lv === LV)) $('ans' + a.n).innerHTML = a.ks.every(k => R(k)) ? ANSWER[a.n]() : 'The answer appears when the comparison below has run (about a minute).'; }
 
@@ -547,7 +555,7 @@ function wire() {
 }
 function selectLevel(n) {
   if (n === LV) return;
-  LV = n; renderActs(); wire(); $('cmpH').firstChild.textContent = `${LVS[LV].name}: all settings on the same 18 visits `;
+  LV = n; renderActs(); wire(); $('cmpH').firstChild.textContent = `${LVS[LV].name}: all settings on the same 18 visits · stand-in planner${LV === 3 ? ' · a preview, not a result' : ''} `;
   selectSetting(ACTS.find(a => a.lv === LV).ks[0]); startCompare(); renderAnswers();
 }
 wire();
@@ -555,7 +563,7 @@ $('play').onclick = () => { if (run.i >= run.tasks.length) newRun(); playing = !
 $('restart').onclick = () => { playing = false; $('play').textContent = '▶ Play'; newRun(); };
 for (const b of $('speed').children) b.onclick = () => { speed = +b.dataset.v; for (const o of $('speed').children) o.classList.toggle('on', o === b); };
 
-$('cmpH').firstChild.textContent = `${LVS[LV].name}: all settings on the same 18 visits `;
+$('cmpH').firstChild.textContent = `${LVS[LV].name}: all settings on the same 18 visits · stand-in planner${LV === 3 ? ' · a preview, not a result' : ''} `;
 selectSetting('B'); startCompare();
 
 // ---------- loop ----------

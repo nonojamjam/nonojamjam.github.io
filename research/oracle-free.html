@@ -83,7 +83,7 @@
     <tr><th>Level</th><th style="text-align:left">What changes</th><th style="text-align:left">Status</th></tr>
     <tr><td>1</td><td style="text-align:left">Boxes in any orientation, a look-alike box, camera only; a shoulder reading off by 0.15 rad</td><td style="text-align:left">done (sections 1–2)</td></tr>
     <tr><td>2</td><td style="text-align:left">A tall block between the boxes and the goal; a support box, placed differently in every scene, that the target must be stood on and that the robot finds by camera; both together</td><td style="text-align:left">done (below)</td></tr>
-    <tr><td>3</td><td style="text-align:left">Five boxes including look-alikes, part of the view blocked, two boxes in a row, the shoulder fault starting in the middle of a run</td><td style="text-align:left">tuned; held-out evaluation next</td></tr>
+    <tr><td>3</td><td style="text-align:left">Five boxes including look-alikes, part of the view blocked, two boxes in a row, the shoulder fault starting in the middle of a run</td><td style="text-align:left">test bed for the next study</td></tr>
   </table></div>
 
   <h3>Level 2</h3>
@@ -99,7 +99,7 @@
   </table></div>
   <p>Memory from level 1 cut large-model calls by 79&nbsp;%, 96&nbsp;% and 78&nbsp;% and kept every box placed. What it reused were level 1's lifting and level carrying steps: the way over the wall was the waypoint, not something the robot found. When I removed the waypoint and left only the gate's rejection (clearance too small), the planners (4B, escalating to 32B) kept proposing the same level step and did not get over the wall in any of 18 episodes on a tuning seed. Whether a robot can find such a detour from its checks and memory is a question I leave for later.</p>
 
-  <h3>Level 3</h3>
+  <h3>Level 3 (next study)</h3>
   <p>Built and checked with a stand-in planner, then tuned with the real LLMs on two scene seeds: with memory alone and the fault starting at visit 7, the robot placed 4/18 on each. The comparison on held-out scenes comes next; results will be added here. The <a href="../demo/oracle-free.html">live demo</a> runs all three levels with the stand-in planner.</p>
   <div class="tw"><table class="res">
     <tr><th>Held-out scenes</th><th>placed</th><th>unsafe actions after the fault</th><th>large-model calls</th></tr>
