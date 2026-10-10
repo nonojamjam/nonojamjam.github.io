@@ -96,3 +96,10 @@ table.heat th:first-child{text-align:left} table.heat td.b{color:var(--mut)}
 ul.chips{display:flex;flex-wrap:wrap;gap:5px;list-style:none;padding:0;margin:6px 0}
 ul.chips li{font-size:.78rem;border:1px solid var(--line);background:var(--soft);border-radius:999px;padding:1px 9px}
 @media(max-width:560px){.cvrow{flex-direction:column;gap:2px}.cvrow .d{flex-basis:auto}}
+/* plain style (10/10 evening): no cards, no side bars — labels inside sentences */
+ul.labeled{list-style:none;padding:0;margin:6px 0 12px;font-size:.94rem} ul.labeled li{margin:3px 0}
+.page ul.keys{font-size:.95rem;margin:8px 0 12px}
+ol.steps{display:block;list-style:decimal;padding-left:1.3em;counter-reset:none;margin:6px 0 10px}
+ol.steps li{border:0;background:none;padding:0;margin:3px 0;font-size:.94rem;position:static}
+ol.steps li::before{content:none;display:none}
+.box{background:none;border:0;padding:0;margin:10px 0;font-style:italic;color:#3a3a3f}

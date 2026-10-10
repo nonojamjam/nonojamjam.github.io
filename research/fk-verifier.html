@@ -15,13 +15,13 @@
   <div class="btns top"><a href="../assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">talk slides (Korean, May 2026)</a><a href="poc.html">follow-up: verify, remember, compute less</a></div>
   <p class="ko">VLM 이 낸 로봇 명령을 순기구학으로 실행 전에 거르고, 언어로 준 물리 정보가 왜 도움이 안 되는지 본 연구입니다.</p>
   <p class="lead">A vision-language model proposes an end-effector target; forward kinematics determines reachability before execution. The pipeline functioned as a filter. The reported result concerns what happened when the VLM was given additional physical information in text.</p>
-  <div class="kpis">
-    <div class="kpi"><b>165.7 → 276.9 mm</b><span>position error when joint angles were given as text</span></div>
-  </div>
+  <ul class="keys">
+    <li><b>165.7 → 276.9 mm</b> position error when joint angles were given as text</li>
+  </ul>
   <figure><img src="../assets/ive_verification_demo.gif" alt="Verification loop"><figcaption>Verification loop from the study: render / IK+FK / collision / semantic + workspace / image–text checks with a cube-error readout, locating the step at which the plan fails.</figcaption></figure>
-  <h2>Pipeline <span class="ko">파이프라인 (발표 슬라이드)</span></h2>
+  <h2>Pipeline</h2>
   <figure><img src="../assets/ksiis/framework.png" alt="Input, LLM planner, kinematics, imagine, pre-verify, execute, post-VLM with re-imagine and re-plan loops"><figcaption>From the KSIIS talk (Korean labels): LLM planner → kinematics (IK, FK skeleton) → imagined goal image → two-stage pre-verification → execute → post-execution check. A failed check re-imagines (up to 2×) or re-plans.</figcaption></figure>
-  <h2>What was tested <span class="ko">무엇을 시험했나</span></h2>
+  <h2>What was tested</h2>
   <p>The original idea was to let a VLM <i>imagine</i> the arm at its goal — edit the camera image — and execute toward that picture. Eight controlled experiments, mostly on a 2-DOF planar arm, located where this breaks.</p>
   <figure class="chart"><img src="../assets/charts/fk_error_mm.svg" alt="End-effector error on a 2-DOF arm: reading angles from an image 14.5 mm, generating the moved arm 93.7 mm; image generation without joint angles 165.7 mm, with joint angles as text 276.9 mm"></figure>
   <details class="more"><summary>All seven experiments</summary>
@@ -36,12 +36,12 @@
 <tr><td style="padding:6px 10px;vertical-align:top">Verifier itself</td><td style="padding:6px 10px;vertical-align:top">cascade of render, IK/FK, collision, workspace and image–text checks</td><td style="padding:6px 10px;vertical-align:top">0 false passes in 50 checks on a 3D shelf task</td><td style="padding:6px 10px;vertical-align:top">the check was reliable; the planner was the bottleneck</td></tr>
 </table>
   </details>
-  <h2>Findings <span class="ko">발견</span></h2>
-  <div class="finds">
-    <div class="neg"><b>Drawing fails</b><span>image editing moves pixels, not rigid bodies: link lengths and joints are not kept</span></div>
-    <div class="neg"><b>Text does not help</b><span>joint angles as text made the error worse (165.7 → 276.9 mm)</span></div>
-    <div><b>Checks outside the model work</b><span>kinematics, rendering and geometry: 0 false passes in 50 checks</span></div>
-  </div>
+  <h2>Findings</h2>
+  <ul class="labeled">
+    <li><b>Drawing fails.</b> Image editing moves pixels, not rigid bodies: link lengths and joints are not kept.</li>
+    <li><b>Text does not help.</b> Joint angles as text made the error worse (165.7 → 276.9 mm).</li>
+    <li><b>Checks outside the model work.</b> Kinematics, rendering and geometry: 0 false passes in 50 checks.</li>
+  </ul>
   <details class="more"><summary>Details</summary>
     <p>Image editing manipulates pixels, not rigid bodies: link lengths and joint connectivity are not preserved, rotations fail more often than translations, and without a grid there is no pixel-to-metre scale. Language does not carry the missing quantities either — giving joint angles as text made the result worse.</p>
   <p>The verification cascade, in contrast, was accurate. A verifier from the same model family as the planner shares its failure modes, so the checks that worked were the ones outside the model: kinematics, rendering and geometry.</p>

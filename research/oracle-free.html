@@ -32,12 +32,12 @@
   </div>
   <script>function loadLive(){const s=document.querySelector('#liveDemo .live-slot');s.outerHTML='<iframe src="../demo/oracle-free.html" title="Live MuJoCo demo" style="width:100%;height:1500px;border:0;display:block"></iframe>';return false;}</script>
 
-  <div class="kpis">
-    <div class="kpi"><b>793 → 0</b><span>large-model calls, same 36/36 placed: a 4B planner with a 32B model's verified memory, held-out scenes</span></div>
-    <div class="kpi"><b>0 → 108/108</b><span>with a shoulder that reads 0.15 rad off: independent sensors recalibrate, then the robot grasps only after observing and verifying</span></div>
-    <div class="kpi"><b>8 of 108</b><span>episodes needed an extra look before grasping, almost all the very first one</span></div>
-    <div class="kpi"><b>−78 to −96&nbsp;%</b><span>large-model calls on a harder level (a wall, a box to stack on, both) when the memory from the easier level is reused; 36/36 placed in each</span></div>
-  </div>
+  <ul class="keys">
+    <li><b>793 → 0</b> large-model calls, same 36/36 placed: a 4B planner with a 32B model's verified memory, held-out scenes</li>
+    <li><b>0 → 108/108</b> with a shoulder that reads 0.15 rad off: independent sensors recalibrate, then the robot grasps only after observing and verifying</li>
+    <li><b>8 of 108</b> episodes needed an extra look before grasping, almost all the very first one</li>
+    <li><b>−78 to −96&nbsp;%</b> large-model calls on a harder level (a wall, a box to stack on, both) when the memory from the easier level is reused; 36/36 placed in each</li>
+  </ul>
 
   <figure class="pipe"><a href="../assets/poc/pipeline.svg"><img src="../assets/poc/pipeline.svg" alt="Pipeline: camera, range tracker, IMU and touch form the robot's belief; verified memory is tried first, then a 4B LLM, then a 32B LLM after two rejections; a kinematic gate checks every proposal before it runs and sends rejections back with a reason; only steps that passed the gate and brought the hand closer are remembered."></a>
     <figcaption>Every step: memory first, then a small LLM, a large one only when stuck. Nothing moves the arm until the kinematic gate passes it, and only passed steps that made progress are remembered. The dashed strip is an extension still under evaluation.</figcaption></figure>
@@ -45,14 +45,14 @@
     It still read the box position and the fingertip from the simulator. Here I removed every such shortcut from the decision loop and asked the same two questions again:
     <b>can memory stand in for a large model</b>, and <b>what keeps the robot right when its own state is wrong</b>?</p>
 
-  <h2>What "no oracle" means here <span class="ko">결정 경로에 정답값이 없다</span></h2>
-  <div class="finds">
-    <div><b>Which box, where, how turned</b><span>camera image only (128 × 128, noisy); the target is the box whose short side measures ~32 mm</span></div>
-    <div><b>Where the hand is</b><span>joint readings, checked against a range tracker (2 cm noise)</span></div>
-    <div><b>Which way it points</b><span>IMU, 1° noise</span></div>
-    <div><b>Holding the right box?</b><span>finger opening after closing (touch)</span></div>
-  </div>
-  <p class="point">Ground truth only scores the outcome. Measuring how a box is turned took any-orientation grasps from 54/108 to 108/108.</p>
+  <h2>What "no oracle" means here</h2>
+  <ul class="labeled">
+    <li><b>Which box, where, how turned.</b> Camera image only (128 × 128, noisy); the target is the box whose short side measures ~32 mm.</li>
+    <li><b>Where the hand is.</b> Joint readings, checked against a range tracker (2 cm noise).</li>
+    <li><b>Which way it points.</b> IMU, 1° noise.</li>
+    <li><b>Holding the right box.</b> Finger opening after closing (touch).</li>
+  </ul>
+  <p>Ground truth only scores the outcome. Measuring how a box is turned took any-orientation grasps from 54/108 to 108/108.</p>
   <details class="more"><summary>Sensor details</summary>
   <div class="tw"><table class="res">
     <tr><th>What the robot needs</th><th style="text-align:left">How it gets it</th></tr>
@@ -64,15 +64,15 @@
   <p>The simulator's ground truth is used only to score the outcome (placed and left standing) and to report errors. Boxes lie in any orientation, so the robot also has to measure how a box is turned and rotate its wrist: without that, 54/108 were placed; with it, 108/108.</p>
   </details>
 
-  <h2>1 · Memory stands in for the large model <span class="ko">기억이 큰 모델을 대신한다</span></h2>
-  <p class="point">A 4B model with the 32B model's verified memory placed every box <b>without a single 32B call</b>.</p>
+  <h2>1 · Memory stands in for the large model</h2>
+  <p>A 4B model with the 32B model's verified memory placed every box <b>without a single 32B call</b>.</p>
   <figure class="chart"><img src="../assets/charts/of_level1_calls.svg" alt="Large-model calls on held-out scenes: 32B alone 793 (36/36 placed), 4B to 32B cascade without memory 269 (33/36), cascade with verified memory 0 (36/36)"></figure>
   <details class="more"><summary>How memory works, and more seeds</summary>
     <p>The planner is asked one step at a time and every proposed step is checked by forward kinematics before it runs. Steps that passed and made progress are kept: the situation (fingertip-to-goal vector) and the fingertip move, re-solved by inverse kinematics when replayed, and only when the remembered situation is close relative to the distance left. The large model is called only after the small one is rejected twice. The memory came from the 32B planner's own runs on two other scene seeds (644 steps). On six further unseen seeds the same setting placed 107/108 and 108/108.</p>
   </details>
 
-  <h2>2 · When the robot's own state is wrong <span class="ko">로봇 자신의 상태가 틀릴 때</span></h2>
-  <p class="point">A shoulder reading 0.15 rad off fools the gate, the memory and the planner at once. <b>Two independent sensors plus "observe → verify → act"</b> brought it from 0 to 108/108.</p>
+  <h2>2 · When the robot's own state is wrong</h2>
+  <p>A shoulder reading 0.15 rad off fools the gate, the memory and the planner at once. <b>Two independent sensors plus "observe → verify → act"</b> brought it from 0 to 108/108.</p>
   <figure class="chart"><img src="../assets/charts/of_fault_recovery.svg" alt="Placed out of 108 with the shoulder fault: no fix 0 (stand-in planner), tracker and IMU calibration 100, plus observe-verify-act 108; reference without fault 108. Large-model calls 36, 13, 11."></figure>
   <ol class="steps">
     <li><b>Detect only</b>: switch to the tracker when it disagrees. Rough tracker: 1 → 6/18. Not enough.</li>
@@ -90,7 +90,7 @@
   </ol>
   </details>
 
-  <h2 id="harder">3 · Harder levels <span class="ko">난이도를 올리면</span></h2>
+  <h2 id="harder">3 · Harder levels</h2>
   <p>Everything above is level 1. I then made the task harder in steps, keeping all of level 1 (any orientation, camera only, touch) underneath, and asked whether memory built on the easier level still helps.</p>
   <div class="tw"><table class="res">
     <tr><th>Level</th><th style="text-align:left">What changes</th><th style="text-align:left">Status</th></tr>
@@ -100,7 +100,7 @@
   </table></div>
 
   <h3>Level 2</h3>
-  <p class="point">The level 1 system alone placed 0/18 with a wall. With level 2 sensing and checks added, <b>reusing level 1 memory cut large-model calls by 78–96 %</b> and every box was placed.</p>
+  <p>The level 1 system alone placed 0/18 with a wall. With level 2 sensing and checks added, <b>reusing level 1 memory cut large-model calls by 78–96 %</b> and every box was placed.</p>
   <figure class="chart"><img src="../assets/charts/of_level2_calls.svg" alt="Level 2 large-model calls on held-out scenes. Wall: no memory 1245, level 1 memory 262, memory grown on level 2 404. Support box: 308, 13, 2. Both: 706, 155, 99."></figure>
   <details class="more"><summary>What level 2 adds, and what memory did not do</summary>
     <p>The level 1 system, unchanged, placed 0/18 with the wall, 3/18 with the support box and 0/18 with both (real LLMs, tuning seed). Level 2 adds a scene camera that measures the wall and the support from depth alone, gate checks for clearance over the measured wall and for the support as the new floor, the measured wall in the planner's prompt, and a carry waypoint above the measured wall.</p>
@@ -115,13 +115,13 @@
     <tr><td>+ calibrate, set faulty memories aside, check before grasping</td><td>—</td><td>—</td><td>—</td></tr>
   </table></div>
 
-  <h2>What a fault does to memory <span class="ko">고장은 기억의 무엇을 더럽히나</span></h2>
-  <p class="point">The fault did not spoil the memories' geometry. It spoiled their <b>outcome labels</b>, and it <b>left gaps</b>: the faulty robot never got past grasping.</p>
+  <h2>What a fault does to memory</h2>
+  <p>The fault did not spoil the memories' geometry. It spoiled their <b>outcome labels</b>, and it <b>left gaps</b>: the faulty robot never got past grasping.</p>
   <details class="more"><summary>Details</summary>
     <p>Stored as task-space moves, memories recorded under the fault were consistent within the robot's own belief, and replayed steps worked as well as clean ones. But every episode failed, so every memory was marked bad and none was replayed. Marking only the fault period's outcomes as invalid (the tracker–reading gap detects it) cut planner calls 89&nbsp;% compared with resetting memory on the easier task, but only 23&nbsp;% on the harder one, because all the faulty robot's memories were approach steps.</p>
   </details>
 
-  <h2>What did not work <span class="ko">안 된 것</span></h2>
+  <h2>What did not work</h2>
   <ul>
     <li>Correcting faulty memories back into true coordinates made them worse: the faulty robot had never been near the goals, so none of the corrected situations were (0 % within 6 cm of a goal).</li>
     <li>Refusing to calibrate directions the sensors cannot observe (the wrist roll when the hand points down) cleaned up the estimate but placed fewer boxes than the usual calibration on the same seeds (100 vs 104/108) and shifted another joint. Dropped.</li>
@@ -130,11 +130,11 @@
   </ul>
   <div class="box">Simulation only. Sensors are noise models, the camera has no shadows or reflections, one kind of fault (a fixed shoulder offset), and two to six held-out seeds per comparison. Memory helps here because evaluation scenes resemble the ones memory was built on; I have not tested a different kind of task.</div>
 
-  <h2>What I want to study next <span class="ko">다음 연구</span></h2>
+  <h2>What I want to study next</h2>
   <p class="ko">쉬운 과제의 기억은 길이 주어지면 어려운 과제에서도 통했습니다. 길 자체를 검증과 기억으로 찾을 수 있는지, 그리고 고장이 남긴 경험의 빈칸을 어떻게 채울지를 보고 싶습니다.</p>
   <p>Can a robot find the route itself from what its checks reject and what it remembers, and what fills the <b>gaps a fault leaves in experience</b>? The rule I would keep: <b>observe, verify, then act</b> at every phase switch.</p>
 
-  <h2 id="setup">Setup <span class="ko">설정</span></h2>
+  <h2 id="setup">Setup</h2>
   <p>MuJoCo 3.15, Franka Panda from MuJoCo Menagerie. Local models through Ollama at temperature 0 on an Apple M5 Pro laptop. Each comparison had its pass criteria written before running; selection was done on tuning seeds and judged once on seeds not used before. Code, logs and the pre-registrations are kept with the project.</p>
   <div class="btns"><a class="primary" href="../demo/oracle-free.html">▶ live demo</a><a href="poc.html">step 1</a><a href="../demo/panda-gripper.html">step 1 Panda demo</a></div>
 </main>

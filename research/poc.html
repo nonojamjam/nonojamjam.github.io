@@ -18,11 +18,11 @@
     I asked three questions: <b>where should memory sit</b> to save computation, <b>what stops a wrong memory</b>, and
     <b>where should verification sit</b> — before planning or after.</p>
 
-  <div class="kpis">
-    <div class="kpi"><b>117 → 34</b><span>LLM calls, same success (66–67 of 75 tasks), camera + touch + memory</span></div>
-    <div class="kpi"><b>30 / 30</b><span>revisits of familiar scenes solved with zero LLM calls and one camera frame</span></div>
-    <div class="kpi"><b>0 rejections</b><span>by the kinematic filter when the joint reading was off by 0.15 rad; the pre-planning check was fooled too</span></div>
-  </div>
+  <ul class="keys">
+    <li><b>117 → 34</b> LLM calls, same success (66–67 of 75 tasks), camera + touch + memory</li>
+    <li><b>30 / 30</b> revisits of familiar scenes solved with zero LLM calls and one camera frame</li>
+    <li><b>0 rejections</b> by the kinematic filter when the joint reading was off by 0.15 rad; the pre-planning check was fooled too</li>
+  </ul>
 
   <div class="demo" id="liveDemo">
     <a class="live-slot" href="../demo/panda-gripper.html" onclick="return loadLive()" style="position:relative;display:block;padding:0"><img src="../assets/poc/panda_mujoco_demo.png" alt="Live demo: Franka Panda in MuJoCo carrying a box after steps replayed from memory">
@@ -30,7 +30,7 @@
     <div><b>Live demo — Franka Panda in MuJoCo</b> · the same step loop on a physics engine: the gripper grasps, carries and places the box through finger contact. Seven scenes: memory replay, the verification gate, a 0.15 rad joint misread, an independent fingertip sensor, swapped look-alike objects with a touch check, a memory–camera conflict check, and a check before vs after planning. Runs in your browser; the planner is a stand-in, not an LLM. <a href="../demo/panda-gripper.html">Open it full page</a>.</div>
   </div>
   <script>function loadLive(){const s=document.querySelector('#liveDemo .live-slot');s.outerHTML='<iframe src="../demo/panda-gripper.html" title="Live MuJoCo demo" style="width:100%;height:1100px;border:0;display:block"></iframe>';return false;}</script>
-  <h2>System <span class="ko">구조</span></h2>
+  <h2>System</h2>
   <figure class="sysfig">
   <svg viewBox="0 0 820 300" role="img" aria-label="System overview: observe, recall from memory or plan with the LLM, check, act, confirm by touch, save verified actions" style="width:100%;height:auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
     <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6b6b70"/></marker></defs>
@@ -65,13 +65,13 @@
   <figcaption><b>Overview.</b> The robot first tries an action that already passed the checks in a similar situation, and calls the LLM planner only when memory has nothing that fits. Every action, replayed or planned, is checked with forward kinematics before it runs, and only actions that pass the check are saved. After the grasp, a touch check confirms the object.</figcaption>
   </figure>
 
-  <h2>1 · Memory where the decision is made <span class="ko">기억은 결정하는 자리에</span></h2>
+  <h2>1 · Memory where the decision is made</h2>
   <p>Memory of verifier verdicts changed costs only when it sat at the decision or the action, not in the prompt.
     On a 2-link arm, LLM calls fell 60 → 24 and on a 3D arm 33 → 12, with every task still solved (GPT-6.1 Pro, 30 tasks).</p>
   <figure><img src="../assets/poc/fig7_two_link_and_3d.png" alt="2-link and 3D arms: LLM calls and tasks solved with and without verified memory"><figcaption>2-link and 3D arms: same success with 60–64% fewer LLM calls.</figcaption></figure>
 
-  <h2>2 · With a camera, touch and memory <span class="ko">카메라 · 촉각 · 기억을 한 고리로</span></h2>
-  <p class="point">Familiar scenes became nearly free, and a touch-width check caught most wrong grasps when memory pointed at the wrong object.</p>
+  <h2>2 · With a camera, touch and memory</h2>
+  <p>Familiar scenes became nearly free, and a touch-width check caught most wrong grasps when memory pointed at the wrong object.</p>
   <details class="more"><summary>Details</summary>
     <p>75 tasks × 7 conditions on the same frames. Familiar scenes became nearly free; unseen scenes reused actions verified elsewhere; when objects were swapped so that memory pointed at the wrong one, a touch-width check cut accepted wrong grasps 6 → 1, and a perception–memory conflict check removed the wrong grasps altogether (20 → 0) without extra LLM calls.</p>
   </details>
@@ -79,8 +79,8 @@
   <figure><img src="../assets/poc/mujoco_demo_run.gif" alt="Example run in the MuJoCo demo"><figcaption>Example run in the MuJoCo demo (objects swapped since the last visit): steps replayed from memory (blue), a planner step the gate rejected (red ghost), the touch check catching the look-alike (40&nbsp;mm ≠ 32&nbsp;mm), then the real box carried to the goal.</figcaption></figure>
   <figure><img src="../assets/poc/fig13_compute_pareto_en.png" alt="Detection time per task for fixed 1 frame, adaptive and fixed 6 frames"><figcaption>Looking at six frames cost 6× detection time and prevented no error: the remaining errors came from objects that no available sense could tell apart.</figcaption></figure>
 
-  <h2>3 · Before or after planning? <span class="ko">계획 전 검증 vs 계획 후 검증</span></h2>
-  <p class="point">A shoulder reading off by 0.15 rad fooled <b>both</b> checks, before and after planning. An independent fingertip sensor restored 7–8 of 8 tasks.</p>
+  <h2>3 · Before or after planning?</h2>
+  <p>A shoulder reading off by 0.15 rad fooled <b>both</b> checks, before and after planning. An independent fingertip sensor restored 7–8 of 8 tasks.</p>
   <details class="more"><summary>Details</summary>
     <p>I compared a HEART-style check before planning (expert agents answer feasibility questions that are injected into the planner) with my forward-kinematics filter after planning, and then broke the assumption both rely on: a shoulder reading off by +0.15 rad.
     Both were fooled — the kinematic filter rejected nothing across two task sets — and an independent fingertip sensor restored 7–8 of 8 tasks with about a third of the LLM calls.</p>
@@ -89,12 +89,12 @@
   <figure><img src="../assets/poc/fig16_prepost_trajectory_en.png" alt="Believed vs actual fingertip path"><figcaption>Believed (dashed) vs actual fingertip path for a task fixed before the run.</figcaption></figure>
   <div class="box">My verification assumes the robot knows its own state. This study measured where that assumption breaks.</div>
 
-  <h2>4 · Cloud memory, on-device planner <span class="ko">클라우드 기억 · 기기 위 작은 모델</span></h2>
-  <div class="finds">
-    <div class="neg"><b>2B planner alone</b><span>0/30: never passed the kinematic check, so it built no memory</span></div>
-    <div><b>+ cloud model's memory</b><span>17/30, every success one replayed action with no LLM call</span></div>
-    <div><b>Energy</b><span>memory lookup + check ≈ 0.015 mJ vs one 2B planning call ≈ 2.3 J</span></div>
-  </div>
+  <h2>4 · Cloud memory, on-device planner</h2>
+  <ul class="labeled">
+    <li><b>2B planner alone.</b> 0/30: never passed the kinematic check, so it built no memory.</li>
+    <li><b>+ cloud model's memory.</b> 17/30, every success one replayed action with no LLM call.</li>
+    <li><b>Energy.</b> Memory lookup + check ≈ 0.015 mJ vs one 2B planning call ≈ 2.3 J.</li>
+  </ul>
   <details class="more"><summary>Setup, controls and limits</summary>
       <p>A 2B planner running on the laptop (gemma4:e2b) never passed the kinematic check on its own,<br>so it could not build any memory.</p>
   <p>I let GPT-6.1 Pro solve 10 practice tasks on the 3D arm and kept the 10–11 verified actions it left in memory.<br>Only that memory went to the 2B planner, on 10 similar evaluation tasks.<br>3 runs; pass/fail criteria fixed before the run.</p>
@@ -111,11 +111,11 @@
   <figure><img src="../assets/poc/fig17_memory_transfer_ondevice_en.png" alt="Strict success and LLM calls per task for the on-device 2B planner with and without the cloud model's memory"><figcaption>On-device 2B planner (gemma4:e2b), 3 runs. Dashed line: the cloud model planning alone on the same tasks.</figcaption></figure>
   <div class="box">Evaluation tasks share centers with the practice tasks, so this is reuse in similar situations, not generalization; and a laptop is not an embedded board.</div>
 
-  <h2>What I want to study next <span class="ko">다음 연구</span></h2>
+  <h2>What I want to study next</h2>
   <p class="ko">어떤 기억을 불러올지, 어떻게 가져올지, 그리고 불러온 행동이 맞지 않을 때 LLM에게 맥락으로 주어 다시 계획할지 저장된 관절 각도에서 빠르게 다시 계산할지를 연구하고 싶습니다.</p>
   <p>Memory saved most planner calls here, so the next questions are about memory itself: <b>which memory to recall, and how to retrieve it</b> for a new scene; and when a recalled action no longer fits, <b>whether to hand it to the LLM as context for a new plan, or to start from its stored joint angles and compute a new action quickly</b> without calling the LLM at all; and, where no memory reaches, <b>when the device should give up and hand the step to a larger model</b>. In parallel, I am extending the simplified grasp (the gripper closes on whatever object is under the fingertip) into full pick-and-place, with a gripper model and a goal zone.</p>
 
-  <h2>Setup <span class="ko">설정</span></h2>
+  <h2>Setup</h2>
   <p>Simulated arms; timings and energy (powermetrics) measured on an Apple M5 Pro laptop; the model used in each condition, every run and its pass/fail criterion are kept with the code.</p>
   <div class="btns"><a href="../demo/panda-gripper.html">live demo · Panda gripper (MuJoCo physics)</a><a href="../demo/memory-gate-panda.html">live demo · 7-DOF Panda</a><a href="../demo/memory-gate-3d.html">3-joint arm</a><a href="../demo/memory-gate.html">2-link arm</a></div>
 </main>

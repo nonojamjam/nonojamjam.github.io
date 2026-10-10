@@ -14,12 +14,12 @@
   <div class="btns top"><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">interactive demo &amp; code</a></div>
   <p class="ko">위성 센서 노이즈 속에서도 가벼운 검출기가 동작하게 하는 연구입니다. 배포 모델은 그대로 두고 학습만 바꿨습니다.</p>
   <p class="lead">Keep a lightweight detector working under satellite sensor noise. DINOv2 (ViT) → YOLOv8s-seg (CNN) distance-wise relational distillation, plus 50:50 mixed-noise training; teacher and adapter are removed at inference, so the deployed model is unchanged (11.8M parameters / 22 MB).</p>
-  <div class="kpis">
-    <div class="kpi"><b>+0.163</b><span>box mAP50 under noise (σ = 0.3), stable across seeds (±0.0005)</span></div>
-    <div class="kpi"><b>97%</b><span>of the gain from noise training; distillation adds +0.005</span></div>
-    <div class="kpi"><b>−0.053</b><span>cost on clean tiles, also seed-stable</span></div>
-  </div>
-  <h2>What I tried <span class="ko">시도한 것</span></h2>
+  <ul class="keys">
+    <li><b>+0.163</b> box mAP50 under noise (σ = 0.3), stable across seeds (±0.0005)</li>
+    <li><b>97%</b> of the gain from noise training; distillation adds +0.005</li>
+    <li><b>−0.053</b> cost on clean tiles, also seed-stable</li>
+  </ul>
+  <h2>What I tried</h2>
   <p>The target is a detector small enough for an on-board computer that still works when the image is noisy. The obvious route — distil a large, robust vision transformer into a small CNN — took four attempts.</p>
   <details class="more"><summary>The four attempts</summary>
   <table style="border-collapse:collapse;font-size:.9rem;margin:10px 0 14px;width:100%">
@@ -30,7 +30,7 @@
 <tr><td style="padding:6px 10px;vertical-align:top"><b>4 · RKD + mixed-noise training</b> (final)</td><td style="padding:6px 10px;vertical-align:top">distance-wise relational KD plus 50:50 clean/noisy training; teacher and adapter removed at inference</td><td style="padding:6px 10px;vertical-align:top">noisy mAP50 +0.163 at the same 22 MB model</td><td style="padding:6px 10px;vertical-align:top">—</td></tr>
 </table>
   </details>
-  <h2>Results <span class="ko">결과</span></h2>
+  <h2>Results</h2>
   <p class="meta">Kaggle T4, 10 epochs, σ = 0.3, box mAP50, seed 0; the noise-training gain repeated with seed 1 (±0.0005)</p>
   <figure class="chart"><img src="../assets/charts/cap_map50.svg" alt="Box mAP50, 2x2 ablation. Noisy tiles: baseline 0.015, distillation 0.018, noise training 0.178, both 0.182. Clean tiles: 0.284, 0.297, 0.225, 0.231."></figure>
   <details class="more"><summary>Table</summary>
@@ -44,13 +44,13 @@
   </details>
   <figure><img src="../assets/profile/noise_slider.gif" alt="Slider comparison on one noisy tile: baseline 0 detections, proposed detects the aircraft" style="max-width:440px;display:block;margin:0 auto"><figcaption>Slider from the interactive demo: baseline (left) finds nothing, proposed (right) detects the aircraft.</figcaption></figure>
   <p class="meta">Qualitative; the numbers are in the chart above.</p>
-  <h2>What the 2 × 2 ablation says <span class="ko">2×2 분해</span></h2>
-  <p class="point"><b>Noise training</b> gives 97 % of the gain (+0.163 noisy mAP50); <b>distillation</b> adds a small, consistent +0.005. Robustness costs about 0.06 on clean tiles.</p>
+  <h2>What the 2 × 2 ablation says</h2>
+  <p><b>Noise training</b> gives 97 % of the gain (+0.163 noisy mAP50); <b>distillation</b> adds a small, consistent +0.005. Robustness costs about 0.06 on clean tiles.</p>
   <details class="more"><summary>Details</summary>
     <p>Running all four combinations (with / without distillation × with / without noise training) separated the two effects. Noise training alone gives +0.163 noisy mAP50 — 97% of the gain; distillation adds +0.005, small but positive in all four comparisons. The two barely interact. Robustness is not free: clean mAP50 drops by about 0.06.</p>
   </details>
   <div class="box">The robustness came from what the model trained on, not from what it was taught by the teacher. The open question is whether the clean/noisy trade-off is fundamental or a side effect of sharing one set of weights and normalisation statistics.</div>
-  <h2>Implementation <span class="ko">구현</span></h2>
+  <h2>Implementation</h2>
   <p>Implementation (sole author of the ML code): RKD loss, custom Ultralytics trainer (SPPF hook, adapter, mixed noise), three framework-level bug fixes.</p>
 
 </main>
