@@ -12,6 +12,14 @@ h1{font-size:1.9rem;margin:0 0 2px;font-weight:650;letter-spacing:-.01em}
 h1 small{font-size:1.05rem;color:var(--mut);font-weight:400;margin-left:6px}
 .role{color:var(--mut);margin:0 0 10px;font-size:.95rem}
 .bio{margin:0 0 6px}
+.focus{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px;padding:0;list-style:none}
+.focus li{font-size:.8rem;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--soft)}
+ul.keys{margin:2px 0 6px;padding-left:1.1em;font-size:.93rem} ul.keys li{margin:1px 0} ul.keys b{font-variant-numeric:tabular-nums}
+.tldr{font-size:1.06rem;font-weight:600;line-height:1.45;margin:10px 0 8px}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.84rem;margin:6px 0 4px}
+.flow span{border:1px solid var(--line);border-radius:6px;padding:3px 8px;background:var(--soft)}
+.flow i{font-style:normal;color:var(--mut)}
+.flow b.c{color:var(--link)}
 .ko{color:var(--mut);font-size:.92rem;margin:4px 0 10px}
 .links{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.93rem}
 h2{font-size:1.15rem;margin:34px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line);font-weight:650}

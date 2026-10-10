@@ -14,6 +14,7 @@
     <p class="bio">I study <b>when a robot can trust what its AI perceives and plans — and how much it should re-check.</b>
       At KAERI I built a forward-kinematics gate for VLM robot commands and an LLM wiki the agent writes and reads as its own memory.
       I am now testing how verified experience can cut computation, and what happens when the robot's own state estimate is wrong.</p>
+    <ul class="focus"><li>verify before acting (runtime assurance)</li><li>memory of verified experience</li><li>small models first, large ones only when needed</li></ul>
     <p class="ko">로봇이 AI의 인지·계획을 언제 믿어도 되는지, 얼마나 다시 확인해야 하는지를 연구합니다.</p>
     <div class="links">
       <a href="cv.html">CV</a>
@@ -39,9 +40,14 @@
     <div>
       <h3><a href="research/oracle-free.html">Memory and verification on a Panda, without an oracle</a></h3>
       <p class="meta">2026.10 · self-initiated · MuJoCo Panda · local LLMs (4B and 32B) · pre-registered, held-out scenes · two steps</p>
-      <p><b>Step 2 (current).</b> The robot sees only through a camera image, a range tracker, an IMU and touch. With a 32B model's verified memory, a 4B planner matched the 32B planner (36/36) with zero large-model calls. With a shoulder reading 0.15 rad off, independent sensors plus "observe, verify, then act" took the robot from 0 to 108/108. On a harder level (a wall, a box to stack on, both), reusing that memory cut large-model calls by 78–96 % with every box placed. A third level (clutter, occlusion, two boxes in a row, a fault mid-run) is tuned and runs in the live demo; its held-out evaluation is next.</p>
-      <p><b>Step 1.</b> With box and fingertip positions read from the simulator, verified memory removed most LLM calls at the same success, and a touch check stopped wrong memories. When the robot's own state was wrong, checks before and after planning were both fooled, which is what step 2 set out to fix.</p>
-      <div class="btns"><a class="primary" href="demo/oracle-free.html">▶ live demo</a><a href="research/oracle-free.html">step 2 details</a><a href="research/poc.html">step 1 details</a><a href="demo/panda-gripper.html">step 1 demo</a></div>
+      <p>The robot sees only through a camera image, a range tracker, an IMU and touch; a small LLM plans, a check decides, and verified steps become memory.</p>
+      <ul class="keys">
+        <li><b>793 → 0</b> large-model calls at the same 36/36: a 4B planner with a 32B model's verified memory</li>
+        <li><b>0 → 108/108</b> with a shoulder reading 0.15 rad off: independent sensors, then observe → verify → act</li>
+        <li><b>−78 to −96 %</b> large-model calls on a harder level (a wall, a box to stack on), reusing that memory, every box placed</li>
+      </ul>
+      <p class="meta">Next study: a harder task where the fault starts halfway through — already playable in the live demo.</p>
+      <div class="btns"><a class="primary" href="demo/oracle-free.html">▶ live demo</a><a href="research/oracle-free.html">study page</a><a href="research/poc.html">earlier version (simulator positions)</a></div>
     </div>
   </div>
 
@@ -52,7 +58,7 @@
     <div>
       <h3><a href="research/fk-verifier.html">VLM robot commands gated by forward kinematics</a></h3>
       <p class="meta"><b>J. Park</b>, H. Seo · KSIIS Spring 2026 · first author · KAERI</p>
-      <p>The model proposes; kinematics decides before execution. Giving the VLM joint angles as text raised position error from 165.7 to 276.9 mm.</p>
+      <p>The model proposes; kinematics decides before execution. Giving the VLM joint angles as text raised position error from <b>165.7 to 276.9 mm</b>.</p>
       <div class="btns"><a href="research/fk-verifier.html">details</a><a href="assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">slides (Korean)</a></div>
     </div>
   </div>
@@ -72,7 +78,7 @@
     <div>
       <h3><a href="research/capstone.html">Noise-robust object detection via heterogeneous relational KD</a></h3>
       <p class="meta">Capstone · 2025.11 – 2026.09 · team lead, sole ML code</p>
-      <p>+0.163 mAP50 under satellite sensor noise with an unchanged 22 MB model; 97% of the gain comes from noise training, distillation adds a small, consistent +0.005.</p>
+      <p><b>+0.163 mAP50</b> under satellite sensor noise with an unchanged 22 MB model; 97% of the gain comes from noise training, distillation adds a small, consistent +0.005.</p>
       <div class="btns"><a href="research/capstone.html">details</a><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">demo</a></div>
     </div>
   </div>
@@ -82,7 +88,7 @@
     <div>
       <h3><a href="research/eloran.html">eLoran time-of-arrival under random sample loss</a></h3>
       <p class="meta">NAVIS Lab · 2025.12 – 2026.02 · undergraduate researcher</p>
-      <p>A frequency-domain compensation gained +6.78 dB SNR but added a permanent +1.497 µs TOA bias — SNR was the wrong objective.</p>
+      <p>A frequency-domain compensation gained <b>+6.78 dB</b> SNR but added a permanent <b>+1.497 µs</b> TOA bias — SNR was the wrong objective.</p>
       <div class="btns"><a href="research/eloran.html">details</a></div>
     </div>
   </div>
