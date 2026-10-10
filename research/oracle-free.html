@@ -41,7 +41,7 @@
   <div class="demo" id="liveDemo">
     <a class="live-slot" href="../demo/oracle-free.html" onclick="return loadLive()" style="position:relative;display:block;padding:0"><img src="../assets/poc/oracle_free_demo.gif" alt="Live demo: the Panda grasps a box in any orientation while the panel shows the robot's own camera image with the measured boxes and the gap between its joint reading and the tracker" style="width:100%;display:block">
       <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--link);color:#fff;border-radius:6px;padding:9px 18px;font-weight:600;white-space:nowrap">▶ Run the live demo here</span></a>
-    <div><b>Live demo — runs in your browser.</b> Three questions, each comparing two settings on the same 18 visits: memory that grows from empty (on one scene seed with the stand-in planner, calls per round of six visits fall 36 → 1 → 0), a lying joint reading, and when it is safe to act. The right panel is the robot's own camera image; the box it picks is chosen by the width it measures, never by the simulator's object id. Stand-in planner in the browser; the LLM numbers below are from the study.</div>
+    <div><b>Live demo, in your browser.</b> Three levels, each comparing two settings on the same 18 visits. The right panel is the robot's own camera image. The planner in the browser is a scripted stand-in; LLM numbers below are from the study.</div>
   </div>
   <script>function loadLive(){const s=document.querySelector('#liveDemo .live-slot');s.outerHTML='<iframe src="../demo/oracle-free.html" title="Live MuJoCo demo" style="width:100%;height:1500px;border:0;display:block"></iframe>';return false;}</script>
 
@@ -56,30 +56,30 @@
   <p>The simulator's ground truth is used only to score the outcome (placed and left standing) and to report errors. Boxes lie in any orientation, so the robot also has to measure how a box is turned and rotate its wrist: without that, 54/108 were placed; with it, 108/108.</p>
 
   <h2>1 · Memory stands in for the large model <span class="ko">기억이 큰 모델을 대신한다</span></h2>
-  <p>The planner is asked one step at a time. Every proposed step is checked by forward kinematics before it runs. Steps that passed and made progress are kept as memory: the situation (fingertip-to-goal vector) and the fingertip move, re-solved by inverse kinematics for the current pose when replayed, and only when the remembered situation is close relative to the distance left. A small model plans; the large one is called only after the small one is rejected twice.</p>
-  <div class="tw"><table class="res">
-    <tr><th>Held-out scenes (36 episodes)</th><th>placed and standing</th><th>large-model calls</th><th>small-model calls</th></tr>
-    <tr><td>32B planner alone</td><td>36/36</td><td>793</td><td>—</td></tr>
-    <tr class="hl"><td>4B planner + 32B's verified memory + large model only when needed</td><td>36/36</td><td>0</td><td>6</td></tr>
-    <tr><td>same cascade without memory</td><td>33/36</td><td>269</td><td>826</td></tr>
-  </table></div>
-  <p>The memory came from the 32B planner's own runs on two other scene seeds (644 steps). The cascade alone cut large-model calls from 793 to 269; the memory took them to 0. On six further unseen seeds the same setting placed 107/108 and 108/108.</p>
+  <p class="point">A 4B model with the 32B model's verified memory placed every box <b>without a single 32B call</b>.</p>
+  <figure class="chart"><img src="../assets/charts/of_level1_calls.svg" alt="Large-model calls on held-out scenes: 32B alone 793 (36/36 placed), 4B to 32B cascade without memory 269 (33/36), cascade with verified memory 0 (36/36)"></figure>
+  <details class="more"><summary>How memory works, and more seeds</summary>
+    <p>The planner is asked one step at a time and every proposed step is checked by forward kinematics before it runs. Steps that passed and made progress are kept: the situation (fingertip-to-goal vector) and the fingertip move, re-solved by inverse kinematics when replayed, and only when the remembered situation is close relative to the distance left. The large model is called only after the small one is rejected twice. The memory came from the 32B planner's own runs on two other scene seeds (644 steps). On six further unseen seeds the same setting placed 107/108 and 108/108.</p>
+  </details>
 
   <h2>2 · When the robot's own state is wrong <span class="ko">로봇 자신의 상태가 틀릴 때</span></h2>
-  <p>A shoulder reading off by 0.15 rad fools the gate, the memory and the planner at once, because all three compute the hand from that reading. How I got from collapse to recovery:</p>
-  <ol class="story">
+  <p class="point">A shoulder reading 0.15 rad off fools the gate, the memory and the planner at once. <b>Two independent sensors plus "observe → verify → act"</b> brought it from 0 to 108/108.</p>
+  <figure class="chart"><img src="../assets/charts/of_fault_recovery.svg" alt="Placed out of 108 with the shoulder fault: no fix 0 (stand-in planner), tracker and IMU calibration 100, plus observe-verify-act 108; reference without fault 108. Large-model calls 36, 13, 11."></figure>
+  <ol class="steps">
+    <li><b>Detect only</b>: switch to the tracker when it disagrees. Rough tracker: 1 → 6/18. Not enough.</li>
+    <li><b>Estimate</b>: tracker + IMU together put the hand within 0.4–1.3 cm and 0.3–0.5°. Either alone failed.</li>
+    <li><b>Calibrate online</b>: 100/108 with real LLMs on unseen seeds.</li>
+    <li><b>Observe → verify → act</b>: wait for enough observations before grasping. 108/108.</li>
+  </ol>
+  <details class="more"><summary>The full path from collapse to recovery</summary>
+    <ol class="story">
     <li><b>Removing the oracle broke the earlier fix.</b> With an ideal fingertip sensor an independent check had solved this; with a realistic range tracker the same robot placed 1/18.</li>
     <li><b>Trust the tracker only when it disagrees.</b> Comparing a 5-read median with the joint-based fingertip, and switching only on a large gap, helped with a good tracker (14 → 17/18) but not with a rough one (1 → 6/18): detecting the error was not enough.</li>
     <li><b>Estimate the error, not just detect it.</b> Calibrating joint offsets from position alone left the hand tilted 3.6–6.5° and boxes fell over; from the IMU alone the fingertip was 3–5 cm off; both together: 0.4–1.3 cm and 0.3–0.5°. Four reviewing models had called the IMU unnecessary.</li>
     <li><b>Calibrate online.</b> Fault with no fix: 0/108 (stand-in planner). Tracker + IMU calibration while moving: 97/108 with the stand-in planner, 100/108 with real LLMs on unseen seeds.</li>
     <li><b>Observe → verify → act.</b> Every remaining failure was the first episode of a run: the robot grasped before calibration had enough observations. A check before the grasp (enough observations, hand position agrees within 5 cm, otherwise look again from nearby points) gave <b>108/108</b>; first-episode failures 6 → 0; large-model calls 36 → 13.</li>
   </ol>
-  <div class="tw"><table class="res">
-    <tr><th>Six unseen seeds, real LLMs (108 episodes)</th><th>placed and standing</th><th>first-episode failures</th><th>large-model calls</th></tr>
-    <tr><td>shoulder fault + calibration</td><td>100/108</td><td>6/6</td><td>36</td></tr>
-    <tr class="hl"><td>+ observe → verify → act</td><td>108/108</td><td>0/6</td><td>13</td></tr>
-    <tr><td>(no fault, same memory and cascade)</td><td>108/108</td><td>0/6</td><td>11</td></tr>
-  </table></div>
+  </details>
 
   <h2 id="harder">3 · Harder levels <span class="ko">난이도를 올리면</span></h2>
   <p>Everything above is level 1. I then made the task harder in steps, keeping all of level 1 (any orientation, camera only, touch) underneath, and asked whether memory built on the easier level still helps.</p>
@@ -91,17 +91,12 @@
   </table></div>
 
   <h3>Level 2</h3>
-  <p>The level 1 system, unchanged, placed 0/18 with the wall, 3/18 with the support box and 0/18 with both (real LLMs, tuning seed). Level 2 adds a scene camera that measures the wall and the support from depth alone, gate checks for clearance over the measured wall and for the support as the new floor, the measured wall in the planner's prompt, and a carry waypoint above the measured wall.</p>
-  <div class="tw"><table class="res">
-    <tr><th>Held-out scenes (36 episodes each)</th><th>no memory</th><th>level 1 memory</th><th>memory grown on level 2</th></tr>
-    <tr><td>wall · placed</td><td>31/36</td><td>36/36</td><td>34/36</td></tr>
-    <tr class="hl"><td>wall · large-model calls</td><td>1245</td><td>262</td><td>404</td></tr>
-    <tr><td>support · placed</td><td>36/36</td><td>36/36</td><td>35/36</td></tr>
-    <tr class="hl"><td>support · large-model calls</td><td>308</td><td>13</td><td>2</td></tr>
-    <tr><td>both · placed</td><td>31/36</td><td>36/36</td><td>35/36</td></tr>
-    <tr class="hl"><td>both · large-model calls</td><td>706</td><td>155</td><td>99</td></tr>
-  </table></div>
-  <p>Memory from level 1 cut large-model calls by 79&nbsp;%, 96&nbsp;% and 78&nbsp;% and kept every box placed. What it reused were level 1's lifting and level carrying steps: the way over the wall was the waypoint, not something the robot found. When I removed the waypoint and left only the gate's rejection (clearance too small), the planners (4B, escalating to 32B) kept proposing the same level step and did not get over the wall in any of 18 episodes on a tuning seed. Whether a robot can find such a detour from its checks and memory is a question I leave for later.</p>
+  <p class="point">The level 1 system alone placed 0/18 with a wall. With level 2 sensing and checks added, <b>reusing level 1 memory cut large-model calls by 78–96 %</b> and every box was placed.</p>
+  <figure class="chart"><img src="../assets/charts/of_level2_calls.svg" alt="Level 2 large-model calls on held-out scenes. Wall: no memory 1245, level 1 memory 262, memory grown on level 2 404. Support box: 308, 13, 2. Both: 706, 155, 99."></figure>
+  <details class="more"><summary>What level 2 adds, and what memory did not do</summary>
+    <p>The level 1 system, unchanged, placed 0/18 with the wall, 3/18 with the support box and 0/18 with both (real LLMs, tuning seed). Level 2 adds a scene camera that measures the wall and the support from depth alone, gate checks for clearance over the measured wall and for the support as the new floor, the measured wall in the planner's prompt, and a carry waypoint above the measured wall.</p>
+    <p>Memory from level 1 cut large-model calls by 79&nbsp;%, 96&nbsp;% and 78&nbsp;%. What it reused were level 1's lifting and level carrying steps: the way over the wall was the waypoint, not something the robot found. Without the waypoint, the planners (4B, escalating to 32B) kept proposing the same level step and did not get over the wall in any of 18 episodes on a tuning seed. Finding that detour from the gate's rejections and memory is being evaluated now.</p>
+  </details>
 
   <h3>Level 3 (next study)</h3>
   <p>Built and checked with a stand-in planner, then tuned with the real LLMs on two scene seeds: with memory alone and the fault starting at visit 7, the robot placed 4/18 on each. The comparison on held-out scenes comes next; results will be added here. The <a href="../demo/oracle-free.html">live demo</a> runs all three levels with the stand-in planner.</p>
@@ -112,8 +107,10 @@
   </table></div>
 
   <h2>What a fault does to memory <span class="ko">고장은 기억의 무엇을 더럽히나</span></h2>
-  <p>I expected memories recorded under the fault to be geometrically wrong and planned to correct them. They were not: stored as task-space moves, they were consistent within the robot's own belief, and replayed steps worked as well as clean ones. What the fault corrupted was the <b>outcome label</b> — every episode failed, so every memory was marked bad and none was replayed. Marking only the fault period's outcomes as invalid, which the tracker–reading gap detects on its own, cut planner calls 89 % compared with resetting memory, on the easier task.
-    On the harder task this helped much less (−23 %), because the faulty robot never got past grasping: all of its memories were approach steps. A fault spoils labels and also <b>leaves gaps in experience</b>, and fixing labels cannot fill them.</p>
+  <p class="point">The fault did not spoil the memories' geometry. It spoiled their <b>outcome labels</b>, and it <b>left gaps</b>: the faulty robot never got past grasping.</p>
+  <details class="more"><summary>Details</summary>
+    <p>Stored as task-space moves, memories recorded under the fault were consistent within the robot's own belief, and replayed steps worked as well as clean ones. But every episode failed, so every memory was marked bad and none was replayed. Marking only the fault period's outcomes as invalid (the tracker–reading gap detects it) cut planner calls 89&nbsp;% compared with resetting memory on the easier task, but only 23&nbsp;% on the harder one, because all the faulty robot's memories were approach steps.</p>
+  </details>
 
   <h2>What did not work <span class="ko">안 된 것</span></h2>
   <ul>
@@ -126,7 +123,7 @@
 
   <h2>What I want to study next <span class="ko">다음 연구</span></h2>
   <p class="ko">쉬운 과제의 기억은 길이 주어지면 어려운 과제에서도 통했습니다. 길 자체를 검증과 기억으로 찾을 수 있는지, 그리고 고장이 남긴 경험의 빈칸을 어떻게 채울지를 보고 싶습니다.</p>
-  <p>Memory from an easy level carried over to a harder one when the route was given. Two questions remain: can a robot find the route itself from what its checks reject and what it remembers, and what fills the <b>gaps a fault leaves in experience</b>? The rule I would keep regardless: <b>observe, verify, then act</b>, at every switch from one phase to the next, not only at every step.</p>
+  <p>Can a robot find the route itself from what its checks reject and what it remembers, and what fills the <b>gaps a fault leaves in experience</b>? The rule I would keep: <b>observe, verify, then act</b> at every phase switch.</p>
 
   <h2 id="setup">Setup <span class="ko">설정</span></h2>
   <p>MuJoCo 3.15, Franka Panda from MuJoCo Menagerie. Local models through Ollama at temperature 0 on an Apple M5 Pro laptop. Each comparison had its pass criteria written before running; selection was done on tuning seeds and judged once on seeds not used before. Code, logs and the pre-registrations are kept with the project.</p>

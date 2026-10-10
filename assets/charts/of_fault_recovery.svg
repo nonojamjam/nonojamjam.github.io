@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 206" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#1d1d1f">
+<title>Shoulder reading 0.15 rad off · placed out of 108, real LLMs</title><rect width="680" height="206" fill="#fff"/>
+<text x="0" y="20" font-weight="650" font-size="14">Shoulder reading 0.15 rad off · placed out of 108, real LLMs</text>
+<text x="220" y="58.0" text-anchor="end">fault, no fix (stand-in planner)</text>
+<rect x="230" y="40" width="280" height="26" fill="#f6f7f9"/>
+<text x="238.0" y="58.0" font-weight="700" text-anchor="start" fill="#1d1d1f">0</text>
+<text x="220" y="96.0" text-anchor="end">+ tracker + IMU calibration</text>
+<rect x="230" y="78" width="280" height="26" fill="#f6f7f9"/>
+<rect x="230" y="78" width="259.3" height="26" rx="3" fill="#b9bcc4"/>
+<text x="481.3" y="96.0" font-weight="700" text-anchor="end" fill="#fff">100</text>
+<text x="524" y="96.0" fill="#6b6b70" font-size="12">large-model calls 36</text>
+<text x="220" y="134.0" text-anchor="end">+ observe → verify → act</text>
+<rect x="230" y="116" width="280" height="26" fill="#f6f7f9"/>
+<rect x="230" y="116" width="280.0" height="26" rx="3" fill="#1a5fb4"/>
+<text x="502.0" y="134.0" font-weight="700" text-anchor="end" fill="#fff">108</text>
+<text x="524" y="134.0" fill="#6b6b70" font-size="12">large-model calls 13</text>
+<text x="220" y="172.0" text-anchor="end">reference: no fault</text>
+<rect x="230" y="154" width="280" height="26" fill="#f6f7f9"/>
+<rect x="230" y="154" width="280.0" height="26" rx="3" fill="#e3e3e6"/>
+<text x="502.0" y="172.0" font-weight="700" text-anchor="end" fill="#1d1d1f">108</text>
+<text x="524" y="172.0" fill="#6b6b70" font-size="12">large-model calls 11</text>
+</svg>
