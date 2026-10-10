@@ -83,3 +83,6 @@ details.more > *:not(summary){margin-top:6px}
 .finds>div.neg{border-top-color:var(--accent)}
 .finds b{display:block;font-size:.92rem;margin-bottom:2px} .finds span{font-size:.84rem;color:var(--mut);line-height:1.45;display:block}
 .item.feat{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:16px;margin:6px 0 4px}
+table.heat{border-collapse:collapse;font-size:.86rem;width:100%;font-variant-numeric:tabular-nums}
+table.heat th,table.heat td{padding:5px 8px;text-align:center;border-bottom:1px solid var(--line)}
+table.heat th:first-child{text-align:left} table.heat td.b{color:var(--mut)}
