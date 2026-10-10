@@ -86,3 +86,6 @@ details.more > *:not(summary){margin-top:6px}
 table.heat{border-collapse:collapse;font-size:.86rem;width:100%;font-variant-numeric:tabular-nums}
 table.heat th,table.heat td{padding:5px 8px;text-align:center;border-bottom:1px solid var(--line)}
 table.heat th:first-child{text-align:left} table.heat td.b{color:var(--mut)}
+.btns.top{margin:4px 0 10px} p.role{font-size:.88rem;margin:2px 0 6px}
+.item.feat .thumb{flex-basis:280px;height:176px}
+@media(max-width:640px){.item.feat{flex-direction:column}.item.feat .thumb{flex-basis:auto;width:100%;height:auto;aspect-ratio:16/10}}

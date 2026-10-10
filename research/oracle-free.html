@@ -25,11 +25,12 @@
 
   <p class="tldr">A 4B model plans, a check decides before every step, and steps that passed become memory. Memory replaced the large model's calls; independent sensors and "observe → verify → act" kept the robot right when its own joint reading was wrong.</p>
   <div class="btns"><a class="primary" href="../demo/oracle-free.html">▶ Live demo (levels 1–3)</a><a href="#harder">Harder levels</a><a href="poc.html">Step 1</a><a href="#setup">Setup</a></div>
-  <figure class="pipe"><a href="../assets/poc/pipeline.svg"><img src="../assets/poc/pipeline.svg" alt="Pipeline: camera, range tracker, IMU and touch form the robot's belief; verified memory is tried first, then a 4B LLM, then a 32B LLM after two rejections; a kinematic gate checks every proposal before it runs and sends rejections back with a reason; only steps that passed the gate and brought the hand closer are remembered."></a>
-    <figcaption>Every step: memory first, then a small LLM, a large one only when stuck. Nothing moves the arm until the kinematic gate passes it, and only passed steps that made progress are remembered. The dashed strip is an extension still under evaluation.</figcaption></figure>
-  <p class="lead"><a href="poc.html">Step 1</a> of this study showed that verified memory cuts LLM calls, and that checks before and after planning are both fooled when the robot's own joint reading is wrong.
-    It still read the box position and the fingertip from the simulator. Here I removed every such shortcut from the decision loop and asked the same two questions again:
-    <b>can memory stand in for a large model</b>, and <b>what keeps the robot right when its own state is wrong</b>?</p>
+  <div class="demo" id="liveDemo">
+    <a class="live-slot" href="../demo/oracle-free.html" onclick="return loadLive()" style="position:relative;display:block;padding:0"><img src="../assets/poc/oracle_free_demo.gif" alt="Live demo: the Panda grasps a box in any orientation while the panel shows the robot's own camera image with the measured boxes and the gap between its joint reading and the tracker" style="width:100%;display:block">
+      <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--link);color:#fff;border-radius:6px;padding:9px 18px;font-weight:600;white-space:nowrap">▶ Run the live demo here</span></a>
+    <div><b>Live demo, in your browser.</b> Three levels, each comparing two settings on the same 18 visits. The right panel is the robot's own camera image. The planner in the browser is a scripted stand-in; LLM numbers below are from the study.</div>
+  </div>
+  <script>function loadLive(){const s=document.querySelector('#liveDemo .live-slot');s.outerHTML='<iframe src="../demo/oracle-free.html" title="Live MuJoCo demo" style="width:100%;height:1500px;border:0;display:block"></iframe>';return false;}</script>
 
   <div class="kpis">
     <div class="kpi"><b>793 → 0</b><span>large-model calls, same 36/36 placed: a 4B planner with a 32B model's verified memory, held-out scenes</span></div>
@@ -38,12 +39,11 @@
     <div class="kpi"><b>−78 to −96&nbsp;%</b><span>large-model calls on a harder level (a wall, a box to stack on, both) when the memory from the easier level is reused; 36/36 placed in each</span></div>
   </div>
 
-  <div class="demo" id="liveDemo">
-    <a class="live-slot" href="../demo/oracle-free.html" onclick="return loadLive()" style="position:relative;display:block;padding:0"><img src="../assets/poc/oracle_free_demo.gif" alt="Live demo: the Panda grasps a box in any orientation while the panel shows the robot's own camera image with the measured boxes and the gap between its joint reading and the tracker" style="width:100%;display:block">
-      <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--link);color:#fff;border-radius:6px;padding:9px 18px;font-weight:600;white-space:nowrap">▶ Run the live demo here</span></a>
-    <div><b>Live demo, in your browser.</b> Three levels, each comparing two settings on the same 18 visits. The right panel is the robot's own camera image. The planner in the browser is a scripted stand-in; LLM numbers below are from the study.</div>
-  </div>
-  <script>function loadLive(){const s=document.querySelector('#liveDemo .live-slot');s.outerHTML='<iframe src="../demo/oracle-free.html" title="Live MuJoCo demo" style="width:100%;height:1500px;border:0;display:block"></iframe>';return false;}</script>
+  <figure class="pipe"><a href="../assets/poc/pipeline.svg"><img src="../assets/poc/pipeline.svg" alt="Pipeline: camera, range tracker, IMU and touch form the robot's belief; verified memory is tried first, then a 4B LLM, then a 32B LLM after two rejections; a kinematic gate checks every proposal before it runs and sends rejections back with a reason; only steps that passed the gate and brought the hand closer are remembered."></a>
+    <figcaption>Every step: memory first, then a small LLM, a large one only when stuck. Nothing moves the arm until the kinematic gate passes it, and only passed steps that made progress are remembered. The dashed strip is an extension still under evaluation.</figcaption></figure>
+  <p class="lead"><a href="poc.html">Step 1</a> of this study showed that verified memory cuts LLM calls, and that checks before and after planning are both fooled when the robot's own joint reading is wrong.
+    It still read the box position and the fingertip from the simulator. Here I removed every such shortcut from the decision loop and asked the same two questions again:
+    <b>can memory stand in for a large model</b>, and <b>what keeps the robot right when its own state is wrong</b>?</p>
 
   <h2>What "no oracle" means here <span class="ko">결정 경로에 정답값이 없다</span></h2>
   <div class="finds">

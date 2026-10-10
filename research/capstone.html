@@ -11,6 +11,7 @@
   <p class="crumb"><a href="../index.html">← Juhyeok Park</a></p>
   <h1>Noise-robust object detection via heterogeneous relational KD</h1>
   <p class="meta">Capstone · 2025.11 – 2026.09 · team lead, sole ML code</p>
+  <div class="btns top"><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">interactive demo &amp; code</a></div>
   <p class="ko">위성 센서 노이즈 속에서도 가벼운 검출기가 동작하게 하는 연구입니다. 배포 모델은 그대로 두고 학습만 바꿨습니다.</p>
   <p class="lead">Keep a lightweight detector working under satellite sensor noise. DINOv2 (ViT) → YOLOv8s-seg (CNN) distance-wise relational distillation, plus 50:50 mixed-noise training; teacher and adapter are removed at inference, so the deployed model is unchanged (11.8M parameters / 22 MB).</p>
   <div class="kpis">
@@ -51,7 +52,7 @@
   <div class="box">The robustness came from what the model trained on, not from what it was taught by the teacher. The open question is whether the clean/noisy trade-off is fundamental or a side effect of sharing one set of weights and normalisation statistics.</div>
   <h2>Implementation <span class="ko">구현</span></h2>
   <p>Implementation (sole author of the ML code): RKD loss, custom Ultralytics trainer (SPPF hook, adapter, mixed noise), three framework-level bug fixes.</p>
-  <div class="btns"><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">interactive demo &amp; code</a></div>
+
 </main>
 <footer class="wrap"><a href="../index.html">← back</a></footer>
 </body>

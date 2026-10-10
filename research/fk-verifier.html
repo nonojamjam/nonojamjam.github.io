@@ -11,6 +11,8 @@
   <p class="crumb"><a href="../index.html">← Juhyeok Park</a></p>
   <h1>VLM robot commands gated by forward kinematics</h1>
   <p class="meta"><b>J. Park</b>, H. Seo · Korea Society of Industrial Information Systems, Spring 2026 · first author · KAERI internship</p>
+  <p class="role"><b>My role:</b> experiment design, data collection, visualization and report.</p>
+  <div class="btns top"><a href="../assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">talk slides (Korean, May 2026)</a><a href="poc.html">follow-up: verify, remember, compute less</a></div>
   <p class="ko">VLM 이 낸 로봇 명령을 순기구학으로 실행 전에 거르고, 언어로 준 물리 정보가 왜 도움이 안 되는지 본 연구입니다.</p>
   <p class="lead">A vision-language model proposes an end-effector target; forward kinematics determines reachability before execution. The pipeline functioned as a filter. The reported result concerns what happened when the VLM was given additional physical information in text.</p>
   <div class="kpis">
@@ -45,9 +47,8 @@
   <p>The verification cascade, in contrast, was accurate. A verifier from the same model family as the planner shares its failure modes, so the checks that worked were the ones outside the model: kinematics, rendering and geometry.</p>
   </details>
   <div class="box">Use the VLM for reading and checking, not for drawing the future. Keep the geometry in computation and the verification outside the model.</div>
-  <h2>My role <span class="ko">역할</span></h2>
-  <p>Experiment design, data collection, visualization and report.</p>
-  <div class="btns"><a href="../assets/talks/KSIIS2026_Park_talk_slides_ko.pdf">talk slides (Korean, May 2026)</a><a href="poc.html">follow-up: verify, remember, compute less</a></div>
+
+
 </main>
 <footer class="wrap"><a href="../index.html">← back</a></footer>
 </body>
