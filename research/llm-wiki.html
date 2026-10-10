@@ -35,7 +35,10 @@
 
   <h2>Results <span class="ko">결과</span></h2>
   <figure><img src="../assets/iaa/fig_before_after.png" alt="Same question, same model, with and without wiki context"><figcaption>Same question, same model — only the context differs. With ambient wiki context the answer uses the noted operational constraints.</figcaption></figure>
-  <p>Answers from one frontier model were graded blind by two frontier models from different families, with the retrieval condition hidden and a gold-span rubric. Ambient injection recovered the answer-bearing node more often than the hybrid-retrieval baseline, with the margin increasing as question wording diverged from the source text.</p>
+  <figure class="chart"><img src="../assets/charts/wiki_recall.svg" alt="Hybrid retrieval vs ambient injection: retrieval recall at 3, 55 vs 79 percent; answer correctness, 33 vs 55 percent"></figure>
+  <details class="more"><summary>How it was graded</summary>
+    <p>Answers from one frontier model were graded blind by two frontier models from different families, with the retrieval condition hidden and a gold-span rubric. Ambient injection recovered the answer-bearing node more often than the hybrid-retrieval baseline, with the margin increasing as question wording diverged from the source text.</p>
+  </details>
   <p>Direct injection of the correct node still left substantial hallucination.</p>
   <div class="box">Access to correct knowledge does not by itself remove hallucination — the answer still has to be checked.</div>
 

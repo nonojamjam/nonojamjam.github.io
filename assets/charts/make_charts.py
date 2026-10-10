@@ -115,5 +115,11 @@ grouped("cap_map50", "Box mAP50 · 2 × 2 ablation (σ = 0.3, seed 0)", [
 ], [("baseline", GREY), ("+ distillation", "#8e93a0"), ("+ noise training", "#7aa5dc"), ("+ both (proposed)", BLUE)], 0.30,
     note="Noise training gives 97 % of the noisy-tile gain; distillation adds +0.005.")
 
+# research/llm-wiki.html, KPI boxes (~6,000-note wiki, 56 questions, blind graders)
+grouped("wiki_recall", "Hybrid retrieval vs ambient injection · ~6,000 notes, 56 questions", [
+    ("retrieval recall@3 (%)", [55, 79], None),
+    ("answer correctness (%)", [33, 55], None),
+], [("hybrid-retrieval baseline", GREY), ("ambient injection", BLUE)], 100)
+
 if __name__ == "__main__":
     print(sorted(p.name for p in OUT.glob("*.svg")))

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 298" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#1d1d1f">
+<title>Hybrid retrieval vs ambient injection · ~6,000 notes, 56 questions</title><rect width="640" height="298" fill="#fff"/>
+<text x="0" y="20" font-weight="650" font-size="14">Hybrid retrieval vs ambient injection · ~6,000 notes, 56 questions</text>
+<rect x="0" y="32" width="12" height="12" rx="2" fill="#b9bcc4"/><text x="17" y="42" font-size="12">hybrid-retrieval baseline</text>
+<rect x="219.0" y="32" width="12" height="12" rx="2" fill="#1a5fb4"/><text x="236.0" y="42" font-size="12">ambient injection</text>
+<line x1="60" y1="246" x2="640" y2="246" stroke="#e3e3e6"/>
+<rect x="171.5" y="152.5" width="34" height="93.5" rx="3" fill="#b9bcc4"/>
+<text x="188.5" y="146.5" text-anchor="middle" font-size="12" font-weight="700">55</text>
+<rect x="209.5" y="111.7" width="34" height="134.3" rx="3" fill="#1a5fb4"/>
+<text x="226.5" y="105.7" text-anchor="middle" font-size="12" font-weight="700">79</text>
+<text x="207.5" y="282" text-anchor="middle" font-weight="650">retrieval recall@3 (%)</text>
+<rect x="446.5" y="189.9" width="34" height="56.1" rx="3" fill="#b9bcc4"/>
+<text x="463.5" y="183.9" text-anchor="middle" font-size="12" font-weight="700">33</text>
+<rect x="484.5" y="152.5" width="34" height="93.5" rx="3" fill="#1a5fb4"/>
+<text x="501.5" y="146.5" text-anchor="middle" font-size="12" font-weight="700">55</text>
+<text x="482.5" y="282" text-anchor="middle" font-weight="650">answer correctness (%)</text>
+</svg>

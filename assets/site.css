@@ -78,3 +78,8 @@ details.more summary{cursor:pointer;color:var(--link);font-size:.86rem;list-styl
 details.more summary::before{content:"▸ ";} details.more[open] summary::before{content:"▾ ";}
 details.more summary::-webkit-details-marker{display:none}
 details.more > *:not(summary){margin-top:6px}
+.finds{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:8px 0 12px}
+.finds>div{border:1px solid var(--line);border-top:3px solid var(--link);border-radius:8px;padding:8px 11px;background:#fff}
+.finds>div.neg{border-top-color:var(--accent)}
+.finds b{display:block;font-size:.92rem;margin-bottom:2px} .finds span{font-size:.84rem;color:var(--mut);line-height:1.45;display:block}
+.item.feat{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:16px;margin:6px 0 4px}

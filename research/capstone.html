@@ -44,7 +44,10 @@
   <figure><img src="../assets/profile/noise_slider.gif" alt="Slider comparison on one noisy tile: baseline 0 detections, proposed detects the aircraft" style="max-width:440px;display:block;margin:0 auto"><figcaption>Slider from the interactive demo: baseline (left) finds nothing, proposed (right) detects the aircraft.</figcaption></figure>
   <p class="meta">Qualitative; the numbers are in the chart above.</p>
   <h2>What the 2 × 2 ablation says <span class="ko">2×2 분해</span></h2>
-  <p>Running all four combinations (with / without distillation × with / without noise training) separated the two effects. Noise training alone gives +0.163 noisy mAP50 — 97% of the gain; distillation adds +0.005, small but positive in all four comparisons. The two barely interact. Robustness is not free: clean mAP50 drops by about 0.06.</p>
+  <p class="point"><b>Noise training</b> gives 97 % of the gain (+0.163 noisy mAP50); <b>distillation</b> adds a small, consistent +0.005. Robustness costs about 0.06 on clean tiles.</p>
+  <details class="more"><summary>Details</summary>
+    <p>Running all four combinations (with / without distillation × with / without noise training) separated the two effects. Noise training alone gives +0.163 noisy mAP50 — 97% of the gain; distillation adds +0.005, small but positive in all four comparisons. The two barely interact. Robustness is not free: clean mAP50 drops by about 0.06.</p>
+  </details>
   <div class="box">The robustness came from what the model trained on, not from what it was taught by the teacher. The open question is whether the clean/noisy trade-off is fundamental or a side effect of sharing one set of weights and normalisation statistics.</div>
   <h2>Implementation <span class="ko">구현</span></h2>
   <p>Implementation (sole author of the ML code): RKD loss, custom Ultralytics trainer (SPPF hook, adapter, mixed noise), three framework-level bug fixes.</p>

@@ -35,8 +35,15 @@
 </table>
   </details>
   <h2>Findings <span class="ko">발견</span></h2>
-  <p>Image editing manipulates pixels, not rigid bodies: link lengths and joint connectivity are not preserved, rotations fail more often than translations, and without a grid there is no pixel-to-metre scale. Language does not carry the missing quantities either — giving joint angles as text made the result worse.</p>
+  <div class="finds">
+    <div class="neg"><b>Drawing fails</b><span>image editing moves pixels, not rigid bodies: link lengths and joints are not kept</span></div>
+    <div class="neg"><b>Text does not help</b><span>joint angles as text made the error worse (165.7 → 276.9 mm)</span></div>
+    <div><b>Checks outside the model work</b><span>kinematics, rendering and geometry: 0 false passes in 50 checks</span></div>
+  </div>
+  <details class="more"><summary>Details</summary>
+    <p>Image editing manipulates pixels, not rigid bodies: link lengths and joint connectivity are not preserved, rotations fail more often than translations, and without a grid there is no pixel-to-metre scale. Language does not carry the missing quantities either — giving joint angles as text made the result worse.</p>
   <p>The verification cascade, in contrast, was accurate. A verifier from the same model family as the planner shares its failure modes, so the checks that worked were the ones outside the model: kinematics, rendering and geometry.</p>
+  </details>
   <div class="box">Use the VLM for reading and checking, not for drawing the future. Keep the geometry in computation and the verification outside the model.</div>
   <h2>My role <span class="ko">역할</span></h2>
   <p>Experiment design, data collection, visualization and report.</p>
