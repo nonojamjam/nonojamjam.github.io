@@ -379,11 +379,11 @@ export function makeEngine(mj, model, data, C, goal) {
       if (cfg.l3?.oracle) {   // L3 참값 대조군(상한 전용, 사전등록 '대조군 ≥ 32/36'): 그 상자 참 위치 + 3 mm 잡음 · 참 방향 — 인식이 완벽할 때 세계가 풀리는지
         const b = want === 't2' ? bodyId('t2') : C.bTarget, p = C.bodyPos(b), q = data.xquat.slice(4 * b, 4 * b + 4), yaw = 2 * Math.atan2(q[3], q[0]);
         let y = yaw % Math.PI; if (y > Math.PI / 2) y -= Math.PI; if (y < -Math.PI / 2) y += Math.PI;
-        beliefYaw = y; ev('vision', { ok: true, xy: [p[0], p[1]], yaw: y, short: null, cands: 0, err: 0, oracle: true }); return [p[0] + CAM_NOISE * gauss(rCam), p[1] + CAM_NOISE * gauss(rCam)];
+        beliefYaw = y; ev('vision', { ok: true, xy: [p[0], p[1]], yaw: y, short: null, cands: 0, err: 0, oracle: true, want }); return [p[0] + CAM_NOISE * gauss(rCam), p[1] + CAM_NOISE * gauss(rCam)];
       }
       vis ??= makeVision(mj, model, data, visOpt());
       const L = vis.look(rVis, cfg.l3 ? want : null), now = C.bodyPos(want === 't2' ? bodyId('t2') : C.bTarget);
-      ev('vision', { ok: L.ok, xy: L.xy, yaw: L.yaw, short: L.short ?? null, cands: L.cands.length, err: L.ok ? Math.hypot(L.xy[0] - now[0], L.xy[1] - now[1]) : null, ...(L.frame ? { frame: L.frame, pick: L.pick } : {}), ...(cfg.l3 ? { uncertain: L.uncertain, ratio: L.ratio ?? null, twins: L.twins ?? 0, cls: L.cls ?? [] } : {}) });   // frame: 데모가 cfg.vision={frame:true} 일 때만
+      ev('vision', { ok: L.ok, xy: L.xy, yaw: L.yaw, short: L.short ?? null, cands: L.cands.length, err: L.ok ? Math.hypot(L.xy[0] - now[0], L.xy[1] - now[1]) : null, ...(L.frame ? { frame: L.frame, pick: L.pick } : {}), ...(cfg.l3 ? { want, uncertain: L.uncertain, ratio: L.ratio ?? null, twins: L.twins ?? 0, cls: L.cls ?? [] } : {}) });   // frame: 데모가 cfg.vision={frame:true} 일 때만
       if (!L.ok) { st.visionMiss = (st.visionMiss || 0) + 1; if (cfg.l3) beliefYaw = 0; return [0.525, 0.09]; }   // 검수 Astra S4: L3 는 못 찾으면 이전 단계 방향을 남기지 않는다
       beliefYaw = L.yaw; return L.xy;
     };
@@ -469,6 +469,13 @@ export function makeEngine(mj, model, data, C, goal) {
       return [-us(tip) * side, clearOf(tip[2])];
     };
     let wallEx = false;
+    // L3 S6: 게이트 맥락(바닥·장애물)을 한 곳에서 — 판정과 채점(참 관절 게이트)이 같은 맥락을 쓰게
+    function gateCtx() {
+      const holding = ['lift', 'carry', 'place'].includes(phase);
+      const floorZ = cfg.stepPhases && holding ? PLACE_Z - FLOOR_EPS : null;   // P1: 걸음 단계 옵션일 때 쥔 채 걷는 단계만
+      const obst = l2Wall || l2Sup || l3Obst.length ? { wall: l2Wall, ...(l3Obst.length ? { extra: l3Obst } : {}), below: holding ? 0.035 : 0.01, sup: l2Sup && { xy: l2Sup.xy, half: l2Sup.half, z: placeZ - FLOOR_EPS }, ...(FREE ? { reach: handReach } : {}) } : null;   // L2 S3: 쥔 상자 바닥(3.5 cm 아래) 또는 손가락 끝 · 받침 위 바닥
+      return { floorZ, obst };
+    }
     function* stepTo(target, maxSteps = MAX_STEPS) {
       let reached = false;
       wallEx = false;
@@ -500,9 +507,7 @@ export function makeEngine(mj, model, data, C, goal) {
         else { dq = ask(); call = st.calls; }
         let attemptNo = 0, gateUs = 0, lastExempt = false;   // lastExempt: 마지막 판정(= 실행할 제안)이 진척 면제로 통과했나
         const judge = () => {   // 제안 하나를 게이트에 넣고 proposal 이벤트를 남긴다 (게이트 꺼짐이면 판정 없이 기록만)
-          const holding = ['lift', 'carry', 'place'].includes(phase);
-          const floorZ = cfg.stepPhases && holding ? PLACE_Z - FLOOR_EPS : null;   // P1: 걸음 단계 옵션일 때 쥔 채 걷는 단계만
-          const obst = l2Wall || l2Sup || l3Obst.length ? { wall: l2Wall, ...(l3Obst.length ? { extra: l3Obst } : {}), below: holding ? 0.035 : 0.01, sup: l2Sup && { xy: l2Sup.xy, half: l2Sup.half, z: placeZ - FLOOR_EPS }, ...(FREE ? { reach: handReach } : {}) } : null;   // L2 S3: 쥔 상자 바닥(3.5 cm 아래) 또는 손가락 끝 · 받침 위 바닥
+          const { floorZ, obst } = gateCtx();
           const t0 = performance.now(), g = cfg.gate ? gateCheck(qB, tipB, dq, target, floorZ, obst) : null; gateUs += performance.now() - t0;
           if (FREE && g && l2Wall) {   // L2-자유: 면제 판단 (다른 검사는 그대로 — 진척만 면제)
             if (g.reason === 'wall' && clearOf(tipB[2]) < WALL_MARGIN) wallEx = true;   // 검수 Astra(2차): 이미 여유 ≥ 2 cm 면 켜지 않는다 (사전등록 '여유 +2 cm 면 소멸')
@@ -528,6 +533,13 @@ export function makeEngine(mj, model, data, C, goal) {
           if (!lastOk) { st.blocked++; ev('blocked'); continue; }   // 끝까지 막히면 움직이지 않고 다음 걸음에서 다시 묻는다
         }
         const realBefore = d3(tipNow(), target), qTrue0 = Array.from(data.qpos.slice(0, 7)), tip0 = tipNow();
+        // L3 S6(채점 전용 참값): 같은 명령을 참 관절에서 게이트에 넣었으면 안전 사유로 거절됐나 — 사전등록 unsafe 정의. 결정에는 안 쓴다
+        let trueGate = null;
+        if (cfg.l3) {   // 검수 Astra S6: 실행 게이트를 끈 조건도 채점용 참 게이트는 계산
+          const qCmd = qB.map((x, i) => x + dq[i] + (cal ? cal.D[i] : 0) - (i === BIAS_JOINT ? bias : 0)), dqT = qCmd.map((x, i) => x - qTrue0[i]);
+          const { floorZ: fz, obst: ob } = gateCtx(), gt = gateCheck(qTrue0, tip0, dqT, target, fz, ob);
+          trueGate = gt.ok || gt.reason === 'progress' ? null : gt.reason;
+        }
         yield* mv(qB.map((x, i) => x + dq[i]));
         const qB2 = rd(), tipB2 = believedTip(qB2);
         const unsafe = d3(tipNow(), target) > realBefore + UNSAFE && !lastExempt;   // L2-자유: 면제 걸음(위로 비켜 감)은 멀어지는 게 정상   // 실제 손끝이 향하던 지점에서 멀어졌다
@@ -542,7 +554,7 @@ export function makeEngine(mj, model, data, C, goal) {
         ev('step', { src: unsafe ? 'unsafe' : src, mem: src === 'mem', tip: tip1, belief: tipB2, key, call, from, phase,
           step, attempt: attemptNo - 1, qRead: qB, qTrue: qTrue0, tipToTarget: [target[0] - tipB[0], target[1] - tipB[1], target[2] - tipB[2]],
           dqCmd: dq.slice(), dqActual: qTrue1.map((v, i) => v - qTrue0[i]), dtipActual: [tip1[0] - tip0[0], tip1[1] - tip0[1], tip1[2] - tip0[2]],
-          distDelta: d3(tip1, target) - realBefore, progressed, unsafe, gateUs, ...(FREE ? { exempt: lastExempt, wallRel: wallRel(tipB) } : {}) });
+          distDelta: d3(tip1, target) - realBefore, progressed, unsafe, gateUs, ...(FREE ? { exempt: lastExempt, wallRel: wallRel(tipB) } : {}), ...(cfg.l3 ? { trueGate } : {}) });
       }
       if (!reached) { const qB = rd(); reached = d3(believedTip(qB), target) < SUCC; }
       return reached;
@@ -598,9 +610,9 @@ export function makeEngine(mj, model, data, C, goal) {
       yield* corrected(g);
       data.ctrl[7] = CLOSED; yield* hold(60);
       const width = data.qpos[7] + data.qpos[8];
-      ev('touch', { width, tip: tipNow(), belief: C.fkTip(rd()) });   // belief = 읽은 관절값으로 계산한 손끝 (센서와 무관)
+      ev('touch', { width, tip: tipNow(), belief: C.fkTip(rd()), want: STG.want });   // belief = 읽은 관절값으로 계산한 손끝 (센서와 무관)
       if (cfg.touch && Math.abs(width - STG.W) > TOL) {
-        st.caught++; ev('caught', { width });
+        st.caught++; ev('caught', { width, want: STG.want });
         data.ctrl[7] = OPEN; yield* hold(40);
         yield* corrected([g[0], g[1], g[2] + ABOVE]);
         mem.scene.delete(task.key); belief = see(STG.want); continue;
