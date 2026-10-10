@@ -8,6 +8,7 @@ export const VISION_DEFAULT = {
   fovy: 25, W: 128, H: 128,                             // 화소 하나 ≈ 2.6 mm (거리 0.75 m)
   sigD: 0.002, pDrop: 0.03, sigC: 0.05,                 // 깊이 가우스 σ [m] · 화소 탈락 확률 · 색 잡음 σ
   zMin: 0.012, zMax: 0.09, satMin: 0.25, minPx: 12, topBand: 0.006, shortMax: 0.036, rectMin: 0.004,
+  obsZMin: 0.03, obsZMax: 0.30, obsTop: 0.09, obsTopMax: 0.16,   // L3: 장애물 = 회색, 윗면 9–16 cm 덩어리 (탁자·상자는 9 cm 아래, 레벨 2 벽은 윗면 ≥ 20 cm 라 장면 카메라 몫 — 검수 S2 실측: 벽이 상자 카메라에도 1–2 덩어리로 잡혔다)
 };
 const gauss = rng => Math.sqrt(-2 * Math.log(rng() + 1e-12)) * Math.cos(2 * Math.PI * rng());
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], norm = a => Math.hypot(a[0], a[1], a[2]);
@@ -34,7 +35,16 @@ export function makeVision(mj, model, data, opt = {}) {
     });
   }
   function detect(img) {   // → 상자 후보 목록 [{ c:[x,y], top, short, long, yaw, n }]
-    const isBox = img.map(px => px.p && px.p[2] > V.zMin && px.p[2] < V.zMax && Math.max(...px.rgb) - Math.min(...px.rgb) > V.satMin);
+    return blobsOf(img, img.map(px => px.p && px.p[2] > V.zMin && px.p[2] < V.zMax && Math.max(...px.rgb) - Math.min(...px.rgb) > V.satMin));
+  }
+  // L3 S2(10/10, 패널 P1): 같은 상자 카메라 영상에서 '키 큰 회색 덩어리'(채도 ≤ satMin · 높이 obsZMin~obsZMax, 덩어리 최고 높이 ≥ obsTop) = 장애물.
+  //   색 번호·geom 번호는 안 쓴다 — 높이와 채도만. 게이트가 벽처럼 쓴다. 결과 = [{ c, short, long, yaw, top, n }]
+  function obstacles(rng) {
+    const img = capture(rng);
+    const isObs = img.map(px => px.p && px.p[2] > V.obsZMin && px.p[2] < V.obsZMax && Math.max(...px.rgb) - Math.min(...px.rgb) <= V.satMin);
+    return blobsOf(img, isObs).filter(b => b.top >= V.obsTop && b.top <= V.obsTopMax);
+  }
+  function blobsOf(img, isBox) {
     const lab = new Int32Array(img.length).fill(-1), out = [];
     for (let s = 0; s < img.length; s++) {
       if (!isBox[s] || lab[s] >= 0) continue;
@@ -82,7 +92,7 @@ export function makeVision(mj, model, data, opt = {}) {
     const frame = V.frame ? frameOf(img, cands) : null;   // 데모 전용 (opt.frame) — 실험 경로는 만들지 않는다
     return tgt ? { ok: true, xy: tgt.c, yaw: tgt.yaw, short: tgt.short, cands, frame, pick: cands.indexOf(tgt) } : { ok: false, xy: null, yaw: 0, cands, frame, pick: -1 };
   }
-  return { capture, detect, look, project, V };
+  return { capture, detect, look, project, obstacles, V };
 }
 
 // L2 S2(10/9): 놓을 곳 위 '장면 카메라' — 위에서 거의 수직으로 내려다보는 두 번째 고정 카메라의 깊이만으로 벽 윗면·받침 윗면을 잰다.

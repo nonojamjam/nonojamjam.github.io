@@ -5,7 +5,7 @@
 // 다 오면 내려가 실제 손가락으로 쥐고(촉각), 들어 옮겨 놓는다. 에피소드는 제너레이터: 제어 한 틱마다 yield.
 import { OPEN, CLOSED } from './pickplace_ctrl.mjs';
 import { estimateOffset } from './calib.mjs';
-import { makeVision, makeSceneVision } from './vision.mjs';
+import { makeVision, makeSceneVision, VISION_DEFAULT } from './vision.mjs';
 
 export const TARGET_W = 0.032, LOOK_W = 0.040;     // 손가락이 닫힌 폭: 목표 상자 32 mm, 닮은 상자 40 mm
 const SUB = 5, PRE = 0.08, ABOVE = 0.15, GRASP_Z = 0.035, PLACE_Z = 0.037;
@@ -115,6 +115,78 @@ export function makeEngine(mj, model, data, C, goal) {
     mj.mj_forward(model, data);
     return { wall: cfg.l2.wall ? wall : null, support: cfg.l2.support ? support : null };
   }
+  // L3(10/10, 사전등록 초안 v1): 방해 상자·2차 목표·가림 블록. pickplace_l3.mjb 에서만 (nq 44).
+  //   추가 상자는 컴파일 때 충돌·중력이 꺼져 있다(레벨 1·2 물리 불변, S1). 켤 때 순서 = 옮김 → 속도 0 → mj_forward → geom·body 마스크 → gravcomp 0 (검수 Astra S1: body 마스크도 0 으로 집계됨).
+  //   ⚠️ 참값(위치·방향·가림 비율)은 채점·기록·세계 생성 전용. 결정 경로(비전·계획·게이트·기억)는 측정값만.
+  const L3_EXTRA = ['dist36', 'flat', 't2'];
+  const L3_Z = { target: 0.03, lookalike: 0.03, dist36: 0.03, flat: 0.02, t2: 0.03 };   // 반높이 = 탁자 위 중심 높이
+  const bodyId = n => mj.mj_name2id(model, mj.mjtObj.mjOBJ_BODY.value, n), geomId = n => mj.mj_name2id(model, mj.mjtObj.mjOBJ_GEOM.value, n);
+  const qadr = n => { const b = bodyId(n); for (let j = 0; j < model.njnt; j++) if (model.jnt_bodyid[j] === b) return [model.jnt_qposadr[j], model.jnt_dofadr[j]]; throw new Error(`L3: ${n} 자유관절 없음 — pickplace_l3.mjb 를 쓰세요`); };
+  function setFree(n, x, y, yaw) {
+    const [a, v] = qadr(n);
+    data.qpos[a] = x; data.qpos[a + 1] = y; data.qpos[a + 2] = L3_Z[n];
+    data.qpos[a + 3] = Math.cos(yaw / 2); data.qpos[a + 4] = 0; data.qpos[a + 5] = 0; data.qpos[a + 6] = Math.sin(yaw / 2);
+    for (let k = 0; k < 6; k++) data.qvel[v + k] = 0;
+  }
+  function enableExtra(n, on) {
+    const g = geomId(n), b = bodyId(n);
+    model.geom_contype[g] = on ? 2 : 0; model.geom_conaffinity[g] = on ? 1 : 0;
+    model.body_contype[b] = on ? 2 : 0; model.body_conaffinity[b] = on ? 1 : 0; model.body_gravcomp[b] = on ? 0 : 1;
+  }
+  // 상자 카메라 광선 중 목표 geom 에 닿는 수 (잡음 없음, 참값) — 가림 비율 = 1 − (블록 있음 / 블록 내림)
+  let occDirs = null;
+  function targetRays(vopt = {}) {   // 검수 Flash S2: 실제 비전과 같은 카메라 설정으로
+    if (!occDirs) { const V = { ...VISION_DEFAULT, ...vopt }, sub = (a, b) => a.map((x, i) => x - b[i]), unit = a => { const n = Math.hypot(...a); return a.map(x => x / n); };
+      const fwd = unit(sub(V.look, V.pos)), right = unit([fwd[1], -fwd[0], 0]), up = [right[1] * fwd[2] - right[2] * fwd[1], right[2] * fwd[0] - right[0] * fwd[2], right[0] * fwd[1] - right[1] * fwd[0]], th = Math.tan(V.fovy * Math.PI / 360);
+      occDirs = { V, dirs: [], gid: new mj.IntBuffer(1), nrm: new mj.DoubleBuffer(3) };
+      for (let r = 0; r < V.H; r++) for (let c = 0; c < V.W; c++) { const u = ((c + 0.5) / V.W * 2 - 1) * th, v = (1 - (r + 0.5) / V.H * 2) * th; occDirs.dirs.push(unit([0, 1, 2].map(k => fwd[k] + u * right[k] + v * up[k]))); } }
+    mj.mj_forward(model, data);
+    const gT = geomId('target'); let n = 0;
+    for (const d of occDirs.dirs) { mj.mj_ray(model, data, occDirs.V.pos, d, null, 1, -1, occDirs.gid, occDirs.nrm); if (occDirs.gid.GetView()[0] === gT) n++; }
+    return n;
+  }
+  function placeL3(cfg, task) {
+    let h = (((cfg.sceneSeed || 0) * 7919 + task.key * 104729 + 31) ^ 0x85ebca6b) >>> 0;
+    h = Math.imul(h ^ (h >>> 16), 0x85ebca6b); h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35); h = (h ^ (h >>> 16)) >>> 0;
+    const r = makeRng(h), u = (lo, hi) => lo + (hi - lo) * r(), L = cfg.l3;
+    const X = L.x ?? [0.42, 0.62], Y = L.y ?? [0.00, 0.20], SEP = L.sep ?? 0.06, YAW = (cfg.yaw ?? 90) * Math.PI / 180;
+    const names = ['target', 'lookalike', ...(L.distract === false ? [] : ['dist36', 'flat']), ...(L.seq ? ['t2'] : [])];
+    const boxes = {}, placed = [];
+    for (const n of names) {   // 기각 샘플링 — 상호 거리 ≥ SEP, 최대 200 회. 못 놓으면 그 상자는 꺼진 채 작업 영역 밖 (기록에 missing)
+      let xy = null;
+      for (let t = 0; t < 200 && !xy; t++) { const c = [u(X[0], X[1]), u(Y[0], Y[1])]; if (placed.every(p => Math.hypot(p[0] - c[0], p[1] - c[1]) >= SEP)) xy = c; }
+      const yaw = u(-YAW, YAW);
+      boxes[n] = xy ? { xy, yaw } : { xy: null, yaw: null, missing: true };
+      if (xy) { placed.push(xy); setFree(n, xy[0], xy[1], yaw); }
+    }
+    // 검수 Astra(S2): 기본 상자(target·lookalike)가 배치 실패하면 reset 위치에 남아 다른 상자와 겹칠 수 있다 → 작업 영역 밖으로(충돌은 켜진 채 바닥 위)
+    for (const n of ['target', 'lookalike']) if (boxes[n]?.missing) setFree(n, 1.6, n === 'target' ? -0.3 : -0.5, 0);
+    for (const n of L3_EXTRA) if (!names.includes(n) || boxes[n].missing) { const [a, v] = qadr(n); data.qpos[a] = 1.6; data.qpos[a + 1] = 0.3 + 0.2 * L3_EXTRA.indexOf(n); data.qpos[a + 2] = L3_Z[n]; for (let k = 0; k < 6; k++) data.qvel[v + k] = 0; }
+    mj.mj_forward(model, data);
+    for (const n of L3_EXTRA) enableExtra(n, names.includes(n) && !boxes[n].missing);
+    // 가림 블록 (배치 방식은 S2 패널 결정으로 채운다): 확률 p 로, 목표에서 상자 카메라 쪽 시선 위 거리 d, 긴 변이 시선에 수직
+    const mb = model.body_mocapid[bodyId('block')];
+    data.mocap_pos[3 * mb + 2] = -1;
+    let block = null;
+    // S2 패널(P3, 10/10): 장면을 가림 1/3 · 대조 블록 1/3 · 블록 없음 1/3 로. 대조 = 같은 거리 d, 시선에서 ±70° 비켜난 방향(목표를 안 가림) — 블록의 '막힘' 효과만
+    //   확률로 고르면 seed 당 6 장면이라 쏠린다(실측 대조 7/12) → 장면 번호로 정확히 1/3 씩 (seed 마다 시작을 돌린다)
+    const kind = !L.occlude || !boxes.target.xy ? 'none' : ['none', 'occlude', L.occlude.control === false ? 'none' : 'control'][(task.key + (cfg.sceneSeed || 0)) % 3];
+    if (kind !== 'none') {
+      const T = boxes.target.xy, C = VISION_DEFAULT.pos, dh = [C[0] - T[0], C[1] - T[1]], dn = Math.hypot(...dh), off = kind === 'control' ? (r() < 0.5 ? 1 : -1) * 70 * Math.PI / 180 : 0;
+      const a0 = Math.atan2(dh[1] / dn, dh[0] / dn) + off, dir = [Math.cos(a0), Math.sin(a0)], yaw = a0;
+      const vo = cfg.vision && cfg.vision !== true ? cfg.vision : {}, n0 = targetRays(vo);
+      const put = d => { data.mocap_pos[3 * mb] = T[0] + d * dir[0]; data.mocap_pos[3 * mb + 1] = T[1] + d * dir[1]; data.mocap_pos[3 * mb + 2] = L.occlude.zc ?? 0.06;
+        data.mocap_quat[4 * mb] = Math.cos(yaw / 2); data.mocap_quat[4 * mb + 1] = 0; data.mocap_quat[4 * mb + 2] = 0; data.mocap_quat[4 * mb + 3] = Math.sin(yaw / 2); };
+      const D = L.occlude.d ?? [0.08, 0.10]; let d = u(D[0], D[1]);
+      put(d); let frac = n0 ? 1 - targetRays(vo) / n0 : null;
+      // P2(패널 2/3 이분 탐색 쪽): 가림 장면이 30–70 % 밖이면 d 를 1 cm 씩 고친다(최대 4 회, 0.05–0.12). 참값은 세계 생성에만 쓴다(결정 경로 아님)
+      for (let k = 0; kind === 'occlude' && frac !== null && (frac < 0.3 || frac > 0.7) && k < 4; k++) { d = Math.min(0.12, Math.max(0.05, d + (frac < 0.3 ? -0.01 : 0.01))); put(d); frac = 1 - targetRays(vo) / n0; }
+      block = { kind, qualified: kind === 'occlude' ? frac !== null && frac >= 0.3 && frac <= 0.7 : kind === 'control' ? frac !== null && frac < 0.1 : true, xy: [data.mocap_pos[3 * mb], data.mocap_pos[3 * mb + 1]], yaw, d, occ_frac_true: frac, target_px: n0 };
+    }
+    mj.mj_forward(model, data);
+    return { boxes, block };
+  }
+
   let kd = null;   // B′2: 보정용 운동학 전용 MjData (cfg.calib 일 때만 만든다)
   function handPose(q) {   // 손끝 위치 + 손 좌표계에서 본 중력 방향 (R 행 우선: Rᵀ·[0,0,-1] = −(셋째 행))
     kd ??= new mj.MjData(model);
@@ -125,13 +197,13 @@ export function makeEngine(mj, model, data, C, goal) {
   }
 
   let capG = null;   // L2-자유: 손 충돌 캡슐 geom 번호 (처음 쓸 때 찾는다)
-  function handReach(q) {   // 지금 관절에서 손 캡슐의 벽 축별 수평 반폭 [짧은 변 축, 긴 변 축] (잰 벽 yaw 기준)
+  function handReach(q, yaw = handReach.yaw) {   // 지금 관절에서 손 캡슐의 벽 축별 수평 반폭 [짧은 변 축, 긴 변 축] (그 장애물 yaw 기준)
     if (capG === null) { const hb = mj.mj_name2id(model, mj.mjtObj.mjOBJ_BODY.value, 'hand'); capG = -1;
       for (let g = 0; g < model.ngeom; g++) if (model.geom_bodyid[g] === hb && model.geom_type[g] === 3 && model.geom_conaffinity[g]) capG = g;
       if (capG < 0) throw new Error('L2-자유: 손 충돌 캡슐을 모델에서 못 찾음'); }
     handPose(q);   // kd 에 운동학 (geom 자세 포함)
     const R = kd.geom_xmat.slice(9 * capG, 9 * capG + 9), ax = [R[2], R[5], R[8]];
-    const ca = Math.cos(handReach.yaw), sa = Math.sin(handReach.yaw);
+    const ca = Math.cos(yaw), sa = Math.sin(yaw);
     return [ax[0] * ca + ax[1] * sa, -ax[0] * sa + ax[1] * ca].map(c => HAND_CAP.half * Math.abs(c) + HAND_CAP.r + HAND_CAP.pad);
   }
   handReach.yaw = 0;
@@ -199,24 +271,31 @@ export function makeEngine(mj, model, data, C, goal) {
     const supHit = floorZ !== null && !!obst?.sup && segPts(tipB, pred).some(p => overSup(p) && p[2] < obst.sup.z);
     const floorHit = floorZ !== null && (pred[2] < floorZ || supHit);
     // 검수 Flash(2차): 손목이 돌면 반폭이 바뀐다 → 걸음 앞뒤 관절의 반폭 중 큰 쪽으로 선분을 보고, 빠져나오기 판정은 앞뒤 각각으로
-    const r0 = obst?.wall && obst.reach ? obst.reach(qB) : null, r1 = r0 ? obst.reach(q1) : null;
-    const reachNow = r0 ? [Math.max(r0[0], r1[0]), Math.max(r0[1], r1[1])] : null;
-    const wallC = obst?.wall ? wallClear(tipB, pred, obst.wall, obst.below, reachNow) : Infinity;
-    let wallHit = wallC < WALL_MARGIN;
-    // L2-자유: 출발점이 이미 (넓힌) 발자국 안 여유 부족이면 — 추적 잡음·손 방향 변화로 들어올 수 있다 — 더 나빠지지 않는 걸음은 통과.
-    //   더 나빠짐 = 벽 면 쪽으로 다가감(짧은 변 축 |us| 감소) 또는 내려감. 대역 시험 실측: 이 규칙 없이 바로 위 5 cm 걸음까지 'wall' 로 거절돼 갇힘
-    if (wallHit && reachNow) {
-      const startC = wallClear(tipB, tipB, obst.wall, obst.below, r0);
-      if (startC < WALL_MARGIN) {
-        // 검수 Astra(2차): 절댓값 비교는 벽 면을 가로지르는 걸음(us +2 cm → −2 cm)도 통과시킨다 → 출발한 쪽 기준 부호 있는 거리로
-        const w = obst.wall, side = Math.sign((tipB[0] - w.c[0]) * Math.cos(w.yaw) + (tipB[1] - w.c[1]) * Math.sin(w.yaw)) || 1;
-        const away = p => side * ((p[0] - w.c[0]) * Math.cos(w.yaw) + (p[1] - w.c[1]) * Math.sin(w.yaw));
-        wallHit = away(pred) - r1[0] < away(tipB) - r0[0] - 0.001 || pred[2] < tipB[2] - 0.001;   // 손 가장자리가 벽 면에 다가가거나(넘어가거나) 내려가면 거절
+    // L3 S2(10/10, 패널 P1): 벽 하나 → 장애물 목록(잰 벽 + 상자 카메라로 잰 키 큰 블록 obst.extra). 장애물마다 같은 검사, 하나라도 걸리면 'wall'.
+    //   벽 하나뿐이면 계산은 예전과 같다(회귀 이벤트 동일 확인). 손 반폭은 장애물마다 그 축으로 투영
+    const walls = obst ? [obst.wall, ...(obst.extra ?? [])].filter(Boolean) : [];
+    let wallC = Infinity, wallHit = false;
+    for (const w of walls) {
+      const r0 = obst.reach ? obst.reach(qB, w.yaw) : null, r1 = r0 ? obst.reach(q1, w.yaw) : null;
+      const reachNow = r0 ? [Math.max(r0[0], r1[0]), Math.max(r0[1], r1[1])] : null;
+      const c = wallClear(tipB, pred, w, obst.below, reachNow);
+      let hit = c < WALL_MARGIN;
+      // L2-자유: 출발점이 이미 (넓힌) 발자국 안 여유 부족이면 — 추적 잡음·손 방향 변화로 들어올 수 있다 — 더 나빠지지 않는 걸음은 통과.
+      //   더 나빠짐 = 벽 면 쪽으로 다가감 또는 내려감. 대역 시험 실측: 이 규칙 없이 바로 위 5 cm 걸음까지 'wall' 로 거절돼 갇힘
+      if (hit && reachNow) {
+        const startC = wallClear(tipB, tipB, w, obst.below, r0);
+        if (startC < WALL_MARGIN) {
+          // 검수 Astra(2차): 절댓값 비교는 벽 면을 가로지르는 걸음(us +2 cm → −2 cm)도 통과시킨다 → 출발한 쪽 기준 부호 있는 거리로
+          const side = Math.sign((tipB[0] - w.c[0]) * Math.cos(w.yaw) + (tipB[1] - w.c[1]) * Math.sin(w.yaw)) || 1;
+          const away = p => side * ((p[0] - w.c[0]) * Math.cos(w.yaw) + (p[1] - w.c[1]) * Math.sin(w.yaw));
+          hit = away(pred) - r1[0] < away(tipB) - r0[0] - 0.001 || pred[2] < tipB[2] - 0.001;   // 손 가장자리가 벽 면에 다가가거나(넘어가거나) 내려가면 거절
+        }
       }
+      wallC = Math.min(wallC, c); wallHit = wallHit || hit;
     }
     const reason = maxDq > JERK ? 'jerk' : handErr > TILT ? 'tilt' : margin < 0 ? 'limit' : floorHit ? 'floor' : wallHit ? 'wall' : progress > PROG ? null : 'progress';
     const values = { max_dq: maxDq, hand_err: handErr, limit_margin: margin, progress };
-    if (obst?.wall && wallC < Infinity) values.wall_clear = wallC;   // L2 S3: 벽 발자국 위일 때만 기록 (L2 끄면 기록이 예전과 같다)
+    if (walls.length && wallC < Infinity) values.wall_clear = wallC;   // L2 S3: 벽 발자국 위일 때만 기록 (L2 끄면 기록이 예전과 같다)
     if (floorZ !== null) values.pred_z = pred[2];   // 바닥 검사를 켰을 때만 (끄면 기록이 예전과 같다)
     return { ok: reason === null, reason, dtip, values };
   }
@@ -235,6 +314,10 @@ export function makeEngine(mj, model, data, C, goal) {
       for (const [a, t] of [[12, yT], [19, yL]]) { data.qpos[a] = Math.cos(t / 2); data.qpos[a + 1] = 0; data.qpos[a + 2] = 0; data.qpos[a + 3] = Math.sin(t / 2); }
       mj.mj_forward(model, data); trueYaw = yT;
     }
+    // L3: 상자들을 레벨 3 규칙으로 다시 놓는다(장면 seed·장면 번호 해시 — 조건과 무관). 목표 방향 참값은 기록용 trueYaw 로
+    const l3Truth = cfg.l3 ? placeL3(cfg, task) : null;
+    if (!cfg.l3 && model.nq === 44) for (const n of L3_EXTRA) enableExtra(n, false);   // 검수 S2: 같은 모델로 레벨 3 아닌 에피소드를 돌리면 켜 둔 상자를 끈다
+    if (l3Truth) { trueYaw = l3Truth.boxes.target.yaw ?? 0; ev('l3-scene', l3Truth); }
     if (cfg.l2?.oracle && cfg.l2?.measure) throw new Error('L2: oracle 과 measure 는 함께 쓸 수 없다');
     // L2-자유(10/10, 사전등록 '레벨 2-자유'): 들기·운반 경유점 없이 쥔 뒤 곧장 놓을 곳 위(놓는 높이 + 3 cm) 한 점으로 걷는다.
     //   벽은 게이트만 안다(플래너 프롬프트에 벽 없음, 거절은 제약 진술만). 측정판 + 운반 걸음 단위에서만
@@ -255,6 +338,15 @@ export function makeEngine(mj, model, data, C, goal) {
         wallTop: e(l2Meas.wall, l2Truth.wall, (m, t) => m.top - t.top),
         supXY: e(l2Meas.support, l2Truth.support, (m, t) => Math.hypot(m.xy[0] - t.xy[0], m.xy[1] - t.xy[1])),
         supTop: e(l2Meas.support, l2Truth.support, (m, t) => m.top - t.top) } });
+    }
+    // L3 S2: 상자 카메라로 키 큰 회색 장애물(가림·대조 블록)을 한 번 잰다 → 게이트가 벽처럼 쓴다. 참값은 오차 기록에만
+    let l3Obst = [];
+    if (cfg.l3) {
+      if (!cfg.vision) throw new Error('L3 는 cfg.vision(상자 카메라)이 필요하다');
+      vis ??= makeVision(mj, model, data, cfg.vision === true ? {} : cfg.vision);
+      l3Obst = vis.obstacles(makeRng(base + 8)).map(b => ({ c: b.c, top: b.top, short: b.short, long: b.long, yaw: b.yaw }));
+      const tb = l3Truth.block;
+      ev('l3-obstacles', { meas: l3Obst, err: tb ? (l3Obst.length ? { xy: Math.min(...l3Obst.map(o => Math.hypot(o.c[0] - tb.xy[0], o.c[1] - tb.xy[1]))), n: l3Obst.length } : 'missed') : (l3Obst.length ? 'false-positive' : null) });
     }
     // L2: 운반 높이·놓을 점·놓는 높이 + 게이트·플래너에 줄 벽. 기본은 레벨 1 그대로(고정 놓을 곳, 탁자 높이, 벽 없음).
     //   cfg.l2.oracle = 의도적 대조군: 벽·받침 참값 (풀 수 있는 과제인지 + 측정판의 상한).
@@ -396,7 +488,7 @@ export function makeEngine(mj, model, data, C, goal) {
         const judge = () => {   // 제안 하나를 게이트에 넣고 proposal 이벤트를 남긴다 (게이트 꺼짐이면 판정 없이 기록만)
           const holding = ['lift', 'carry', 'place'].includes(phase);
           const floorZ = cfg.stepPhases && holding ? PLACE_Z - FLOOR_EPS : null;   // P1: 걸음 단계 옵션일 때 쥔 채 걷는 단계만
-          const obst = l2Wall || l2Sup ? { wall: l2Wall, below: holding ? 0.035 : 0.01, sup: l2Sup && { xy: l2Sup.xy, half: l2Sup.half, z: placeZ - FLOOR_EPS }, ...(FREE ? { reach: handReach } : {}) } : null;   // L2 S3: 쥔 상자 바닥(3.5 cm 아래) 또는 손가락 끝 · 받침 위 바닥
+          const obst = l2Wall || l2Sup || l3Obst.length ? { wall: l2Wall, ...(l3Obst.length ? { extra: l3Obst } : {}), below: holding ? 0.035 : 0.01, sup: l2Sup && { xy: l2Sup.xy, half: l2Sup.half, z: placeZ - FLOOR_EPS }, ...(FREE ? { reach: handReach } : {}) } : null;   // L2 S3: 쥔 상자 바닥(3.5 cm 아래) 또는 손가락 끝 · 받침 위 바닥
           const t0 = performance.now(), g = cfg.gate ? gateCheck(qB, tipB, dq, target, floorZ, obst) : null; gateUs += performance.now() - t0;
           if (FREE && g && l2Wall) {   // L2-자유: 면제 판단 (다른 검사는 그대로 — 진척만 면제)
             if (g.reason === 'wall' && clearOf(tipB[2]) < WALL_MARGIN) wallEx = true;   // 검수 Astra(2차): 이미 여유 ≥ 2 cm 면 켜지 않는다 (사전등록 '여유 +2 cm 면 소멸')
