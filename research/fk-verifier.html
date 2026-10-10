@@ -21,6 +21,8 @@
   <figure><img src="../assets/ksiis/framework.png" alt="Input, LLM planner, kinematics, imagine, pre-verify, execute, post-VLM with re-imagine and re-plan loops"><figcaption>From the KSIIS talk (Korean labels): LLM planner → kinematics (IK, FK skeleton) → imagined goal image → two-stage pre-verification → execute → post-execution check. A failed check re-imagines (up to 2×) or re-plans.</figcaption></figure>
   <h2>What was tested <span class="ko">무엇을 시험했나</span></h2>
   <p>The original idea was to let a VLM <i>imagine</i> the arm at its goal — edit the camera image — and execute toward that picture. Eight controlled experiments, mostly on a 2-DOF planar arm, located where this breaks.</p>
+  <figure class="chart"><img src="../assets/charts/fk_error_mm.svg" alt="End-effector error on a 2-DOF arm: reading angles from an image 14.5 mm, generating the moved arm 93.7 mm; image generation without joint angles 165.7 mm, with joint angles as text 276.9 mm"></figure>
+  <details class="more"><summary>All seven experiments</summary>
   <table style="border-collapse:collapse;font-size:.9rem;margin:10px 0 14px;width:100%">
 <tr><th style="text-align:left;padding:6px 10px">experiment</th><th style="text-align:left;padding:6px 10px">what was varied</th><th style="text-align:left;padding:6px 10px">result</th><th style="text-align:left;padding:6px 10px">reading</th></tr>
 <tr><td style="padding:6px 10px;vertical-align:top">Hints for image generation</td><td style="padding:6px 10px;vertical-align:top">none / target coordinates / joint angles and link lengths / all information</td><td style="padding:6px 10px;vertical-align:top">joint angles <i>raised</i> end-effector error 165.7 → 276.9 mm; 0/5 in both</td><td style="padding:6px 10px;vertical-align:top">more information made it worse</td></tr>
@@ -31,6 +33,7 @@
 <tr><td style="padding:6px 10px;vertical-align:top">DOF scaling</td><td style="padding:6px 10px;vertical-align:top">1 → 5 links, with and without the verifier cascade</td><td style="padding:6px 10px;vertical-align:top">2-DOF 0% → 100% with verification; plateau at +20% from 4 links</td><td style="padding:6px 10px;vertical-align:top">the verifier rescues, but cannot supply spatial grounding</td></tr>
 <tr><td style="padding:6px 10px;vertical-align:top">Verifier itself</td><td style="padding:6px 10px;vertical-align:top">cascade of render, IK/FK, collision, workspace and image–text checks</td><td style="padding:6px 10px;vertical-align:top">0 false passes in 50 checks on a 3D shelf task</td><td style="padding:6px 10px;vertical-align:top">the check was reliable; the planner was the bottleneck</td></tr>
 </table>
+  </details>
   <h2>Findings <span class="ko">발견</span></h2>
   <p>Image editing manipulates pixels, not rigid bodies: link lengths and joint connectivity are not preserved, rotations fail more often than translations, and without a grid there is no pixel-to-metre scale. Language does not carry the missing quantities either — giving joint angles as text made the result worse.</p>
   <p>The verification cascade, in contrast, was accurate. A verifier from the same model family as the planner shares its failure modes, so the checks that worked were the ones outside the model: kinematics, rendering and geometry.</p>

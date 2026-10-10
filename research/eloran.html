@@ -20,10 +20,16 @@
   </div>
 
   <h2>The problem <span class="ko">문제</span></h2>
-  <p>An eLoran pulse is a 100 kHz carrier under an asymmetric envelope; a Master station sends groups of 9 pulses and each Secondary 8, repeating every group repetition interval. TOA is taken 30 µs into the pulse, before skywave arrives. Adding N repetitions raises SNR by 10·log₁₀N dB — but only if every repetition is aligned in time. A one-carrier-cycle mistake (10 µs) is a cycle slip, kilometres of range error.</p>
+  <p class="point">Adding N repetitions raises SNR by 10·log₁₀N dB, but only if every repetition stays aligned in time. One carrier cycle off (10 µs) is kilometres of range error.</p>
+  <details class="more"><summary>The eLoran signal</summary>
+    <p>An eLoran pulse is a 100 kHz carrier under an asymmetric envelope; a Master station sends groups of 9 pulses and each Secondary 8, repeating every group repetition interval. TOA is taken 30 µs into the pulse, before skywave arrives. Adding N repetitions raises SNR by 10·log₁₀N dB — but only if every repetition is aligned in time. A one-carrier-cycle mistake (10 µs) is a cycle slip, kilometres of range error.</p>
+  </details>
 
   <h2>What I tried <span class="ko">시도한 것</span></h2>
-  <p><b>1 · A loss model.</b> Two independent kinds of loss: single samples dropped inside the receiver (interrupt delay, DMA overrun) and contiguous bursts from outside (lightning, interference) that can cross group boundaries. Each can be handled two ways: <i>blanking</i> keeps the index and zeroes the value — only energy is lost; <i>compression</i> deletes the gap and shifts everything after it — every later phase moves. Compression is the damaging case.</p>
+  <p class="point">Losses that <b>delete</b> samples shift every later phase; losses that only zero them cost energy. Deletion is the damaging case.</p>
+  <details class="more"><summary>1 · The loss model</summary>
+    <p><b>1 · A loss model.</b> Two independent kinds of loss: single samples dropped inside the receiver (interrupt delay, DMA overrun) and contiguous bursts from outside (lightning, interference) that can cross group boundaries. Each can be handled two ways: <i>blanking</i> keeps the index and zeroes the value — only energy is lost; <i>compression</i> deletes the gap and shifts everything after it — every later phase moves. Compression is the damaging case.</p>
+  </details>
   <figure><img src="../assets/eloran_pulse.png" alt="Loss model on one simulated pulse: original and distorted by hybrid loss"><figcaption>The loss model on one simulated pulse. Blue samples stay in place, coloured samples are pulled earlier by compression (colour = shift in samples), black dots are zero-filled.</figcaption></figure>
   <table style="border-collapse:collapse;font-size:.9rem;margin:10px 0 14px;width:100%">
     <tr><th style="text-align:left;padding:6px 10px 6px 0;width:22%">attempt</th><th style="text-align:left;padding:6px 10px">idea</th><th style="text-align:left;padding:6px 10px">what happened</th><th style="text-align:left;padding:6px 0 6px 10px">why it failed</th></tr>

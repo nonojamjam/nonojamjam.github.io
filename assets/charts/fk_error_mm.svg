@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 282" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#1d1d1f">
+<title>End-effector error in mm (lower is better), 2-DOF arm</title><rect width="680" height="282" fill="#fff"/>
+<text x="0" y="20" font-weight="650" font-size="14">End-effector error in mm (lower is better), 2-DOF arm</text>
+<text x="0" y="62.0" font-size="12" font-weight="650" fill="#6b6b70">VLM reads vs draws the arm</text>
+<text x="220" y="96.0" text-anchor="end">reads angles from an image</text>
+<rect x="230" y="78" width="280" height="26" fill="#f6f7f9"/>
+<rect x="230" y="78" width="14.7" height="26" rx="3" fill="#1a5fb4"/>
+<text x="252.7" y="96.0" font-weight="700" text-anchor="start" fill="#1d1d1f">14.5 mm</text>
+<text x="524" y="96.0" fill="#6b6b70" font-size="12">5/5 with a grid</text>
+<text x="220" y="134.0" text-anchor="end">generates the moved arm</text>
+<rect x="230" y="116" width="280" height="26" fill="#f6f7f9"/>
+<rect x="230" y="116" width="94.7" height="26" rx="3" fill="#b9bcc4"/>
+<text x="316.7" y="134.0" font-weight="700" text-anchor="end" fill="#fff">93.7 mm</text>
+<text x="524" y="134.0" fill="#6b6b70" font-size="12">0/5</text>
+<text x="0" y="176.0" font-size="12" font-weight="650" fill="#6b6b70">Giving the VLM more in text</text>
+<text x="220" y="210.0" text-anchor="end">without joint angles</text>
+<rect x="230" y="192" width="280" height="26" fill="#f6f7f9"/>
+<rect x="230" y="192" width="167.6" height="26" rx="3" fill="#b9bcc4"/>
+<text x="389.6" y="210.0" font-weight="700" text-anchor="end" fill="#fff">165.7 mm</text>
+<text x="524" y="210.0" fill="#6b6b70" font-size="12">0/5</text>
+<text x="220" y="248.0" text-anchor="end">+ joint angles as text</text>
+<rect x="230" y="230" width="280" height="26" fill="#f6f7f9"/>
+<rect x="230" y="230" width="280.0" height="26" rx="3" fill="#c0392b"/>
+<text x="502.0" y="248.0" font-weight="700" text-anchor="end" fill="#fff">276.9 mm</text>
+<text x="524" y="248.0" fill="#6b6b70" font-size="12">0/5, worse</text>
+</svg>

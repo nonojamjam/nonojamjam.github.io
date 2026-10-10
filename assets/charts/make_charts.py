@@ -21,6 +21,9 @@ def hbars(name, title, rows, vmax, unit="", w=680, label_w=230, note=None):
            f'<text x="0" y="20" font-weight="650" font-size="14">{esc(title)}</text>']
     for i, (lab, v, col, right) in enumerate(rows):
         y = top + i * (bh + gap)
+        if v is None:   # section header row
+            out.append(f'<text x="0" y="{y + bh / 2 + 9}" font-size="12" font-weight="650" fill="{MUT}">{esc(lab)}</text>')
+            continue
         bw = max(2, (x1 - x0) * v / vmax) if v else 0
         out.append(f'<text x="{x0 - 10}" y="{y + bh / 2 + 5}" text-anchor="end">{esc(lab)}</text>')
         out.append(f'<rect x="{x0}" y="{y}" width="{x1 - x0}" height="{bh}" fill="#f6f7f9"/>')
@@ -94,6 +97,23 @@ grouped("of_level2_calls", "Level 2 · large-model calls, held-out scenes (36 ep
     ("both", [706, 155, 99], ["31/36", "36/36", "35/36"]),
 ], [("no memory", GREY), ("level 1 memory", BLUE), ("memory grown on level 2", "#7aa5dc")], 1245,
     note="Numbers under the bars: boxes placed and left standing.")
+
+# research/fk-verifier.html, "What was tested" table (2-DOF planar arm, 5 trials each)
+hbars("fk_error_mm", "End-effector error in mm (lower is better), 2-DOF arm", [
+    ("VLM reads vs draws the arm", None, None, ""),
+    ("reads angles from an image", 14.5, BLUE, "5/5 with a grid"),
+    ("generates the moved arm", 93.7, GREY, "0/5"),
+    ("Giving the VLM more in text", None, None, ""),
+    ("without joint angles", 165.7, GREY, "0/5"),
+    ("+ joint angles as text", 276.9, RED, "0/5, worse"),
+], 276.9, unit=" mm")
+
+# research/capstone.html, Results table (Kaggle T4, 10 epochs, sigma 0.3, box mAP50, seed 0)
+grouped("cap_map50", "Box mAP50 · 2 × 2 ablation (σ = 0.3, seed 0)", [
+    ("noisy tiles", [0.015, 0.018, 0.178, 0.182], None),
+    ("clean tiles", [0.284, 0.297, 0.225, 0.231], None),
+], [("baseline", GREY), ("+ distillation", "#8e93a0"), ("+ noise training", "#7aa5dc"), ("+ both (proposed)", BLUE)], 0.30,
+    note="Noise training gives 97 % of the noisy-tile gain; distillation adds +0.005.")
 
 if __name__ == "__main__":
     print(sorted(p.name for p in OUT.glob("*.svg")))

@@ -20,6 +20,7 @@
   </div>
   <h2>What I tried <span class="ko">시도한 것</span></h2>
   <p>The target is a detector small enough for an on-board computer that still works when the image is noisy. The obvious route — distil a large, robust vision transformer into a small CNN — took four attempts.</p>
+  <details class="more"><summary>The four attempts</summary>
   <table style="border-collapse:collapse;font-size:.9rem;margin:10px 0 14px;width:100%">
 <tr><th style="text-align:left;padding:6px 10px">attempt</th><th style="text-align:left;padding:6px 10px">idea</th><th style="text-align:left;padding:6px 10px">what happened</th><th style="text-align:left;padding:6px 10px">why it fell short</th></tr>
 <tr><td style="padding:6px 10px;vertical-align:top"><b>1 · Feature-matching KD</b></td><td style="padding:6px 10px;vertical-align:top">1×1 adapter, MSE between DINOv2 and YOLO features (small COCO subset)</td><td style="padding:6px 10px;vertical-align:top">mAP below the plain detector</td><td style="padding:6px 10px;vertical-align:top">adapter too shallow; no detection loss in the objective</td></tr>
@@ -27,8 +28,11 @@
 <tr><td style="padding:6px 10px;vertical-align:top"><b>3 · Clean teacher, noisy student</b></td><td style="padding:6px 10px;vertical-align:top">teacher sees the clean tile, student the noisy one; align their statistics on iSAID</td><td style="padding:6px 10px;vertical-align:top">loss converged; no measured robustness gain</td><td style="padding:6px 10px;vertical-align:top">matching statistics of noisy features did not make detection robust</td></tr>
 <tr><td style="padding:6px 10px;vertical-align:top"><b>4 · RKD + mixed-noise training</b> (final)</td><td style="padding:6px 10px;vertical-align:top">distance-wise relational KD plus 50:50 clean/noisy training; teacher and adapter removed at inference</td><td style="padding:6px 10px;vertical-align:top">noisy mAP50 +0.163 at the same 22 MB model</td><td style="padding:6px 10px;vertical-align:top">—</td></tr>
 </table>
+  </details>
   <h2>Results <span class="ko">결과</span></h2>
   <p class="meta">Kaggle T4, 10 epochs, σ = 0.3, box mAP50, seed 0; the noise-training gain repeated with seed 1 (±0.0005)</p>
+  <figure class="chart"><img src="../assets/charts/cap_map50.svg" alt="Box mAP50, 2x2 ablation. Noisy tiles: baseline 0.015, distillation 0.018, noise training 0.178, both 0.182. Clean tiles: 0.284, 0.297, 0.225, 0.231."></figure>
+  <details class="more"><summary>Table</summary>
   <table style="border-collapse:collapse;font-size:.92rem;margin:6px 0 12px">
     <tr><th style="text-align:left;padding:4px 14px 4px 0">model</th><th style="padding:4px 14px">noisy</th><th style="padding:4px 14px">clean</th></tr>
     <tr><td style="padding:3px 14px 3px 0">Baseline (clean-only)</td><td style="padding:3px 14px">0.015</td><td style="padding:3px 14px">0.284</td></tr>
@@ -36,8 +40,9 @@
 <tr><td style="padding:3px 14px 3px 0">+ noise training</td><td style="padding:3px 14px">0.178</td><td style="padding:3px 14px">0.225</td></tr>
     <tr><td style="padding:3px 14px 3px 0"><b>+ distillation (proposed)</b></td><td style="padding:3px 14px"><b>0.182</b></td><td style="padding:3px 14px">0.231</td></tr>
   </table>
+  </details>
   <figure><img src="../assets/profile/noise_slider.gif" alt="Slider comparison on one noisy tile: baseline 0 detections, proposed detects the aircraft" style="max-width:440px;display:block;margin:0 auto"><figcaption>Slider from the interactive demo: baseline (left) finds nothing, proposed (right) detects the aircraft.</figcaption></figure>
-  <p class="meta">Qualitative; the quantitative result is the table above.</p>
+  <p class="meta">Qualitative; the numbers are in the chart above.</p>
   <h2>What the 2 × 2 ablation says <span class="ko">2×2 분해</span></h2>
   <p>Running all four combinations (with / without distillation × with / without noise training) separated the two effects. Noise training alone gives +0.163 noisy mAP50 — 97% of the gain; distillation adds +0.005, small but positive in all four comparisons. The two barely interact. Robustness is not free: clean mAP50 drops by about 0.06.</p>
   <div class="box">The robustness came from what the model trained on, not from what it was taught by the teacher. The open question is whether the clean/noisy trade-off is fundamental or a side effect of sharing one set of weights and normalisation statistics.</div>
