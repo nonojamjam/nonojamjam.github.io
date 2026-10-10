@@ -66,3 +66,4 @@ table th,table td{border-bottom:1px solid var(--line)}
 .demo img{width:100%;display:block}
 .demo div{padding:10px 14px;font-size:.9rem;color:var(--txt)} .demo div b{color:var(--link)}
 .demo:hover{border-color:var(--link);text-decoration:none}
+figure.pipe{margin:14px 0 6px} figure.pipe img{width:100%;height:auto;border:1px solid var(--line);border-radius:6px;display:block} figure.pipe figcaption{font-size:.84rem;color:var(--mut);margin-top:6px}

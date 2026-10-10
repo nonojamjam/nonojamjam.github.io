@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 452" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#1d1d1f">
+  <title>Pipeline of the preliminary study: sense, propose, decide, act and remember</title>
+  <defs>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#6b6b70"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#1a5fb4"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#c0392b"/></marker>
+    <marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#1d1d1f"/></marker>
+  </defs>
+  <rect width="960" height="452" fill="#fff"/>
+
+  <!-- stage headers -->
+  <g font-size="11" font-weight="600" fill="#6b6b70" letter-spacing=".08em">
+    <text x="20" y="22">1 · SENSE</text>
+    <text x="360" y="22">2 · PROPOSE</text>
+    <text x="610" y="22">3 · DECIDE</text>
+    <text x="800" y="22">4 · ACT</text>
+  </g>
+
+  <!-- remember loop (top) -->
+  <path d="M870,96 V48 H465 V88" fill="none" stroke="#1a5fb4" stroke-width="2" marker-end="url(#ab)"/>
+  <text x="667" y="42" text-anchor="middle" font-size="12" fill="#1a5fb4" font-weight="600">remember only steps that passed the gate and brought the hand closer</text>
+
+  <!-- 1 sense -->
+  <g font-size="12">
+    <rect x="20" y="100" width="136" height="32" rx="6" fill="#f6f7f9" stroke="#c8c8cd"/><text x="88" y="120" text-anchor="middle">camera image</text>
+    <rect x="20" y="144" width="136" height="32" rx="6" fill="#f6f7f9" stroke="#c8c8cd"/><text x="88" y="164" text-anchor="middle">range tracker</text>
+    <rect x="20" y="188" width="136" height="32" rx="6" fill="#f6f7f9" stroke="#c8c8cd"/><text x="88" y="208" text-anchor="middle">IMU</text>
+    <rect x="20" y="232" width="136" height="32" rx="6" fill="#f6f7f9" stroke="#c8c8cd"/><text x="88" y="252" text-anchor="middle">touch</text>
+  </g>
+  <g stroke="#6b6b70" stroke-width="1.4" fill="none">
+    <path d="M156,116 L186,150" marker-end="url(#ag)"/><path d="M156,160 L186,170" marker-end="url(#ag)"/>
+    <path d="M156,204 L186,196" marker-end="url(#ag)"/><path d="M156,248 L186,216" marker-end="url(#ag)"/>
+  </g>
+  <rect x="190" y="110" width="140" height="146" rx="8" fill="#fff" stroke="#1d1d1f" stroke-width="1.3"/>
+  <text x="260" y="134" text-anchor="middle" font-weight="650">what it believes</text>
+  <g font-size="12" fill="#3a3a3f" text-anchor="middle">
+    <text x="260" y="158">joint reading,</text>
+    <text x="260" y="174">offset calibrated</text>
+    <text x="260" y="190">from tracker + IMU</text>
+    <text x="260" y="214">box poses measured</text>
+    <text x="260" y="230">in the camera image</text>
+  </g>
+  <rect x="190" y="270" width="140" height="48" rx="6" fill="#fdf1ef" stroke="#c0392b" stroke-dasharray="4 3"/>
+  <g font-size="11" fill="#8e2b20" text-anchor="middle">
+    <text x="260" y="289">sensors disagree &gt; 5 cm</text>
+    <text x="260" y="305">→ memory is not recalled</text>
+  </g>
+  <path d="M260,318 V338 H371 V134 H378" fill="none" stroke="#c0392b" stroke-width="1.3" stroke-dasharray="4 3"/>
+  <path d="M372,127 l12,12 M384,127 l-12,12" stroke="#c0392b" stroke-width="2.4"/>
+  <path d="M330,183 H356" stroke="#1d1d1f" stroke-width="1.6" marker-end="url(#ak)"/>
+
+  <!-- 2 propose (unverified) -->
+  <rect x="360" y="80" width="210" height="246" rx="10" fill="none" stroke="#b0b0b6" stroke-dasharray="5 4"/>
+  <text x="465" y="318" text-anchor="middle" font-size="11" fill="#6b6b70" font-style="italic">unverified until the gate says yes</text>
+  <!-- memory cylinder -->
+  <path d="M380,100 V156 A85,9 0 0 0 550,156 V100" fill="#eef4fc" stroke="#1a5fb4" stroke-width="1.4"/>
+  <ellipse cx="465" cy="100" rx="85" ry="9" fill="#dce8f8" stroke="#1a5fb4" stroke-width="1.4"/>
+  <text x="465" y="127" text-anchor="middle" font-weight="650" fill="#1a5fb4">① verified memory</text>
+  <text x="465" y="144" text-anchor="middle" font-size="12" fill="#3a3a3f">replays a stored step</text>
+  <text x="465" y="159" text-anchor="middle" font-size="12" fill="#3a3a3f">if similar (score ≥ 0.5)</text>
+  <rect x="380" y="180" width="170" height="52" rx="8" fill="#fff" stroke="#1d1d1f" stroke-width="1.2"/>
+  <text x="465" y="201" text-anchor="middle" font-weight="650">② small LLM · 4B</text>
+  <text x="465" y="219" text-anchor="middle" font-size="12" fill="#3a3a3f">proposes one step</text>
+  <rect x="380" y="244" width="170" height="52" rx="8" fill="#fff" stroke="#1d1d1f" stroke-width="1.2"/>
+  <text x="465" y="265" text-anchor="middle" font-weight="650">③ large LLM · 32B</text>
+  <text x="465" y="283" text-anchor="middle" font-size="12" fill="#3a3a3f">called only when stuck</text>
+  <g stroke="#6b6b70" stroke-width="1.2" fill="none">
+    <path d="M465,166 V178" marker-end="url(#ag)"/><path d="M465,232 V242" marker-end="url(#ag)"/></g><g font-size="10" fill="#6b6b70"><text x="472" y="175">none left</text><text x="472" y="240">after 2 rejections</text>
+  </g>
+
+  <!-- proposal -> gate -->
+  <path d="M570,194 H606" stroke="#1d1d1f" stroke-width="1.6" marker-end="url(#ak)"/>
+  <text x="588" y="186" text-anchor="middle" font-size="11" fill="#6b6b70">step</text>
+
+  <!-- 3 gate -->
+  <rect x="610" y="80" width="160" height="246" rx="10" fill="#fffaea" stroke="#c9a227" stroke-width="2"/>
+  <text x="690" y="106" text-anchor="middle" font-weight="700">kinematic gate</text>
+  <text x="690" y="124" text-anchor="middle" font-size="11" fill="#6b6b70">checks every proposal</text>
+  <text x="690" y="139" text-anchor="middle" font-size="11" fill="#6b6b70">before it runs</text>
+  <g font-size="12" fill="#3a3a3f">
+    <text x="630" y="168">✓ step size</text>
+    <text x="630" y="191">✓ hand tilt</text>
+    <text x="630" y="214">✓ joint limits</text>
+    <text x="630" y="237">✓ floor</text>
+    <text x="630" y="260">✓ wall &amp; obstacles</text>
+    <text x="630" y="283">✓ closer to target</text>
+  </g>
+  <text x="690" y="312" text-anchor="middle" font-size="11" fill="#8a6d0b">no LLM inside</text>
+
+  <!-- gate -> act -->
+  <path d="M770,160 H796" stroke="#1d1d1f" stroke-width="1.6" marker-end="url(#ak)"/>
+  <text x="783" y="152" text-anchor="middle" font-size="11" fill="#6b6b70">pass</text>
+
+  <!-- 4 act -->
+  <rect x="800" y="96" width="140" height="130" rx="10" fill="#f6f7f9" stroke="#1d1d1f" stroke-width="1.3"/>
+  <text x="870" y="142" text-anchor="middle" font-weight="650">Panda moves</text>
+  <text x="870" y="160" text-anchor="middle" font-size="12" fill="#3a3a3f">one step,</text>
+  <text x="870" y="176" text-anchor="middle" font-size="12" fill="#3a3a3f">then senses again</text>
+  <path d="M870,226 V242" stroke="#c9a227" stroke-dasharray="3 3" stroke-width="1.4"/>
+  <rect x="800" y="244" width="140" height="52" rx="8" fill="#fff" stroke="#c9a227" stroke-dasharray="4 3"/>
+  <text x="870" y="265" text-anchor="middle" font-size="11" fill="#6b6b70">before each grasp</text>
+  <text x="870" y="282" text-anchor="middle" font-size="11.5" font-weight="650">observe→verify→act</text>
+
+  <!-- reject loop (bottom) -->
+  <path d="M690,326 V352 H465 V330" fill="none" stroke="#c0392b" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="577" y="370" text-anchor="middle" font-size="12" fill="#c0392b" font-weight="600">reject + reason → next memory candidate, or ask the planner again</text>
+  <text x="577" y="384" text-anchor="middle" font-size="11" fill="#8e2b20">a remembered step that fails is forgotten</text>
+
+  <!-- level 2 add-on, under evaluation -->
+  <rect x="20" y="396" width="920" height="46" rx="8" fill="#fafafb" stroke="#b0b0b6" stroke-dasharray="5 4"/>
+  <text x="36" y="416" font-size="12" font-weight="650" fill="#3a3a3f">Being evaluated, not a result yet (level 2, wall):</text>
+  <text x="36" y="433" font-size="12" fill="#3a3a3f">on a “wall” rejection, search 5 cm moves the gate accepts until a straight path is clear; detours that ran to the end are stored and tried first at the next wall.</text>
+</svg>
