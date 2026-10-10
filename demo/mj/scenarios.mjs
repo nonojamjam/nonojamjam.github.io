@@ -308,7 +308,10 @@ export function makeEngine(mj, model, data, C, goal) {
   function* episode(task, cfg, mem, st, seed, ev = () => {}) {
     const base = (seed * 7919 + task.idx * 104729) >>> 0;
     const rCam = makeRng(base + 1), rPlan = makeRng(base + 2), rSen = makeRng(base + 3);
-    const bias = cfg.bias ? 0.15 : 0;
+    // L3 S5(10/10): 고장 중간 발병 — cfg.l3.fault = { k } 이면 에피소드 번호(task.idx, 방문 순) k 부터 어깨 읽기 +0.15 rad (끝까지). 사전등록 k = 튜닝에서 정함(없으면 10)
+    const faultOn = !!(cfg.l3?.fault && task.idx >= (cfg.l3.fault.k ?? 10));
+    const bias = cfg.bias || faultOn ? 0.15 : 0;
+    if (cfg.l3?.fault) ev('fault', { on: faultOn, k: cfg.l3.fault.k ?? 10 });
     C.reset([0, 0], task.place);
     // V3: cfg.yaw = 상자 회전 범위(±도). 회전값은 장면 seed·장면 번호로만 정한다 (조건이 달라도 같은 세계). 끄면 회전 없음
     let trueYaw = 0;
@@ -470,7 +473,8 @@ export function makeEngine(mj, model, data, C, goal) {
       let reached = false;
       wallEx = false;
       for (let n = 0; n < maxSteps; n++) {
-        const dis = cal ? calObserve() : rMon ? monitorDis() : 0; lastDis = dis;   // B′2: 관측은 읽기 전에 (방금 갱신된 Δ̂ 로 이 걸음을 읽는다) · V4: 감시만
+        const dis = cal ? calObserve() : rMon ? monitorDis() : 0; lastDis = dis;
+        if (cfg.l3?.fault) ev('dis', { dis });   // L3 S5: 걸음마다 추적−FK 불일치 (감지 지연 채점용, 감시는 cfg.monitor 또는 보정이 켜져 있어야 값이 생긴다)   // B′2: 관측은 읽기 전에 (방금 갱신된 Δ̂ 로 이 걸음을 읽는다) · V4: 감시만
         if (cfg.monitor) { monAgg.n++; monAgg.max = Math.max(monAgg.max, dis); if (dis > (cfg.monitor.delta ?? 0.05)) monAgg.over++; }
         const qB = rd(), tipB = believedTip(qB);
         if (d3(tipB, target) < SUCC) { reached = true; break; }
