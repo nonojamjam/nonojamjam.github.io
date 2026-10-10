@@ -119,6 +119,8 @@ export function makeEngine(mj, model, data, C, goal) {
   //   추가 상자는 컴파일 때 충돌·중력이 꺼져 있다(레벨 1·2 물리 불변, S1). 켤 때 순서 = 옮김 → 속도 0 → mj_forward → geom·body 마스크 → gravcomp 0 (검수 Astra S1: body 마스크도 0 으로 집계됨).
   //   ⚠️ 참값(위치·방향·가림 비율)은 채점·기록·세계 생성 전용. 결정 경로(비전·계획·게이트·기억)는 측정값만.
   const L3_EXTRA = ['dist36', 'flat', 't2'];
+  // L3 S3: 상자 비전 설정 — 3D 이음 끊기(jump 12 mm) + 물체 목록 분류(과제 명세 크기, 위에서 본 [짧은, 긴]) + 측정 치우침(튜닝 519·520 실측) + 불확실 문턱
+  const L3_VISION = { jump: 0.012, catalog: { target: [0.032, 0.040], lookalike: [0.040, 0.040], dist36: [0.036, 0.044], flat: [0.021, 0.060], t2: [0.026, 0.040] }, bias: [-0.0010, -0.0015], ambig: 0.6 };
   const L3_Z = { target: 0.03, lookalike: 0.03, dist36: 0.03, flat: 0.02, t2: 0.03 };   // 반높이 = 탁자 위 중심 높이
   const bodyId = n => mj.mj_name2id(model, mj.mjtObj.mjOBJ_BODY.value, n), geomId = n => mj.mj_name2id(model, mj.mjtObj.mjOBJ_GEOM.value, n);
   const qadr = n => { const b = bodyId(n); for (let j = 0; j < model.njnt; j++) if (model.jnt_bodyid[j] === b) return [model.jnt_qposadr[j], model.jnt_dofadr[j]]; throw new Error(`L3: ${n} 자유관절 없음 — pickplace_l3.mjb 를 쓰세요`); };
@@ -340,10 +342,11 @@ export function makeEngine(mj, model, data, C, goal) {
         supTop: e(l2Meas.support, l2Truth.support, (m, t) => m.top - t.top) } });
     }
     // L3 S2: 상자 카메라로 키 큰 회색 장애물(가림·대조 블록)을 한 번 잰다 → 게이트가 벽처럼 쓴다. 참값은 오차 기록에만
+    const visOpt = () => ({ ...(cfg.l3 ? L3_VISION : {}), ...(cfg.vision === true ? {} : cfg.vision) });
     let l3Obst = [];
     if (cfg.l3) {
       if (!cfg.vision) throw new Error('L3 는 cfg.vision(상자 카메라)이 필요하다');
-      vis ??= makeVision(mj, model, data, cfg.vision === true ? {} : cfg.vision);
+      vis ??= makeVision(mj, model, data, visOpt());
       l3Obst = vis.obstacles(makeRng(base + 8)).map(b => ({ c: b.c, top: b.top, short: b.short, long: b.long, yaw: b.yaw }));
       const tb = l3Truth.block;
       ev('l3-obstacles', { meas: l3Obst, err: tb ? (l3Obst.length ? { xy: Math.min(...l3Obst.map(o => Math.hypot(o.c[0] - tb.xy[0], o.c[1] - tb.xy[1]))), n: l3Obst.length } : 'missed') : (l3Obst.length ? 'false-positive' : null) });
@@ -368,9 +371,9 @@ export function makeEngine(mj, model, data, C, goal) {
     let beliefYaw = 0;
     const see = () => {
       if (!cfg.vision) return cam();
-      vis ??= makeVision(mj, model, data, cfg.vision === true ? {} : cfg.vision);
-      const L = vis.look(rVis), now = C.bodyPos(C.bTarget);
-      ev('vision', { ok: L.ok, xy: L.xy, yaw: L.yaw, short: L.short ?? null, cands: L.cands.length, err: L.ok ? Math.hypot(L.xy[0] - now[0], L.xy[1] - now[1]) : null, ...(L.frame ? { frame: L.frame, pick: L.pick } : {}) });   // frame: 데모가 cfg.vision={frame:true} 일 때만
+      vis ??= makeVision(mj, model, data, visOpt());
+      const L = vis.look(rVis, cfg.l3 ? 'target' : null), now = C.bodyPos(C.bTarget);
+      ev('vision', { ok: L.ok, xy: L.xy, yaw: L.yaw, short: L.short ?? null, cands: L.cands.length, err: L.ok ? Math.hypot(L.xy[0] - now[0], L.xy[1] - now[1]) : null, ...(L.frame ? { frame: L.frame, pick: L.pick } : {}), ...(cfg.l3 ? { uncertain: L.uncertain, ratio: L.ratio ?? null, twins: L.twins ?? 0, cls: L.cls ?? [] } : {}) });   // frame: 데모가 cfg.vision={frame:true} 일 때만
       if (!L.ok) { st.visionMiss = (st.visionMiss || 0) + 1; return [0.525, 0.09]; }
       beliefYaw = L.yaw; return L.xy;
     };

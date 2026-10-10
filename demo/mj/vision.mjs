@@ -54,7 +54,8 @@ export function makeVision(mj, model, data, opt = {}) {
         const r = (i / V.W) | 0, c = i % V.W;
         for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
           const rr = r + dr, cc = c + dc, j = rr * V.W + cc;
-          if (rr >= 0 && rr < V.H && cc >= 0 && cc < V.W && isBox[j] && lab[j] < 0) { lab[j] = out.length; stack.push(j); }
+          // L3 S3(10/10): V.jump 이면 이웃 화소의 3D 거리가 jump 넘으면 잇지 않는다 — 시선 방향으로 6 cm 떨어진 두 상자가 한 덩어리(긴 변 99–110 mm)로 붙었다 [실측 S3]. 기본 null = 예전 그대로
+          if (rr >= 0 && rr < V.H && cc >= 0 && cc < V.W && isBox[j] && lab[j] < 0 && (!V.jump || Math.hypot(img[i].p[0] - img[j].p[0], img[i].p[1] - img[j].p[1], img[i].p[2] - img[j].p[2]) < V.jump)) { lab[j] = out.length; stack.push(j); }
         }
       }
       if (mem.length < V.minPx) { out.push(null); continue; }
@@ -86,7 +87,22 @@ export function makeVision(mj, model, data, opt = {}) {
       return { short: b.short, long: b.long, corners: [[hs, hl], [-hs, hl], [-hs, -hl], [hs, -hl]].map(([x, y]) => project([b.c[0] + x * ca - y * sa, b.c[1] + x * sa + y * ca, b.top])) }; });
     return { W: V.W, H: V.H, rgba, boxes };
   }
-  function look(rng) {   // → 목표 추정 { ok, xy, yaw, cands }. 목표 = 짧은 변이 가장 짧은 후보, 단 짧은 변 < shortMax 이고 직사각(긴 변 − 짧은 변 > rectMin)일 때만
+  // L3 S3(10/10): 물체 목록 분류. V.catalog = { 이름: [짧은 변, 긴 변] m (과제 명세) } + V.bias = [짧은, 긴] 측정 치우침(튜닝 seed 519·520 실측 −1.0·−1.5 mm 로 고정).
+  //   덩어리마다 (짧은, 긴) 이 가장 가까운 목록 항목으로 분류, want 로 분류된 것 중 가장 가까운 것을 고른다. 둘째로 가까운 항목과의 거리 비 > V.ambig 면 불확실.
+  //   참값·geom 번호 안 씀 — 잰 크기와 과제 명세만. catalog 가 없으면 아래 예전 look 그대로
+  function lookAs(rng, want) {
+    const img = capture(rng), cands = detect(img), bias = V.bias ?? [0, 0];
+    const T = Object.entries(V.catalog).map(([n, [a, b]]) => [n, a + bias[0], b + bias[1]]);
+    const scored = cands.map(c => { const d = T.map(([n, a, b]) => [Math.hypot(c.short - a, c.long - b), n]).sort((x, y) => x[0] - y[0]); return { c, cls: d[0][1], d1: d[0][0], ratio: d.length > 1 ? d[0][0] / Math.max(d[1][0], 1e-9) : 0 }; });   // 검수 Flash S3: 목록 1 개 가드
+    const pick = scored.filter(x => x.cls === want).sort((x, y) => x.d1 - y.d1)[0];
+    const frame = V.frame ? frameOf(img, cands) : null;
+    if (!pick) return { ok: false, xy: null, yaw: 0, cands, frame, pick: -1, uncertain: true, cls: scored.map(x => x.cls) };
+    // 검수 Astra(S3): 같은 종류로 분류된 후보가 둘 이상이면(목표와 가려진 방해물이 둘 다 목표 크기로 잰 경우 등) 후보 간에도 애매 → 불확실
+    const twins = scored.filter(x => x.cls === want).length;
+    return { ok: true, xy: pick.c.c, yaw: pick.c.yaw, short: pick.c.short, long: pick.c.long, cands, frame, pick: cands.indexOf(pick.c), uncertain: pick.ratio > (V.ambig ?? 0.6) || twins > 1, ratio: pick.ratio, twins, cls: scored.map(x => x.cls) };
+  }
+  function look(rng, want = null) {
+    if (V.catalog && want) return lookAs(rng, want);   // → 목표 추정 { ok, xy, yaw, cands }. 목표 = 짧은 변이 가장 짧은 후보, 단 짧은 변 < shortMax 이고 직사각(긴 변 − 짧은 변 > rectMin)일 때만
     //   검수 반영: 문턱 하나(34 mm)는 양쪽 여유가 1.6 mm 뿐이었다 → 폭 + 모양 두 기준으로 (목표 32×40 직사각 · 닮은 40×40 정사각)
     const img = capture(rng), cands = detect(img), tgt = cands.slice().sort((a, b) => a.short - b.short).find(b => b.short < V.shortMax && b.long - b.short > V.rectMin);
     const frame = V.frame ? frameOf(img, cands) : null;   // 데모 전용 (opt.frame) — 실험 경로는 만들지 않는다
