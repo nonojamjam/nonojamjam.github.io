@@ -151,7 +151,8 @@ export function makeEngine(mj, model, data, C, goal) {
     let h = (((cfg.sceneSeed || 0) * 7919 + task.key * 104729 + 31) ^ 0x85ebca6b) >>> 0;
     h = Math.imul(h ^ (h >>> 16), 0x85ebca6b); h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35); h = (h ^ (h >>> 16)) >>> 0;
     const r = makeRng(h), u = (lo, hi) => lo + (hi - lo) * r(), L = cfg.l3;
-    const X = L.x ?? [0.42, 0.62], Y = L.y ?? [0.00, 0.20], SEP = L.sep ?? 0.06, YAW = (cfg.yaw ?? 90) * Math.PI / 180;
+    const X = L.x ?? [0.40, 0.66], Y = L.y ?? [-0.02, 0.22], SEP = L.sep ?? 0.10,   // S7 개정(10/10): 6 cm 는 손 캡슐(축 10 cm)이 옆 상자를 쳐 넘어뜨렸다 [실측 참값 대조군] → 10 cm, 영역 넓힘(배치 실패 0/36)
+      YAW = (cfg.yaw ?? 90) * Math.PI / 180;
     const names = ['target', 'lookalike', ...(L.distract === false ? [] : ['dist36', 'flat']), ...(L.seq ? ['t2'] : [])];
     const boxes = {}, placed = [];
     for (const n of names) {   // 기각 샘플링 — 상호 거리 ≥ SEP, 최대 200 회. 못 놓으면 그 상자는 꺼진 채 작업 영역 밖 (기록에 missing)
@@ -562,7 +563,9 @@ export function makeEngine(mj, model, data, C, goal) {
 
     // L3 S4(10/10): 연속 과제 — 1단계 목표(32 mm) → G1(dst), 2단계 t2(26 mm) → G2. 단계마다 시도 3 회(= 재관찰 2), 촉각 기대 폭은 단계 상자, 허용오차 ±1.5 mm
     //   (튜닝 실측: 맞는 상자를 쥔 폭 31.9 mm 로 거의 일정 → 32 / 36 / 26 을 가른다). 레벨 3 아니면 단계 하나 = 예전 그대로
-    const G2 = cfg.l3?.seq ? [goal[0] + 0.14, goal[1]] : null;
+    // G2: 놓을 곳 + 14 cm x. 잰 받침(l2Sup, 측정값)이 그 근처면(발자국 + 8 cm 안) 반대쪽 −14 cm 로 — 받침 위 바닥 검사가 탁자로 내려가는 걸음을 막는다
+    let G2 = cfg.l3?.seq ? [goal[0] + 0.14, goal[1]] : null;
+    if (G2 && l2Sup) { const cand = [[goal[0] + 0.14, goal[1]], [goal[0] - 0.14, goal[1]]], far = c => Math.max(Math.abs(c[0] - l2Sup.xy[0]), Math.abs(c[1] - l2Sup.xy[1])) - l2Sup.half; G2 = cand.sort((a, b) => far(b) - far(a))[0]; }   // 검수 Astra S7: 두 후보 중 잰 받침에서 더 먼 쪽
     const STAGES = cfg.l3?.seq ? [{ want: 'target', W: TARGET_W, dst, pz: placeZ }, { want: 't2', W: 0.026, dst: G2, pz: PLACE_Z }] : [{ want: 'target', W: TARGET_W, dst, pz: placeZ }];   // pz: 2차는 늘 탁자 위
     const TOL = cfg.l3 ? 0.0015 : TOUCH_TOL;
     const stageDone = [];
@@ -573,6 +576,9 @@ export function makeEngine(mj, model, data, C, goal) {
       setPhase('approach');
       const pre = [belief[0], belief[1], GRASP_Z + PRE];
       ev('reach-start', { tip: tipNow(), belief: believedTip(rd()) });
+      // L3 S7(10/10): 경유점 방식 + 벽이면 2단계 접근도 운반 높이를 거친다 — 1차를 벽 너머에 놓고 돌아올 때 직선 접근이 벽에 막혔다(대역 'wall' 거절 32 [실측]).
+      //   자유 모드는 LLM 이 돌아갈 길을 찾아야 하므로 그대로
+      if (si > 0 && attempt === 0 && l2Wall && !FREE && !(yield* stepTo([belief[0], belief[1], carryZ]))) ev('phase-not-reached', { phase: 'approach-over' });   // 검수 Astra S7: 못 닿으면 기록(다음 직선 접근은 게이트가 벽을 막는다)
       // ---- 걸음 단위로 잡을 지점 위까지 ----
       const reached = yield* stepTo(pre);
       if (!reached) { st.notReached++; ev('not-reached'); break; }
@@ -655,6 +661,7 @@ export function makeEngine(mj, model, data, C, goal) {
       break;
     }
     stageDone.push(stageOk);
+    if (cfg.l3) { const tl = b => tiltDegFromXmat(data.xmat.slice(9 * b, 9 * b + 9)); ev('stage-end', { stage: STG.want, ok: stageOk, tiltTarget: tl(C.bTarget), tiltT2: tl(bodyId('t2')), target: C.bodyPos(C.bTarget) }); }   // L3 S7: 채점·진단 전용 참값 — 2단계 중 1차 상자가 넘어가는지
     if (!stageOk) break;   // L3: 1단계를 못 마치면 2단계는 하지 않는다 (실패 단계 = 1차)
     }
     // L2: 받침이 있으면 성공 = 상자 중심이 받침 윗면 안쪽 위 (참값 채점). 없으면 예전 그대로 놓을 곳 12 cm 칸
