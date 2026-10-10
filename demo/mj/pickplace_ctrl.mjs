@@ -14,7 +14,8 @@ export function makeController(mj, model, data) {
   const jacr = new mj.DoubleBuffer(3 * model.nv);
   let Rdes = null;   // 목표 손 방향 (reset 에서 정함)
   // 인덱스 가정 확인: 팔 7 + 손가락 2 + 상자 freejoint 7×2 = 23, 액추에이터 8 (손가락 1개가 두 손가락을 함께 구동)
-  if (model.nq !== 23 || model.nu !== 8 || site < 0 || bTarget < 0) throw new Error(`unexpected model: nq=${model.nq} nu=${model.nu}`);
+  // 레벨 3(10/10): 상자 freejoint 가 3 개 더(방해 2 + 2차 목표) = 44. 뒤에 붙어 있어 위 번호(9..22)는 그대로
+  if (![23, 44].includes(model.nq) || model.nu !== 8 || site < 0 || bTarget < 0) throw new Error(`unexpected model: nq=${model.nq} nu=${model.nu}`);
 
   function reset(jitter = [0, 0], place = null) {
     mj.mj_resetData(model, data);
