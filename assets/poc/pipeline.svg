@@ -106,8 +106,8 @@
   <text x="577" y="370" text-anchor="middle" font-size="12" fill="#c0392b" font-weight="600">reject + reason → next memory candidate, or ask the planner again</text>
   <text x="577" y="384" text-anchor="middle" font-size="11" fill="#8e2b20">a remembered step that fails is forgotten</text>
 
-  <!-- level 2 add-on, under evaluation -->
-  <rect x="20" y="396" width="920" height="46" rx="8" fill="#fafafb" stroke="#b0b0b6" stroke-dasharray="5 4"/>
-  <text x="36" y="416" font-size="12" font-weight="650" fill="#3a3a3f">Being evaluated, not a result yet (level 2, wall):</text>
-  <text x="36" y="433" font-size="12" fill="#3a3a3f">on a “wall” rejection, search 5 cm moves the gate accepts until a straight path is clear; detours that ran to the end are stored and tried first at the next wall.</text>
+  <!-- level 2 add-on, pre-registered result (10/11) -->
+  <rect x="20" y="396" width="920" height="46" rx="8" fill="#fafafb" stroke="#b0b0b6"/>
+  <text x="36" y="416" font-size="12" font-weight="650" fill="#3a3a3f">Level 2, no waypoint (held-out, 36 episodes): a search with no LLM, run on “wall” rejections, got over the wall in 21/36.</text>
+  <text x="36" y="433" font-size="12" fill="#3a3a3f">Reusing stored detours cut the median search on a new wall placement from 18,654 to 2,708 gate checks.</text>
 </svg>

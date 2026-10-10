@@ -98,6 +98,13 @@ grouped("of_level2_calls", "Level 2 · large-model calls, held-out scenes (36 ep
 ], [("no memory", GREY), ("level 1 memory", BLUE), ("memory grown on level 2", "#7aa5dc")], 1245,
     note="Numbers under the bars: boxes placed and left standing.")
 
+# research/oracle-free.html, level 2 without the waypoint (pre-registered, held-out seeds 523/524, 18 episodes each)
+grouped("of_level2_search", "Level 2, no waypoint · over the wall, out of 18 per seed", [
+    ("seed 523", [12, 7, 8], None),
+    ("seed 524", [9, 8, 17], None),
+], [("search on wall rejection", GREY), ("+ level 1 memory", "#8e93a0"), ("+ stored detours", BLUE)], 18,
+    note="First visits to new wall placements (12): median search 18,654 → 2,708 gate checks with detours.")
+
 # research/fk-verifier.html, "What was tested" table (2-DOF planar arm, 5 trials each)
 hbars("fk_error_mm", "End-effector error in mm (lower is better), 2-DOF arm", [
     ("VLM reads vs draws the arm", None, None, ""),

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 318" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#1d1d1f">
+<title>Level 2, no waypoint · over the wall, out of 18 per seed</title><rect width="640" height="318" fill="#fff"/>
+<text x="0" y="20" font-weight="650" font-size="14">Level 2, no waypoint · over the wall, out of 18 per seed</text>
+<rect x="0" y="32" width="12" height="12" rx="2" fill="#b9bcc4"/><text x="17" y="42" font-size="12">search on wall rejection</text>
+<rect x="211.60000000000002" y="32" width="12" height="12" rx="2" fill="#8e93a0"/><text x="228.60000000000002" y="42" font-size="12">+ level 1 memory</text>
+<rect x="364.0" y="32" width="12" height="12" rx="2" fill="#1a5fb4"/><text x="381.0" y="42" font-size="12">+ stored detours</text>
+<line x1="60" y1="246" x2="640" y2="246" stroke="#e3e3e6"/>
+<rect x="152.5" y="132.7" width="34" height="113.3" rx="3" fill="#b9bcc4"/>
+<text x="169.5" y="126.7" text-anchor="middle" font-size="12" font-weight="700">12</text>
+<rect x="190.5" y="179.9" width="34" height="66.1" rx="3" fill="#8e93a0"/>
+<text x="207.5" y="173.9" text-anchor="middle" font-size="12" font-weight="700">7</text>
+<rect x="228.5" y="170.4" width="34" height="75.6" rx="3" fill="#1a5fb4"/>
+<text x="245.5" y="164.4" text-anchor="middle" font-size="12" font-weight="700">8</text>
+<text x="207.5" y="282" text-anchor="middle" font-weight="650">seed 523</text>
+<rect x="427.5" y="161.0" width="34" height="85.0" rx="3" fill="#b9bcc4"/>
+<text x="444.5" y="155.0" text-anchor="middle" font-size="12" font-weight="700">9</text>
+<rect x="465.5" y="170.4" width="34" height="75.6" rx="3" fill="#8e93a0"/>
+<text x="482.5" y="164.4" text-anchor="middle" font-size="12" font-weight="700">8</text>
+<rect x="503.5" y="85.4" width="34" height="160.6" rx="3" fill="#1a5fb4"/>
+<text x="520.5" y="79.4" text-anchor="middle" font-size="12" font-weight="700">17</text>
+<text x="482.5" y="282" text-anchor="middle" font-weight="650">seed 524</text>
+<text x="0" y="312" fill="#6b6b70" font-size="11.5">First visits to new wall placements (12): median search 18,654 → 2,708 gate checks with detours.</text>
+</svg>
