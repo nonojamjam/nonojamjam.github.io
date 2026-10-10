@@ -291,20 +291,17 @@ renderActs();
 const mj = await loadMujoco();
 mj.FS.writeFile('/pp.mjb', new Uint8Array(await (await fetch('mj/pickplace_l3.mjb')).arrayBuffer()));
 const model = mj.MjModel.from_binary_path('/pp.mjb', new mj.MjVFS());
-// The background comparison gets its own model: levels 2 and 3 switch the extra bodies' collision and gravity in the model per episode,
-//   so a shared model would let the visible run and the background comparison switch each other's boxes off.
-const modelB = mj.MjModel.from_binary_path('/pp.mjb', new mj.MjVFS());
-const data = new mj.MjData(model), dataB = new mj.MjData(modelB), ghostData = new mj.MjData(model);
-const C = makeController(mj, model, data), CB = makeController(mj, modelB, dataB);
+const data = new mj.MjData(model), ghostData = new mj.MjData(model);
+const C = makeController(mj, model, data);
 const ID = (t, n) => mj.mj_name2id(model, t.value, n);
 const gGoal = ID(mj.mjtObj.mjOBJ_GEOM, 'goal'), gTarget = ID(mj.mjtObj.mjOBJ_GEOM, 'target'), gLook = ID(mj.mjtObj.mjOBJ_GEOM, 'lookalike');
-C.reset(); CB.reset();
+C.reset();
 const goal = Array.from(data.geom_xpos.slice(3 * gGoal, 3 * gGoal + 3));
 const G2_DX = 0.14;   // = scenarios.mjs G2 on the level 1 base (no support box in level 3)
-// A fresh engine for every run and every comparison row: the engine builds its camera once, with the options of the first setting it sees
+// A fresh engine for every run: the engine builds its camera once, with the options of the first setting it sees
 //   (level 3 uses its own vision options), so an engine reused across levels would look with the wrong camera settings.
-const newE = () => makeEngine(mj, model, data, C, goal), newEB = () => makeEngine(mj, modelB, dataB, CB, goal);
-let E = newE(), EB = newEB();
+const newE = () => makeEngine(mj, model, data, C, goal);
+let E = newE();
 
 // ---------- three.js ----------
 const view = $('view');
@@ -571,19 +568,25 @@ function liveDis() {
 
 // ---------- background comparison: the four settings, same 18 visits ----------
 let ROWS = SETTINGS.map(() => null), cmp = null;
-function startCompare() { const idx = SETTINGS.map((x, i) => i).filter(i => SETTINGS[i].lv === LV && !ROWS[i]); cmp = idx.length ? { idx, j: 0, pi: idx[0], ti: 0, st: null, mem: null, gen: null, tasks: null, looks: 0 } : null; renderCmp(); }
-function compareSlice(budgetMs) {
-  const t0 = performance.now();
-  while (cmp && performance.now() - t0 < budgetMs) {
-    if (!cmp.M) cmp.M = memOf(SETTINGS[cmp.pi]);
-    const cfg = { ...cfgOf(SETTINGS[cmp.pi], cmp.M), vision: true };   // no image frames in the background
-    if (!cmp.gen) {
-      if (!cmp.st) { EB = newEB(); cmp.st = EB.newStats(); cmp.mem = { scene: new Map(), act: new Map() }; cmp.tasks = EB.tasks(false, SCENE); cmp.ti = 0; cmp.looks = 0; cmp.pv = []; cmp.c0 = 0; cmp.pm = []; cmp.m0 = 0; cmp.okv = []; cmp.s0 = 0; }
-      if (cmp.ti >= cmp.tasks.length) { const pv = cmp.pv; ROWS[cmp.pi] = { ...cmp.st, looks: cmp.looks, bank: cmp.M ? cmp.M.size - (SETTINGS[cmp.pi].mem === 'bank' ? BANK.candidates.length : 0) : 0, rounds: [0, 1, 2].map(i => pv.slice(6 * i, 6 * i + 6).reduce((a, b) => a + b, 0)), pv, pm: cmp.pm, okv: cmp.okv }; cmp.st = null; cmp.M = null; cmp.j++; if (cmp.j >= cmp.idx.length) cmp = null; else cmp.pi = cmp.idx[cmp.j]; renderCmp(); renderAnswers(); continue; }
-      const M = cmp.M; cmp.gen = EB.episode(cmp.tasks[cmp.ti], cfg, cmp.mem, cmp.st, SEED, (k, x) => { if (M) M.onEvent(k, x); if (k === 'active-sense') cmp.looks += x.probes; });
-    }
-    for (let k = 0; k < 120; k++) if (cmp.gen.next().done) { cmp.gen = null; cmp.ti++; cmp.pv.push(cmp.st.calls - cmp.c0); cmp.c0 = cmp.st.calls; cmp.pm.push(cmp.st.memSteps - cmp.m0); cmp.m0 = cmp.st.memSteps; cmp.okv.push(cmp.st.standing > cmp.s0); cmp.s0 = cmp.st.standing; break; }
-  }
+// The comparison runs in a Web Worker (compare-worker.mjs, its own MuJoCo model and engine): run on the page, its heavier steps
+//   (camera ray casts, calibration) held frames for up to 1.6 s and the level 3 view dropped to about 12 fps.
+const worker = new Worker('compare-worker.mjs', { type: 'module' });
+let job = 0;
+worker.onmessage = e => {
+  const m = e.data;
+  if (m.type === 'error') { cmp = null; $('cmpNote').textContent = 'The background comparison stopped with an error: ' + m.msg.split('\n')[0]; return; }
+  if (m.job !== job) return;
+  if (m.type === 'busy') cmp = { pi: m.i };
+  else if (m.type === 'row') ROWS[m.i] = m.row;
+  else if (m.type === 'done') cmp = null;
+  renderCmp(); renderAnswers();
+};
+worker.onerror = e => { cmp = null; $('cmpNote').textContent = 'The background comparison could not start: ' + (e.message || 'worker error'); };
+function startCompare() {
+  const idx = SETTINGS.map((x, i) => i).filter(i => SETTINGS[i].lv === LV && !ROWS[i]);
+  job++; cmp = idx.length ? { pi: idx[0] } : null;
+  if (idx.length) worker.postMessage({ job, items: idx.map(i => ({ i, cfg: { ...cfgOf(SETTINGS[i], null), vision: true }, mem: SETTINGS[i].mem })), seed: SEED, scene: SCENE });
+  renderCmp();
 }
 // One small strip per row: the same 18 visits side by side for every setting (live, from the background comparison)
 function mini(r) {
@@ -651,7 +654,6 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (playing && run) { acc += dt * speed; const t0 = performance.now(); while (acc >= TICK && playing && performance.now() - t0 < 30) { stepRun(); acc -= TICK; } if (acc > 4 * TICK) acc = 4 * TICK; }
   else { acc = 0; C.gravComp(); mj.mj_step(model, data); }
-  if (cmp) compareSlice(playing ? 4 : 10);
   if (run && (run.cfg.bias || run.faultOn)) {   // believed arm = true joints + fault − current offset estimate
     const D = run.mem.cal ? run.mem.cal.D : [0, 0, 0, 0, 0, 0, 0], q = Array.from(data.qpos.slice(0, 7)).map((v, i) => v + (i === 1 ? 0.15 : 0) - D[i]);
     placeGhost(q);
