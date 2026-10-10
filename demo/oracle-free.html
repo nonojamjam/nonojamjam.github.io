@@ -26,6 +26,10 @@
   .lvls button.on{background:var(--accent);border-color:var(--accent);color:#fff}
   .lvls button span{color:var(--mut);margin-left:6px;font-size:.8rem} .lvls button.on span{color:#dbe6f7}
   .lvnote{margin:4px 0 0;font-size:.84rem;color:var(--mut)}
+  .take{margin:10px 0 2px;font-size:1.08rem;font-weight:650;line-height:1.4}
+  .take span{display:block;font-size:.88rem;font-weight:400;color:var(--mut)}
+  .lvnote.warn{background:#fff6e0;border:1px solid #f0d48a;color:#7a5a00;border-radius:8px;padding:6px 10px;font-weight:600}
+  #standin{position:absolute;right:8px;top:8px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.74rem;color:var(--mut)}
   .acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 12px}
   @media (max-width:860px){.acts{grid-template-columns:1fr}}
   .act{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 11px;display:flex;flex-direction:column;gap:6px}
@@ -41,7 +45,10 @@
   .pre.on{border-color:var(--accent);box-shadow:0 0 0 2px #cfe0f4 inset;background:#f5f9fe}
   #tlWrap{margin:10px 0 0;border:1px solid var(--line);border-radius:10px;padding:6px 8px 4px;background:#fff}
   #tlWrap .tlh{display:flex;justify-content:space-between;font-size:.76rem;color:var(--mut);gap:10px;flex-wrap:wrap}
-  #tl{display:block;width:100%;height:96px}
+  #tlWrap{position:relative}
+  #tl{display:block;width:100%;height:158px;cursor:crosshair}
+  #tlTip{position:absolute;pointer-events:none;background:#1d1d1f;color:#fff;font-size:.74rem;line-height:1.35;padding:5px 8px;border-radius:6px;max-width:340px;display:none;z-index:5}
+  svg.mini{display:block}
   .tlleg{display:flex;flex-wrap:wrap;gap:12px;font-size:.74rem;color:var(--mut);margin:2px 0 2px}
 
   .stage{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:10px}
@@ -117,6 +124,7 @@
   <p class="ko">상자는 이미지에서 찾고, 손끝은 잡음 있는 거리 추적, 손 기울기는 IMU 로 잽니다. 난이도(레벨 1·2·3)를 고르고 질문을 차례로 눌러 보세요. 각 질문은 설정 두 개를 같은 18번 방문으로 비교하고, 답은 아래에서 돌아가는 비교로 채워집니다.</p>
 
   <div class="lvls" id="lvls"></div>
+  <p class="take" id="take"></p>
   <p class="lvnote" id="lvnote"></p>
   <div class="acts" id="acts"></div>
 
@@ -125,6 +133,7 @@
       <div id="view">
         <div id="loading">loading MuJoCo and the Panda model (≈6 MB)…</div>
         <div class="ov" id="where">pick a setting</div>
+        <div id="standin">planner here: a scripted stand-in, not an LLM</div>
         <div class="ov" id="event">—</div>
         <div class="ov" id="verdict"></div>
         <div class="hint">drag to orbit · scroll to zoom</div>
@@ -136,14 +145,17 @@
         <span class="lbl">speed</span><div class="seg" id="speed"><button data-v="1">1×</button><button data-v="3" class="on">3×</button><button data-v="8">8×</button></div>
       </div>
       <div id="tlWrap">
-        <div class="tlh"><span><b>Who decided each step</b> · 걸음마다 기억이 했는지 플래너(실험에선 LLM)가 했는지</span><span id="tlCount"></span></div>
-        <canvas id="tl"></canvas>
+        <div class="tlh"><span><b>What happened at each step</b> · 본다 → 결정한다(플래너 또는 기억) → 검증한다 → 감시한다 · hover for details</span><span id="tlCount"></span></div>
+        <canvas id="tl"></canvas><div id="tlTip"></div>
         <div class="tlleg">
-          <span><span class="sw" style="background:#8a8f98"></span>planner call</span>
-          <span><span class="sw" style="background:#2f6fd6"></span>step from memory (no call)</span>
-          <span><span class="sw" style="background:transparent;border:2px solid #c0392b"></span>rejected by the gate</span>
+          <span><span class="sw" style="background:#3fbf4d"></span>camera found the box <b style="color:#c0392b">✗</b> did not</span>
           <span><span class="sw" style="background:#b7791f"></span>extra look before grasping</span>
-          <span><b style="color:#2f6fd6">⌒</b> line: this memory step reuses the step that planner call produced earlier (to the left edge: from the 32B model's memory)</span>
+          <span><span class="sw" style="background:#8a8f98"></span>planner* call (a scripted stand-in here, an LLM in the study)</span>
+          <span><span class="sw" style="background:#2f6fd6"></span>step from memory (no call)</span>
+          <span><b style="color:#2f6fd6">⌒</b> the planner call (or, at the left edge, the 32B model's memory) that memory step came from</span>
+          <span><span class="sw" style="background:transparent;border:2px solid #c0392b"></span>stopped by a check: gate ▮ · touch ◆ · memory set aside ▬ · unsafe step ✕</span>
+          <span><b style="color:#c0392b">—</b> hand gap: joint reading vs tracker, 5 cm line</span>
+          <span><span class="sw" style="background:#fbe9e7"></span>shoulder fault on</span>
         </div>
       </div>
     </div>
@@ -238,6 +250,11 @@ const LVS = {
   2: { name: 'Level 2', sub: 'a wall · a box to stand it on', note: 'Level 1 underneath, plus a tall wall between the boxes and the goal and a support box, placed differently in every scene, that the target must be stood on.' },
   3: { name: 'Level 3 · next study', sub: 'clutter · occlusion · two in a row · fault mid-run', note: 'The test bed for my next study, not a result. Level 1 underneath, plus five boxes including look-alikes, part of the view blocked, two boxes to move in a row, and the shoulder fault starting in the middle of the run.' },
 };
+const TAKE = {
+  1: ['Verified memory stands in for the planner, and sensors that do not trust the joint reading catch a lying joint.', 'Study, local LLMs: large-model calls 793 → 0 at the same 36/36 · shoulder fault 0 → 108/108 with observe → verify → act.'],
+  2: ['Once the new wall and support are measured, memory from level 1 still carries the robot and the planner is barely called.', 'Study, local LLMs: large-model calls −78 to −96 %, 36/36 placed in every world. The way over the wall is a waypoint the code gives.'],
+  3: ['Next study: does the same loop hold up when the task gets long and messy and the arm breaks midway?', 'Not a result. With LLMs, the fault drops memory-only from 24/36 to 8/36 (tuning seeds); whether the safeguards win that back is the open question.'],
+};
 const ACTS = [
   { lv: 1, n: 1, h: 'Can memory stand in for the planner?', q: 'Every step normally asks a planner (an LLM in the study). Memory keeps the steps that passed the checks and replays them in similar situations, re-solved for the current pose. Watch the calls fade as it fills up.', ks: ['A', 'B', 'B2'] },
   { lv: 1, n: 2, h: 'The joint reading lies. Who notices?', q: 'The gate, the memory and the planner all trust the joint reading, so a wrong reading fools all three at once. Only a sensor that does not use it can tell.', ks: ['C', 'D'] },
@@ -263,7 +280,8 @@ const CUR = () => SETTINGS.filter(x => x.lv === LV);
 const btn = x => `<button class="pre" data-k="${x.k}"><b>${x.k} · ${x.title}</b><span>${x.sub}</span></button>`;
 function renderActs() {
 $('lvls').innerHTML = Object.entries(LVS).map(([n, v]) => `<button data-lv="${n}" class="${+n === LV ? 'on' : ''}">${v.name}<span>${v.sub}</span></button>`).join('');
-$('lvnote').textContent = LVS[LV].note;
+$('lvnote').textContent = LVS[LV].note; $('lvnote').className = 'lvnote' + (LV === 3 ? ' warn' : '');
+$('take').innerHTML = `${TAKE[LV][0]}<span>${TAKE[LV][1]}</span>`;
 $('legend').innerHTML = LEGEND[LV];
 $('acts').innerHTML = ACTS.filter(a => a.lv === LV).map(a => `<div class="act"><h3><i>${a.n}</i>${a.h}</h3><p class="q">${a.q}</p>${a.ks.map(k => btn(SETTINGS[SI[k]])).join('')}<p class="ans" id="ans${a.n}">The answer appears when the comparison below has run (about a minute).</p></div>`).join('');
 }
@@ -388,47 +406,95 @@ function gauges() {
   $('cReady').lastChild.textContent = cfg && cfg.calibGate ? (ready ? 'pre-grasp check: ready to grasp' : 'pre-grasp check: not yet, look again first') : 'pre-grasp check: off in this setting';
 }
 
-// ---------- timeline: who decided each step ----------
-const tlc = $('tl'), tctx = tlc.getContext('2d');
-let TL = null;
-function tlReset() { TL = { items: [], slot: 0, nCalls: 0, nMem: 0, nLook: 0, lastCall: null, calls: new Map(), round: 0, rounds: [0, 0, 0] }; tlDraw(); }
+// ---------- timeline: sees · decides · checks · monitors ----------
+// One column per step or event, lanes stacked on a shared time axis (as in multi-lane event timelines and runtime-monitor views):
+//   what the robot saw, who decided the step (a planner call or a memory replay), which check stopped something, and the monitored hand gap.
+const tlc = $('tl'), tctx = tlc.getContext('2d'), tipEl = $('tlTip');
+let TL = null, TLG = null;
+const REASON = { jerk: 'a joint would turn too fast', tilt: 'it would tilt the hand', limit: 'a joint would hit its limit', floor: 'it would push the box into the table', wall: 'not enough clearance over the wall', progress: 'it would not get closer to the target' };
+function tlReset() { TL = { items: [], mon: [], slot: 0, nCalls: 0, nMem: 0, nLook: 0, nChk: 0, lastCall: null, lastX: 0, calls: new Map(), round: 0, rounds: [0, 0, 0], visit: null, faultX: null, stage2: [] }; tlDraw(); }
 function tlEvent(k, x) {
   if (!TL) return;
-  const add = it => { it.x = TL.slot++; TL.items.push(it); return it; };
-  if (k === 'belief' && x.stage === 't2') return;
-  if (k === 'belief') { if (TL.items.length) TL.slot += 1; add({ t: 'visit', n: x.task.visit * 6 + x.task.key + 1 }); TL.round = x.task.visit; }
-  else if (k === 'call') { TL.lastCall = add({ t: 'call' }); TL.calls.set(x.id, TL.lastCall); TL.nCalls++; TL.rounds[TL.round]++; }
-  else if (k === 'reject') { if (x.src === 'mem') add({ t: 'mem', rej: true, from: x.from }); else if (TL.lastCall) TL.lastCall.rej = true; }
-  else if (k === 'step') { if (x.mem) { add({ t: 'mem', from: x.from }); TL.nMem++; } }
-  else if (k === 'active-sense') { add({ t: 'look' }); TL.nLook += x.probes; }
+  const add = it => { it.x = TL.slot++; TL.items.push(it); TL.lastX = it.x; return it; };
+  const at = it => { it.x = TL.lastX; TL.items.push(it); return it; };   // same column as the step it belongs to
+  const v = () => `visit ${TL.visit ? TL.visit.n : '–'}`;
+  if (k === 'belief' && x.stage === 't2') { TL.stage2.push(TL.slot); TL.slot += 1; return; }
+  if (k === 'belief') { if (TL.items.length) TL.slot += 1; TL.visit = add({ t: 'visit', n: x.task.visit * 6 + x.task.key + 1, res: null, d: '' }); TL.visit.d = `visit ${TL.visit.n}`; TL.round = x.task.visit; if (run && run.faultOn && TL.faultX == null) TL.faultX = TL.visit.x; }
+  else if (k === 'vision') add({ t: 'see', ok: x.ok, d: `${v()} · camera: ${x.ok ? `found the ${x.want === 't2' ? 'green box' : 'target'} (${(1000 * x.short).toFixed(0)} mm short side)` : 'no box of the right shape'}` });
+  else if (k === 'active-sense') { add({ t: 'look', d: `${v()} · pre-grasp check failed (${x.before.n} observations, gap ${(100 * x.before.dis).toFixed(1)} cm) → looked from ${x.probes} more points` }); TL.nLook += x.probes; }
+  else if (k === 'call') { TL.lastCall = add({ t: 'call', d: `${v()} · planner call` }); TL.calls.set(x.id, TL.lastCall); TL.nCalls++; TL.rounds[TL.round]++; }
+  else if (k === 'proposal' && x.gate && !x.gate.ok) {
+    const why = REASON[x.gate.reason] || x.gate.reason;
+    if (x.src === 'mem') add({ t: 'mem', rej: true, from: x.from, d: `${v()} · ${x.phase}: memory step rejected — ${why}` });
+    else if (TL.lastCall) { TL.lastCall.rej = true; TL.lastCall.d += ` (${x.phase}) → rejected — ${why}`; TL.lastX = TL.lastCall.x; }
+    at({ t: 'chk', k: 'gate', d: `${v()} · gate stopped a step: ${why}` }); TL.nChk++;
+  }
+  else if (k === 'step') {
+    if (x.mem) { add({ t: 'mem', from: x.from, d: `${v()} · ${x.phase}: replayed from memory, no call` + (typeof x.from === 'string' && x.from.startsWith('call') ? ' (a step learned earlier in this run)' : " (from the 32B model's memory)") }); TL.nMem++; }
+    else if (TL.lastCall && TL.lastCall.x === TL.slot - 1 && !TL.lastCall.rej) TL.lastCall.d += ` (${x.phase}) → ran`;
+    if (x.src === 'unsafe') { at({ t: 'chk', k: 'unsafe', d: `${v()} · an unsafe step ran (checked on the true joints, sim only)` }); TL.nChk++; }
+    TL.mon.push({ x: TL.lastX, v: liveDis() });
+  }
+  else if (k === 'caught') { add({ t: 'chk', k: 'touch', d: `${v()} · touch: fingers closed at ${(1000 * x.width).toFixed(0)} mm, expected ${x.want === 't2' ? 26 : 32} → let go and look again` }); TL.nChk++; }
+  else if (k === 'quarantine') { at({ t: 'chk', k: 'quar', d: `${v()} · memory set aside: tracker and joint reading disagree by ${(100 * x.dis).toFixed(1)} cm` }); }
+  else if (k === 'result') { if (TL.visit) { TL.visit.res = x.result; TL.visit.d += x.result === 'success' ? ' · placed' : x.result === 'wrong' ? ' · carried the wrong box' : ' · missed'; } }
   else return;
   tlDraw();
 }
+const LANES = (Y, M0, M1) => [['sees', Y.see], ['planner*', Y.call], ['memory', Y.mem], ['checks', Y.chk], ['hand gap', (M0 + M1) / 2]];
 function tlDraw() {
   const dpr = Math.min(2, window.devicePixelRatio || 1), W = tlc.clientWidth, H = tlc.clientHeight;
   if (tlc.width !== W * dpr || tlc.height !== H * dpr) { tlc.width = W * dpr; tlc.height = H * dpr; }
   const g = tctx; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-  const L = 62, Rr = W - 6, yC = 28, yS = 70, hb = 13;
-  g.font = '11px -apple-system,Segoe UI,sans-serif'; g.fillStyle = '#6b6b70'; g.textBaseline = 'middle';
-  g.fillText('planner', 4, yC); g.fillText('memory', 4, yS);
-  g.strokeStyle = '#e3e3e6'; g.lineWidth = 1; g.beginPath(); g.moveTo(L, yC); g.lineTo(Rr, yC); g.moveTo(L, yS); g.lineTo(Rr, yS); g.stroke();
-  if (!TL || !TL.items.length) { g.fillText('press Play: every planner call and every step from memory appears here', L + 6, (yC + yS) / 2); $('tlCount').textContent = ''; return; }
+  const L = 62, Rr = W - 6, Y = { see: 22, call: 46, mem: 76, chk: 102 }, M0 = 150, M1 = 116, hb = 12;
+  g.font = '11px -apple-system,Segoe UI,sans-serif'; g.textBaseline = 'middle';
+  if (!TL || !TL.items.length) { g.fillStyle = '#6b6b70'; for (const [n, y] of LANES(Y, M0, M1)) g.fillText(n, 4, y); g.fillText('press Play: every look, decision and check appears here', L + 6, Y.mem); $('tlCount').textContent = ''; TLG = null; return; }
   const sp = Math.min(10, (Rr - L) / Math.max(40, TL.slot)), X = i => L + (i + 0.5) * sp, w = Math.max(2, sp * 0.72);
-  // arcs: a memory step → the planner call that first produced it (bank steps → left edge)
-  for (const it of TL.items) if (it.t === 'mem' && it.from != null) {
+  TLG = { L, sp };
+  if (TL.faultX != null) { g.fillStyle = '#fbe9e7'; g.fillRect(X(TL.faultX) - sp / 2, 0, Rr - X(TL.faultX) + sp / 2, H); g.fillStyle = '#c0392b'; g.fillText('shoulder fault', X(TL.faultX) + 3, H - 6); }
+  g.fillStyle = '#3a3a3f'; g.font = '600 11px -apple-system,Segoe UI,sans-serif'; for (const [n, y] of LANES(Y, M0, M1)) g.fillText(n, 4, y); g.font = '11px -apple-system,Segoe UI,sans-serif';
+  g.strokeStyle = '#e3e3e6'; g.lineWidth = 1; g.beginPath(); for (const y of [Y.see, Y.call, Y.mem, Y.chk]) { g.moveTo(L, y); g.lineTo(Rr, y); } g.stroke();
+  const y5 = M0 - (M0 - M1) * (0.05 / 0.15); g.setLineDash([3, 3]); g.strokeStyle = '#999'; g.beginPath(); g.moveTo(L, y5); g.lineTo(Rr, y5); g.stroke(); g.setLineDash([]);
+  g.setLineDash([2, 3]); g.strokeStyle = '#1e7d4f'; for (const s2 of TL.stage2) { g.beginPath(); g.moveTo(X(s2), 4); g.lineTo(X(s2), M1 - 4); g.stroke(); } g.setLineDash([]);
+  for (const it of TL.items) if (it.t === 'mem' && it.from != null) {   // arcs: memory step → the planner call that produced it (bank steps → left edge)
     const src = typeof it.from === 'string' && it.from.startsWith('call') ? TL.calls.get(+it.from.slice(4)) : null;
-    const x0 = X(it.x), x1 = src ? X(src.x) : L - 4, top = yC + hb / 2 + 2, bot = yS - hb / 2 - 2;
+    const x0 = X(it.x), x1 = src ? X(src.x) : L - 4, top = Y.call + hb / 2 + 2, bot = Y.mem - hb / 2 - 2;
     g.strokeStyle = it.rej ? 'rgba(192,57,43,.5)' : src ? 'rgba(47,111,214,.35)' : 'rgba(47,111,214,.12)'; g.lineWidth = 1.1;
     g.beginPath(); g.moveTo(x0, bot); g.bezierCurveTo(x0, (top + bot) / 2, x1, (top + bot) / 2, x1, src ? top : (top + bot) / 2); g.stroke();
   }
   for (const it of TL.items) {
-    if (it.t === 'visit') { g.strokeStyle = '#d5d9df'; g.beginPath(); g.moveTo(X(it.x), 8); g.lineTo(X(it.x), H - 4); g.stroke(); if (sp * 6 > 18 || it.n % 6 === 1) { g.fillStyle = '#6b6b70'; g.fillText(String(it.n), X(it.x) + 2, 9); } continue; }
-    const y = it.t === 'call' ? yC : yS, fill = it.t === 'call' ? '#8a8f98' : it.t === 'look' ? '#b7791f' : '#2f6fd6';
-    g.globalAlpha = it.rej ? 0.35 : 1; g.fillStyle = fill; g.fillRect(X(it.x) - w / 2, y - hb / 2, w, hb); g.globalAlpha = 1;
-    if (it.rej) { g.strokeStyle = '#c0392b'; g.lineWidth = 1.3; g.strokeRect(X(it.x) - w / 2, y - hb / 2, w, hb); }
+    const x = X(it.x);
+    if (it.t === 'visit') { g.strokeStyle = '#d5d9df'; g.beginPath(); g.moveTo(x, 8); g.lineTo(x, M0); g.stroke(); if (sp * 6 > 18 || it.n % 6 === 1) { g.fillStyle = it.res === 'success' ? '#1e7d4f' : it.res ? '#c0392b' : '#6b6b70'; g.fillText(String(it.n), x + 2, 7); } continue; }
+    if (it.t === 'see') { g.fillStyle = it.ok ? '#3fbf4d' : '#c0392b'; if (it.ok) { g.beginPath(); g.arc(x, Y.see, Math.max(1.5, w / 2), 0, 7); g.fill(); } else g.fillText('✗', x - 3, Y.see); continue; }
+    if (it.t === 'look') { g.fillStyle = '#b7791f'; g.fillRect(x - w / 2, Y.see - hb / 2, w, hb); continue; }
+    if (it.t === 'chk') {
+      g.fillStyle = g.strokeStyle = it.k === 'unsafe' ? '#1d1d1f' : it.k === 'quar' ? '#7b4fb0' : '#c0392b';
+      if (it.k === 'gate') g.fillRect(x - w / 2, Y.chk - 5, w, 10);
+      else if (it.k === 'touch') { g.beginPath(); g.moveTo(x, Y.chk - 6); g.lineTo(x + 5, Y.chk); g.lineTo(x, Y.chk + 6); g.lineTo(x - 5, Y.chk); g.fill(); }
+      else if (it.k === 'quar') g.fillRect(x - sp / 2, Y.chk + 7, sp, 3);
+      else { g.lineWidth = 1.6; g.beginPath(); g.moveTo(x - 4, Y.chk - 4); g.lineTo(x + 4, Y.chk + 4); g.moveTo(x + 4, Y.chk - 4); g.lineTo(x - 4, Y.chk + 4); g.stroke(); }
+      continue;
+    }
+    const y = it.t === 'call' ? Y.call : Y.mem, fill = it.t === 'call' ? '#8a8f98' : '#2f6fd6';
+    g.globalAlpha = it.rej ? 0.35 : 1; g.fillStyle = fill; g.fillRect(x - w / 2, y - hb / 2, w, hb); g.globalAlpha = 1;
+    if (it.rej) { g.strokeStyle = '#c0392b'; g.lineWidth = 1.3; g.strokeRect(x - w / 2, y - hb / 2, w, hb); }
   }
-  $('tlCount').innerHTML = `planner calls per round of 6 visits: <b>${TL.rounds.join(' → ')}</b> · ${TL.nMem} steps from memory · ${TL.nLook} extra looks`;
+  const pts = TL.mon.filter(m => m.v != null);
+  if (pts.length) { g.strokeStyle = '#c0392b'; g.lineWidth = 1.2; g.beginPath(); pts.forEach((m, i) => { const yy = M0 - (M0 - M1) * Math.min(1, m.v / 0.15); i ? g.lineTo(X(m.x), yy) : g.moveTo(X(m.x), yy); }); g.stroke(); }
+  $('tlCount').innerHTML = `planner calls per round of 6 visits: <b>${TL.rounds.join(' → ')}</b> · ${TL.nMem} steps from memory · ${TL.nChk} stopped by a check · ${TL.nLook} extra looks`;
 }
+tlc.addEventListener('mousemove', e => {
+  if (!TL || !TLG) return;
+  const r = tlc.getBoundingClientRect(), i = Math.round((e.clientX - r.left - TLG.L) / TLG.sp - 0.5);
+  const hits = TL.items.filter(it => it.x === i && it.d), vis = [...TL.items].reverse().find(it => it.t === 'visit' && it.x <= i);
+  const m = TL.mon.find(mm => mm.x === i && mm.v != null);
+  const lines = hits.length ? hits.map(h => h.d) : vis ? [vis.d] : [];
+  if (m) lines.push(`hand gap ${(100 * m.v).toFixed(1)} cm`);
+  if (!lines.length) { tipEl.style.display = 'none'; return; }
+  tipEl.innerHTML = lines.join('<br>'); tipEl.style.display = 'block';
+  const wr = $('tlWrap').getBoundingClientRect(); tipEl.style.left = `${Math.min(e.clientX - wr.left + 12, wr.width - 350)}px`; tipEl.style.top = `${e.clientY - wr.top + 12}px`;
+});
+tlc.addEventListener('mouseleave', () => { tipEl.style.display = 'none'; });
 new ResizeObserver(() => tlDraw()).observe(tlc);
 
 // ---------- live run ----------
@@ -456,7 +522,7 @@ function onEvent(k, x) {
   else if (k === 'calib') { run.calErr = x.err; }
   else if (k === 'active-sense') { run.looks += x.probes; say(`pre-grasp gate: only ${x.before.n} observations, disagreement ${(100 * x.before.dis).toFixed(1)} cm → <b>looked from ${x.probes} more points</b>, now ${x.n} obs, ${(100 * x.dis).toFixed(1)} cm`, 'look'); }
   else if (k === 'yaw-align') {}
-  else if (k === 'step') { say(x.mem ? 'step <b>replayed from memory</b> — no planner call' : x.src === 'unsafe' ? 'an <b>unsafe step</b> ran' : 'planner proposed the step — <b>1 call</b>', x.mem ? 'mem' : x.src === 'unsafe' ? 'bad' : ''); }
+  else if (k === 'step') { say(x.mem ? 'reused a move that already passed the checks in a similar spot — <b>no planner call</b>' : x.src === 'unsafe' ? 'an <b>unsafe step</b> ran' : 'planner proposed the step — <b>1 call</b>', x.mem ? 'mem' : x.src === 'unsafe' ? 'bad' : ''); }
   else if (k === 'touch') say(`touch: fingers closed at <b>${(1000 * x.width).toFixed(0)} mm</b> (${x.want === 't2' ? 'green box 26' : 'target 32'} mm)`, Math.abs(x.width - (x.want === 't2' ? 0.026 : 0.032)) > 0.006 ? 'bad' : 'good');
   else if (k === 'caught') say(`touch check: ${(1000 * x.width).toFixed(0)} mm ≠ ${x.want === 't2' ? 26 : 32} mm → <b>let go and look again</b>`, 'bad');
   else if (k === 'settle') { if (x.fallen && x.result === 'success') verdict('⚠ placed, but lying down', false); }
@@ -512,19 +578,32 @@ function compareSlice(budgetMs) {
     if (!cmp.M) cmp.M = memOf(SETTINGS[cmp.pi]);
     const cfg = { ...cfgOf(SETTINGS[cmp.pi], cmp.M), vision: true };   // no image frames in the background
     if (!cmp.gen) {
-      if (!cmp.st) { EB = newEB(); cmp.st = EB.newStats(); cmp.mem = { scene: new Map(), act: new Map() }; cmp.tasks = EB.tasks(false, SCENE); cmp.ti = 0; cmp.looks = 0; cmp.pv = []; cmp.c0 = 0; }
-      if (cmp.ti >= cmp.tasks.length) { const pv = cmp.pv; ROWS[cmp.pi] = { ...cmp.st, looks: cmp.looks, bank: cmp.M ? cmp.M.size - (SETTINGS[cmp.pi].mem === 'bank' ? BANK.candidates.length : 0) : 0, rounds: [0, 1, 2].map(i => pv.slice(6 * i, 6 * i + 6).reduce((a, b) => a + b, 0)) }; cmp.st = null; cmp.M = null; cmp.j++; if (cmp.j >= cmp.idx.length) cmp = null; else cmp.pi = cmp.idx[cmp.j]; renderCmp(); renderAnswers(); continue; }
+      if (!cmp.st) { EB = newEB(); cmp.st = EB.newStats(); cmp.mem = { scene: new Map(), act: new Map() }; cmp.tasks = EB.tasks(false, SCENE); cmp.ti = 0; cmp.looks = 0; cmp.pv = []; cmp.c0 = 0; cmp.pm = []; cmp.m0 = 0; cmp.okv = []; cmp.s0 = 0; }
+      if (cmp.ti >= cmp.tasks.length) { const pv = cmp.pv; ROWS[cmp.pi] = { ...cmp.st, looks: cmp.looks, bank: cmp.M ? cmp.M.size - (SETTINGS[cmp.pi].mem === 'bank' ? BANK.candidates.length : 0) : 0, rounds: [0, 1, 2].map(i => pv.slice(6 * i, 6 * i + 6).reduce((a, b) => a + b, 0)), pv, pm: cmp.pm, okv: cmp.okv }; cmp.st = null; cmp.M = null; cmp.j++; if (cmp.j >= cmp.idx.length) cmp = null; else cmp.pi = cmp.idx[cmp.j]; renderCmp(); renderAnswers(); continue; }
       const M = cmp.M; cmp.gen = EB.episode(cmp.tasks[cmp.ti], cfg, cmp.mem, cmp.st, SEED, (k, x) => { if (M) M.onEvent(k, x); if (k === 'active-sense') cmp.looks += x.probes; });
     }
-    for (let k = 0; k < 120; k++) if (cmp.gen.next().done) { cmp.gen = null; cmp.ti++; cmp.pv.push(cmp.st.calls - cmp.c0); cmp.c0 = cmp.st.calls; break; }
+    for (let k = 0; k < 120; k++) if (cmp.gen.next().done) { cmp.gen = null; cmp.ti++; cmp.pv.push(cmp.st.calls - cmp.c0); cmp.c0 = cmp.st.calls; cmp.pm.push(cmp.st.memSteps - cmp.m0); cmp.m0 = cmp.st.memSteps; cmp.okv.push(cmp.st.standing > cmp.s0); cmp.s0 = cmp.st.standing; break; }
   }
 }
+// One small strip per row: the same 18 visits side by side for every setting (live, from the background comparison)
+function mini(r) {
+  const vis = SETTINGS.map((x, i) => ROWS[i]).filter((rr, i) => rr && SETTINGS[i].lv === LV && rr.pv);
+  const cMax = Math.max(1, ...vis.flatMap(rr => rr.pv)), mMax = Math.max(1, ...vis.flatMap(rr => rr.pm)), bw = 7, H2 = 15;
+  let o = `<svg class="mini" width="${18 * bw}" height="${2 * H2 + 10}" viewBox="0 0 ${18 * bw} ${2 * H2 + 10}">`;
+  r.pv.forEach((c, i) => {
+    const hc = c ? Math.max(1, H2 * Math.sqrt(c / cMax)) : 0, hm = r.pm[i] ? Math.max(1, H2 * Math.sqrt(r.pm[i] / mMax)) : 0, x = i * bw;
+    o += `<rect x="${x}" y="${H2 - hc}" width="${bw - 2}" height="${hc}" fill="#8a8f98"><title>visit ${i + 1}: ${c} planner calls</title></rect>`;
+    o += `<rect x="${x}" y="${H2 + 1}" width="${bw - 2}" height="${hm}" fill="#2f6fd6"><title>visit ${i + 1}: ${r.pm[i]} steps from memory</title></rect>`;
+    o += `<circle cx="${x + (bw - 2) / 2}" cy="${2 * H2 + 6}" r="2.4" fill="${r.okv[i] ? '#1e7d4f' : '#c0392b'}"><title>visit ${i + 1}: ${r.okv[i] ? 'placed and standing' : 'not placed'}</title></circle>`;
+  });
+  return o + '</svg>';
+}
 function renderCmp() {
-  $('cmp').innerHTML = '<tr><th>setting</th><th>placed and standing</th><th>missed / wrong</th><th>planner calls</th><th>calls per round</th><th>steps from memory</th><th>memory saved</th><th>extra looks</th></tr>' +
+  $('cmp').innerHTML = '<tr><th>setting</th><th>placed and standing</th><th>missed / wrong</th><th>planner calls</th><th>calls per round</th><th>steps from memory</th><th>memory saved</th><th>extra looks</th><th style="text-align:left">each of the 18 visits: <span style="color:#8a8f98">▮ planner calls</span> above · <span style="color:#2f6fd6">▮ steps from memory</span> below · <span style="color:#1e7d4f">●</span> placed <span style="color:#c0392b">●</span> not</th></tr>' +
     SETTINGS.map((x, i) => [x, i]).filter(([x]) => x.lv === LV).map(([x, i]) => { const r = ROWS[i], busy = cmp && cmp.pi === i;
       return `<tr class="${setting && setting.k === x.k ? 'mine' : ''}"><td><b>${x.k}</b> ${x.title} <span style="color:#6b6b70">· ${x.sub}</span></td>` + (r
-        ? `<td class="${r.standing === r.n ? 'g' : r.standing < r.n / 2 ? 'r' : ''}">${r.standing}/${r.n}</td><td class="${r.wrong + r.miss ? 'r' : ''}">${r.wrong + r.miss}</td><td>${r.calls}</td><td>${r.rounds.join(' / ')}</td><td>${r.memSteps}/${r.steps}</td><td>${r.bank}${SETTINGS[i].mem === 'bank' ? ' + 644' : ''}</td><td>${r.looks}</td>`
-        : `<td colspan="7" style="text-align:left;color:#6b6b70">${busy ? 'running in the background…' : '—'}</td>`) + '</tr>'; }).join('');
+        ? `<td class="${r.standing === r.n ? 'g' : r.standing < r.n / 2 ? 'r' : ''}">${r.standing}/${r.n}</td><td class="${r.wrong + r.miss ? 'r' : ''}">${r.wrong + r.miss}</td><td>${r.calls}</td><td>${r.rounds.join(' / ')}</td><td>${r.memSteps}/${r.steps}</td><td>${r.bank}${SETTINGS[i].mem === 'bank' ? ' + 644' : ''}</td><td>${r.looks}</td><td>${mini(r)}</td>`
+        : `<td colspan="8" style="text-align:left;color:#6b6b70">${busy ? 'running in the background…' : '—'}</td>`) + '</tr>'; }).join('');
   $('cmpNote').textContent = `Same 18 visits (scene seed ${SCENE}, 6 scenes × 3) for every row, stand-in planner. A round = the 6 scenes once. ` + CMPNOTE[LV];
 }
 const CMPNOTE = {
