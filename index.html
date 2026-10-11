@@ -51,6 +51,20 @@
     </div>
   </div>
 
+  <div class="item">
+    <a class="thumb" href="research/oracle-free.html#wall"><img src="assets/poc/l2wall_thumb.gif" alt="Replay of a real-LLM run: the Panda lifts the box over a wall it was never told to go over"></a>
+    <div>
+      <h3><a href="research/oracle-free.html#wall">Over a wall with no route given: the gate's rejections drive the search</a></h3>
+      <p class="meta">2026.10 · self-initiated · follow-up to the study above · local LLMs (4B and 32B) · pre-registered, held-out scenes</p>
+      <p>Without a waypoint the planners kept proposing the same blocked step. On each “wall” rejection, a search with no LLM in it strings together 5&nbsp;cm moves the gate accepts until a straight path to the target clears.</p>
+      <ul class="keys">
+        <li><b>21/36</b> boxes over the wall on held-out scenes, with no hint of which way to go</li>
+        <li><b>18,654 → 2,708</b> median gate checks on the first visit to a new wall placement, by reusing detours stored earlier (12 episodes)</li>
+      </ul>
+      <div class="btns"><a class="primary" href="research/oracle-free.html#wall">▶ real-LLM run, replayed</a><a href="research/oracle-free.html#wall">results</a></div>
+    </div>
+  </div>
+
   <h2>Research</h2>
 
   <div class="item">

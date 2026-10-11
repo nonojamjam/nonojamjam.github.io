@@ -101,6 +101,8 @@
 
   <h3>Level 2</h3>
   <p>The level 1 system alone placed 0/18 with a wall. With level 2 sensing and checks added, <b>reusing level 1 memory cut large-model calls by 78–96 %</b> and every box was placed. Without the waypoint, a search driven only by the gate's rejections got over the wall in <b>21/36</b> held-out episodes.</p>
+  <figure class="pipe" id="wall"><video src="../assets/poc/l2wall_s523_ep0.mp4" controls muted playsinline loop preload="metadata" style="width:100%;max-width:760px;display:block;border:1px solid var(--line);border-radius:6px"></video>
+    <figcaption>A real run, replayed from the logged LLM answers (held-out scene, no waypoint): the gate's rejection reasons in red, and the steps the search found (gate search, no LLM) bringing the box over the wall.</figcaption></figure>
   <figure class="chart"><img src="../assets/charts/of_level2_calls.svg" alt="Level 2 large-model calls on held-out scenes. Wall: no memory 1245, level 1 memory 262, memory grown on level 2 404. Support box: 308, 13, 2. Both: 706, 155, 99."></figure>
   <details class="more"><summary>What level 2 adds, and finding the way over the wall without a waypoint</summary>
     <p>The level 1 system, unchanged, placed 0/18 with the wall, 3/18 with the support box and 0/18 with both (real LLMs, tuning seed). Level 2 adds a scene camera that measures the wall and the support from depth alone, gate checks for clearance over the measured wall and for the support as the new floor, the measured wall in the planner's prompt, and a carry waypoint above the measured wall.</p>
