@@ -34,7 +34,7 @@
 
   <ul class="keys">
     <li><b>793 → 0</b> large-model calls, same 36/36 placed: a 4B planner with a 32B model's verified memory, held-out scenes</li>
-    <li><b>0 → 108/108</b> with a shoulder that reads 0.15 rad off: independent sensors recalibrate, then the robot grasps only after observing and verifying</li>
+    <li><b>100 → 108/108</b> with real LLMs and a shoulder that reads 0.15 rad off: independent sensors recalibrate, then the robot grasps only after observing and verifying</li>
     <li><b>8 of 108</b> episodes needed an extra look before grasping, almost all the very first one</li>
     <li><b>−78 to −96&nbsp;%</b> large-model calls on a harder level (a wall, a box to stack on, both) when the memory from the easier level is reused; 36/36 placed in each</li>
   </ul>
@@ -72,7 +72,7 @@
   </details>
 
   <h2>2 · When the robot's own state is wrong</h2>
-  <p>A shoulder reading 0.15 rad off fools the gate, the memory and the planner at once. <b>Two independent sensors plus "observe → verify → act"</b> brought it from 0 to 108/108.</p>
+  <p>A shoulder reading 0.15 rad off fools the gate, the memory and the planner at once. <b>Two independent sensors plus "observe → verify → act"</b> brought it to 108/108 with the real LLMs (with no fix, the stand-in planner placed 0/108).</p>
   <figure class="chart"><img src="../assets/charts/of_fault_recovery.svg" alt="Placed out of 108 with the shoulder fault: no fix 0 (stand-in planner), tracker and IMU calibration 100, plus observe-verify-act 108; reference without fault 108. Large-model calls 36, 13, 11."></figure>
   <ol class="steps">
     <li><b>Detect only</b>: switch to the tracker when it disagrees. Rough tracker: 1 → 6/18. Not enough.</li>

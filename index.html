@@ -43,7 +43,7 @@
       <p>The robot sees only through a camera image, a range tracker, an IMU and touch; a small LLM plans, a check decides, and verified steps become memory.</p>
       <ul class="keys">
         <li><b>793 → 0</b> large-model calls at the same 36/36: a 4B planner with a 32B model's verified memory</li>
-        <li><b>0 → 108/108</b> with a shoulder reading 0.15 rad off: independent sensors, then observe → verify → act</li>
+        <li><b>100 → 108/108</b> with real LLMs and a shoulder reading 0.15 rad off: independent sensors recalibrate, then observe → verify → act</li>
         <li><b>−78 to −96 %</b> large-model calls on a harder level (a wall, a box to stack on), reusing that memory, every box placed</li>
       </ul>
       <p class="meta">Next study: a harder task where the fault starts halfway through — already playable in the live demo.</p>
