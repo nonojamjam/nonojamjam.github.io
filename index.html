@@ -90,9 +90,9 @@
   <div class="item">
     <a class="thumb" href="research/capstone.html"><img src="assets/profile/noise_slider.gif" alt="Baseline vs proposed detector on a noisy satellite tile"></a>
     <div>
-      <h3><a href="research/capstone.html">Noise-robust object detection via heterogeneous relational KD</a></h3>
+      <h3><a href="research/capstone.html">Noise-robust object detection via heterogeneous ViT → CNN distillation</a></h3>
       <p class="meta">Capstone &amp; graduation thesis · 2025.11 – 2026.11 · team lead, sole ML code</p>
-      <p><b>+0.163 mAP50</b> under satellite sensor noise with an unchanged 22 MB model; 97% of the gain comes from noise training, distillation adds a small, consistent +0.005.</p>
+      <p>Noise training lifts box mAP50 under satellite sensor noise from <b>0.018 to 0.381</b> with an unchanged 22 MB model; centred spatial distillation from DINOv2 adds <b>+0.020 / +0.010</b> (two seeds), while relational KD adds nothing. Official iSAID split, re-run after finding a leaky public split.</p>
       <div class="btns"><a href="research/capstone.html">details</a><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">demo</a></div>
     </div>
   </div>

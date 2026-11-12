@@ -3,56 +3,57 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Noise-robust object detection via heterogeneous relational KD — Juhyeok Park</title>
+<title>Noise-robust object detection via heterogeneous ViT → CNN distillation — Juhyeok Park</title>
 <link rel="stylesheet" href="../assets/site.css">
 </head>
 <body>
 <main class="wrap page">
   <p class="crumb"><a href="../index.html">← Juhyeok Park</a></p>
-  <h1>Noise-robust object detection via heterogeneous relational KD</h1>
+  <h1>Noise-robust object detection via heterogeneous ViT → CNN distillation</h1>
   <p class="meta">Capstone &amp; graduation thesis · 2025.11 – 2026.11 · team lead, sole ML code</p>
-  <div class="btns top"><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">interactive demo &amp; code</a></div>
+  <div class="btns top"><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">interactive demo &amp; code (September version)</a></div>
   <p class="ko">위성 센서 노이즈 속에서도 가벼운 검출기가 동작하게 하는 연구입니다. 배포 모델은 그대로 두고 학습만 바꿨습니다.</p>
-  <p class="lead">Keep a lightweight detector working under satellite sensor noise. DINOv2 (ViT) → YOLOv8s-seg (CNN) distance-wise relational distillation, plus 50:50 mixed-noise training; teacher and adapter are removed at inference, so the deployed model is unchanged (11.8M parameters / 22 MB).</p>
+  <p class="lead">Keep a lightweight detector working under satellite sensor noise. YOLOv8s-seg (CNN) is trained with 50:50 clean/noisy batches and, in the final version, a centred spatial distillation loss from DINOv2 (ViT) patch tokens; teacher and adapter are removed at inference, so the deployed model is unchanged (11.8M parameters / 22 MB).</p>
   <ul class="keys">
-    <li><b>+0.163</b> box mAP50 under noise (σ = 0.3), stable across seeds (±0.0005)</li>
-    <li><b>97%</b> of the gain from noise training; distillation adds +0.005</li>
-    <li><b>−0.053</b> cost on clean tiles, also seed-stable</li>
+    <li><b>0.018 → 0.381</b> box mAP50 under noise (σ = 0.3) from noise training alone</li>
+    <li><b>+0.020 / +0.010</b> more from centred spatial distillation (seeds 0 / 1); relational KD added nothing</li>
+    <li><b>−0.034</b> clean-tile cost of noise training; with spatial distillation −0.020</li>
   </ul>
+  <p class="meta">2026.10 correction: the September numbers first shown here used a public Kaggle copy of iSAID whose validation tiles were 88.9% identical to training tiles, and a label-parsing bug that inflated boxes. Every condition was re-run on the official iSAID split with fixed labels; all numbers below are from that re-run (graduation thesis v2.1).</p>
   <h2>What I tried</h2>
-  <p>The target is a detector small enough for an on-board computer that still works when the image is noisy. The obvious route — distil a large, robust vision transformer into a small CNN — took four attempts.</p>
-  <details class="more"><summary>The four attempts</summary>
+  <p>The target is a detector small enough for an on-board computer that still works when the image is noisy. The obvious route — distil a large, robust vision transformer into a small CNN — took five attempts.</p>
+  <details class="more"><summary>The five attempts</summary>
   <table style="border-collapse:collapse;font-size:.9rem;margin:10px 0 14px;width:100%">
 <tr><th style="text-align:left;padding:6px 10px">attempt</th><th style="text-align:left;padding:6px 10px">idea</th><th style="text-align:left;padding:6px 10px">what happened</th><th style="text-align:left;padding:6px 10px">why it fell short</th></tr>
 <tr><td style="padding:6px 10px;vertical-align:top"><b>1 · Feature-matching KD</b></td><td style="padding:6px 10px;vertical-align:top">1×1 adapter, MSE between DINOv2 and YOLO features (small COCO subset)</td><td style="padding:6px 10px;vertical-align:top">mAP below the plain detector</td><td style="padding:6px 10px;vertical-align:top">adapter too shallow; no detection loss in the objective</td></tr>
 <tr><td style="padding:6px 10px;vertical-align:top"><b>2 · Adapter v1 → v9</b></td><td style="padding:6px 10px;vertical-align:top">residual adapter with GroupNorm, GELU, coordinate attention; MSE + RKD + cosine; PCGrad against gradient clash (COCO 40k)</td><td style="padding:6px 10px;vertical-align:top">clean mAP50 0.5423 → 0.5616, but at σ = 0.3 0.4171 → 0.4058</td><td style="padding:6px 10px;vertical-align:top">the distilled backbone fell <i>faster</i> under noise — clean-image knowledge did not transfer to noisy inputs</td></tr>
 <tr><td style="padding:6px 10px;vertical-align:top"><b>3 · Clean teacher, noisy student</b></td><td style="padding:6px 10px;vertical-align:top">teacher sees the clean tile, student the noisy one; align their statistics on iSAID</td><td style="padding:6px 10px;vertical-align:top">loss converged; no measured robustness gain</td><td style="padding:6px 10px;vertical-align:top">matching statistics of noisy features did not make detection robust</td></tr>
-<tr><td style="padding:6px 10px;vertical-align:top"><b>4 · RKD + mixed-noise training</b> (final)</td><td style="padding:6px 10px;vertical-align:top">distance-wise relational KD plus 50:50 clean/noisy training; teacher and adapter removed at inference</td><td style="padding:6px 10px;vertical-align:top">noisy mAP50 +0.163 at the same 22 MB model</td><td style="padding:6px 10px;vertical-align:top">—</td></tr>
+<tr><td style="padding:6px 10px;vertical-align:top"><b>4 · RKD + mixed-noise training</b></td><td style="padding:6px 10px;vertical-align:top">distance-wise relational KD between images plus 50:50 clean/noisy training</td><td style="padding:6px 10px;vertical-align:top">official split: same as noise training alone (+0.001 / −0.002 over two seeds)</td><td style="padding:6px 10px;vertical-align:top">it relates whole images to each other; nothing tells the student <i>where</i> objects are</td></tr>
+<tr><td style="padding:6px 10px;vertical-align:top"><b>5 · Centred spatial KD + mixed-noise training</b> (final)</td><td style="padding:6px 10px;vertical-align:top">align DINOv2 patch tokens to student features position by position, after removing each image's mean token on both sides</td><td style="padding:6px 10px;vertical-align:top">noisy mAP50 +0.020 / +0.010 over noise training alone; gone when teacher positions are shuffled (seed 0)</td><td style="padding:6px 10px;vertical-align:top">— (open questions below)</td></tr>
 </table>
   </details>
   <h2>Results</h2>
-  <p class="meta">Kaggle T4, 10 epochs, σ = 0.3, box mAP50, seed 0; the noise-training gain repeated with seed 1 (±0.0005)</p>
-  <figure class="chart"><img src="../assets/charts/cap_map50.svg" alt="Box mAP50, 2x2 ablation. Noisy tiles: baseline 0.015, distillation 0.018, noise training 0.178, both 0.182. Clean tiles: 0.284, 0.297, 0.225, 0.231."></figure>
-  <details class="more"><summary>Table</summary>
+  <p class="meta">Official iSAID split (18,732 / 6,048 patches), Kaggle T4, 10 epochs, σ = 0.3, box mAP50, seed 0, every model re-evaluated on the same noisy images.</p>
   <table style="border-collapse:collapse;font-size:.92rem;margin:6px 0 12px">
     <tr><th style="text-align:left;padding:4px 14px 4px 0">model</th><th style="padding:4px 14px">noisy</th><th style="padding:4px 14px">clean</th></tr>
-    <tr><td style="padding:3px 14px 3px 0">Baseline (clean-only)</td><td style="padding:3px 14px">0.015</td><td style="padding:3px 14px">0.284</td></tr>
-    <tr><td style="padding:3px 14px 3px 0">+ distillation only</td><td style="padding:3px 14px">0.018</td><td style="padding:3px 14px">0.297</td></tr>
-<tr><td style="padding:3px 14px 3px 0">+ noise training</td><td style="padding:3px 14px">0.178</td><td style="padding:3px 14px">0.225</td></tr>
-    <tr><td style="padding:3px 14px 3px 0"><b>+ distillation (proposed)</b></td><td style="padding:3px 14px"><b>0.182</b></td><td style="padding:3px 14px">0.231</td></tr>
+    <tr><td style="padding:3px 14px 3px 0">Baseline (no noise training)*</td><td style="padding:3px 14px">0.018</td><td style="padding:3px 14px">0.631</td></tr>
+    <tr><td style="padding:3px 14px 3px 0">+ noise training</td><td style="padding:3px 14px">0.381</td><td style="padding:3px 14px">0.597</td></tr>
+    <tr><td style="padding:3px 14px 3px 0">+ noise training + relational KD</td><td style="padding:3px 14px">0.382</td><td style="padding:3px 14px">0.593</td></tr>
+    <tr><td style="padding:3px 14px 3px 0"><b>+ noise training + centred spatial KD (final)</b></td><td style="padding:3px 14px"><b>0.401</b></td><td style="padding:3px 14px"><b>0.611</b></td></tr>
   </table>
+  <p class="meta">* trained on an RTX 3060 Ti with a different software stack; the other rows on the same T4 setup. Distillation without noise training was not re-run on the official split.</p>
+  <figure><img src="../assets/profile/noise_slider.gif" alt="Slider comparison on one noisy tile: baseline 0 detections, proposed detects the aircraft" style="max-width:440px;display:block;margin:0 auto"><figcaption>Slider from the interactive demo (September models): baseline (left) finds nothing, the September model with noise training + relational KD (right) detects the aircraft.</figcaption></figure>
+  <p class="meta">Qualitative; the numbers are in the table above.</p>
+  <h2>What the comparison says</h2>
+  <p><b>Noise training</b> does most of the work (0.018 → 0.381 noisy mAP50). <b>Relational KD</b> adds nothing on top. <b>Centred spatial KD</b> adds a smaller but repeated gain (+0.020 / +0.010) and also raises clean mAP50. Robustness is not free: noise training costs 0.034 on clean tiles.</p>
+  <details class="more"><summary>Superseded September 2 × 2 (kept for the record)</summary>
+    <p>On the leaky Kaggle split with inflated boxes, the 2 × 2 (with / without distillation × with / without noise training) gave baseline 0.015 / 0.284, distillation only 0.018 / 0.297, noise training 0.178 / 0.225, both 0.182 / 0.231 (noisy / clean), i.e. "+0.163, 97% from noise training, distillation +0.005". The direction — noise training dominates, relational KD adds little — held on the official split; the absolute numbers did not.</p>
+    <figure class="chart"><img src="../assets/charts/cap_map50.svg" alt="Superseded September 2x2 ablation on the leaky split. Noisy tiles: baseline 0.015, distillation 0.018, noise training 0.178, both 0.182. Clean tiles: 0.284, 0.297, 0.225, 0.231."></figure>
   </details>
-  <figure><img src="../assets/profile/noise_slider.gif" alt="Slider comparison on one noisy tile: baseline 0 detections, proposed detects the aircraft" style="max-width:440px;display:block;margin:0 auto"><figcaption>Slider from the interactive demo: baseline (left) finds nothing, proposed (right) detects the aircraft.</figcaption></figure>
-  <p class="meta">Qualitative; the numbers are in the chart above.</p>
-  <h2>What the 2 × 2 ablation says</h2>
-  <p><b>Noise training</b> gives 97 % of the gain (+0.163 noisy mAP50); <b>distillation</b> adds a small, consistent +0.005. Robustness costs about 0.06 on clean tiles.</p>
-  <details class="more"><summary>Details</summary>
-    <p>Running all four combinations (with / without distillation × with / without noise training) separated the two effects. Noise training alone gives +0.163 noisy mAP50 — 97% of the gain; distillation adds +0.005, small but positive in all four comparisons. The two barely interact. Robustness is not free: clean mAP50 drops by about 0.06.</p>
-  </details>
-  <div class="box">The robustness came from what the model trained on, not from what it was taught by the teacher. The open question is whether the clean/noisy trade-off is fundamental or a side effect of sharing one set of weights and normalisation statistics.</div>
-  <h2>Update · 2026.11 — spatial distillation (graduation thesis)</h2>
+  <div class="box">Most of the robustness came from what the model trained on. The teacher helped only once it taught <i>where</i> things are, with the shared, position-independent component removed from both sides.</div>
+  <h2>Spatial distillation in detail (graduation thesis, 2026.11)</h2>
   <p class="meta">Source: J. Park, B.S. graduation thesis, Chungbuk National University (in preparation, v2.1), Tables 3–4 and Fig. 3.</p>
-  <p>The 2 × 2 left one question open: can the teacher add more than +0.005 if it teaches <i>where</i>, not just how images relate? I aligned DINOv2 patch tokens to student features position by position (cosine distance, teacher tokens with outlier norms masked) and checked each variant against a control in which the teacher's token positions are shuffled per image.</p>
+  <p>Relational KD relates images to each other. Spatial distillation instead asks whether the teacher can help by teaching <i>where</i>: I aligned DINOv2 patch tokens to student features position by position (cosine distance, teacher tokens with outlier norms masked) and checked each variant against a control in which the teacher's token positions are shuffled per image.</p>
   <figure>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:660px;margin:0 auto">
       <img src="../assets/cap/ex_clean.jpg" alt="iSAID tile, clean" style="width:100%;display:block">
@@ -61,7 +62,7 @@
     </div>
     <figcaption>One iSAID tile: clean input · training noise (σ = 50/255) · what the teacher sees — DINOv2 ViT-B/14 last-block patch tokens (32 × 32), first three principal components as RGB. Spatial distillation asks the student to reproduce this map position by position.</figcaption>
   </figure>
-  <p class="meta">Official iSAID split (18,732 / 6,048 patches) with corrected box labels, so these numbers are not directly comparable with the 2 × 2 above. All conditions include noise training. Kaggle T4, 10 epochs, σ = 0.3, box mAP50, last-epoch weights, every model re-evaluated on the same noisy images.</p>
+  <p class="meta">All conditions include noise training. Kaggle T4, 10 epochs, σ = 0.3, box mAP50, last-epoch weights, every model re-evaluated on the same noisy images.</p>
   <ul class="keys">
     <li><b>+0.020 / +0.010</b> noisy mAP50 over noise training alone with centred alignment (seeds 0 / 1); clean also +0.014 / +0.017</li>
     <li><b>[+0.015, +0.024]</b> 95% bootstrap interval of that gap on seed 0 (evaluation-sample variation only)</li>
