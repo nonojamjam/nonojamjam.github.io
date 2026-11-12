@@ -53,6 +53,14 @@
   <h2>Update · 2026.11 — spatial distillation (graduation thesis)</h2>
   <p class="meta">Source: J. Park, B.S. graduation thesis, Chungbuk National University (in preparation, v2.1), Tables 3–4 and Fig. 3.</p>
   <p>The 2 × 2 left one question open: can the teacher add more than +0.005 if it teaches <i>where</i>, not just how images relate? I aligned DINOv2 patch tokens to student features position by position (cosine distance, teacher tokens with outlier norms masked) and checked each variant against a control in which the teacher's token positions are shuffled per image.</p>
+  <figure>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:660px;margin:0 auto">
+      <img src="../assets/cap/ex_clean.jpg" alt="iSAID tile, clean" style="width:100%;display:block">
+      <img src="../assets/cap/ex_noisy.jpg" alt="Same tile with training noise sigma 50/255" style="width:100%;display:block">
+      <img src="../assets/cap/ex_teacher_pca.png" alt="DINOv2 patch-token PCA of the clean tile: the three rows of parked helicopters stand out from the ground as one colour" style="width:100%;display:block;image-rendering:pixelated">
+    </div>
+    <figcaption>One iSAID tile: clean input · training noise (σ = 50/255) · what the teacher sees — DINOv2 ViT-B/14 last-block patch tokens (32 × 32), first three principal components as RGB. Spatial distillation asks the student to reproduce this map position by position.</figcaption>
+  </figure>
   <p class="meta">Official iSAID split (18,732 / 6,048 patches) with corrected box labels, so these numbers are not directly comparable with the 2 × 2 above. All conditions include noise training. Kaggle T4, 10 epochs, σ = 0.3, box mAP50, last-epoch weights, every model re-evaluated on the same noisy images.</p>
   <ul class="keys">
     <li><b>+0.020 / +0.010</b> noisy mAP50 over noise training alone with centred alignment (seeds 0 / 1); clean also +0.014 / +0.017</li>
@@ -71,6 +79,7 @@
   </table>
   <p class="meta">Small objects: approximate AP50 for boxes under 32² px at 640 px input (not COCO small AP). Deployed student unchanged: 11.8M parameters; teacher and adapter removed at inference.</p>
   <p>In a short diagnostic run, plain alignment pushed student features toward one position-independent direction. Subtracting each image's mean token from teacher and student before the cosine distance (centring) removes that shared component and aligns each position's deviation. It is the only variant that beat both noise training alone and its own shuffled control. Across evaluation noise levels, centred alignment led at σ = 0.1–0.3 on both seeds, and in all six seed × noise-sample combinations at σ = 0.3.</p>
+  <figure class="chart"><img src="../assets/charts/cap_sigma.svg" alt="Box mAP50 versus evaluation noise sigma 0 to 0.4. Without noise training: 0.631, 0.270, 0.081, 0.018, 0.002. Noise training only, seed 0: 0.597, 0.518, 0.473, 0.381, 0.257. Centred spatial KD, seed 0: 0.611, 0.537, 0.496, 0.401, 0.274. Seed 1: noise training only 0.587 to 0.283, centred 0.604 to 0.267."><figcaption>Same checkpoints re-evaluated at each σ (thesis Fig. 3). The no-noise-training model was trained on a different GPU and software stack.</figcaption></figure>
   <details class="more"><summary>What this does not show yet</summary>
     <p>Centring and λ changed together; plain alignment at λ = 2.5 landed in between (0.391), so the two effects are not separated. The shuffled controls and that check have one seed each. The main comparison has two training seeds, and at σ = 0.4 the sign flipped on seed 1. The bootstrap resamples patches cut from 458 source images, so the interval is likely too narrow. Only Gaussian noise was tested.</p>
   </details>
