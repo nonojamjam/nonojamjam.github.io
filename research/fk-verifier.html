@@ -22,7 +22,7 @@
   <h2>Pipeline</h2>
   <figure><img src="../assets/ksiis/framework.png" alt="Input, LLM planner, kinematics, imagine, pre-verify, execute, post-VLM with re-imagine and re-plan loops"><figcaption>From the KSIIS talk (Korean labels): LLM planner → kinematics (IK, FK skeleton) → imagined goal image → two-stage pre-verification → execute → post-execution check. A failed check re-imagines (up to 2×) or re-plans.</figcaption></figure>
   <h2>What was tested</h2>
-  <p>The original idea was to let a VLM <i>imagine</i> the arm at its goal — edit the camera image — and execute toward that picture. Eight controlled experiments, mostly on a 2-DOF planar arm, located where this breaks.</p>
+  <p>The original idea was to let a VLM <i>imagine</i> the arm at its goal — edit the camera image — and execute toward that picture. Seven controlled experiments, mostly on a 2-DOF planar arm, located where this breaks.</p>
   <figure class="chart"><img src="../assets/charts/fk_error_mm.svg" alt="End-effector error on a 2-DOF arm: reading angles from an image 14.5 mm, generating the moved arm 93.7 mm; image generation without joint angles 165.7 mm, with joint angles as text 276.9 mm"></figure>
   <details class="more"><summary>All seven experiments</summary>
   <table style="border-collapse:collapse;font-size:.9rem;margin:10px 0 14px;width:100%">

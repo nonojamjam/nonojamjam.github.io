@@ -35,7 +35,7 @@
   <ul class="keys">
     <li><b>793 → 0</b> large-model calls, same 36/36 placed: a 4B planner with a 32B model's verified memory, held-out scenes</li>
     <li><b>100 → 108/108</b> with real LLMs and a shoulder that reads 0.15 rad off: independent sensors recalibrate, then the robot grasps only after observing and verifying</li>
-    <li><b>8 of 108</b> episodes needed an extra look before grasping, almost all the very first one</li>
+    <li><b>8 of 108</b> episodes needed an extra look before grasping, almost all of them the first episode of a run</li>
     <li><b>−78 to −96&nbsp;%</b> large-model calls on a harder level (a wall, a box to stack on, both) when the memory from the easier level is reused; 36/36 placed in each</li>
   </ul>
 
@@ -112,12 +112,7 @@
   </details>
 
   <h3>Level 3 (next study)</h3>
-  <p>Built and checked with a stand-in planner, then tuned with the real LLMs on two scene seeds: with memory alone and the fault starting at visit 7, the robot placed 4/18 on each. The comparison on held-out scenes comes next; results will be added here. The <a href="../demo/oracle-free.html">live demo</a> runs all three levels with the stand-in planner.</p>
-  <div class="tw"><table class="res">
-    <tr><th>Held-out scenes</th><th>placed</th><th>unsafe actions after the fault</th><th>large-model calls</th></tr>
-    <tr><td>level 1 memory</td><td>—</td><td>—</td><td>—</td></tr>
-    <tr><td>+ calibrate, set faulty memories aside, check before grasping</td><td>—</td><td>—</td><td>—</td></tr>
-  </table></div>
+  <p>Built and checked with a stand-in planner, then tuned with the real LLMs on two scene seeds: with memory alone and the fault starting at visit 7, the robot placed 4/18 on each. Held-out results are not in yet. The <a href="../demo/oracle-free.html">live demo</a> runs all three levels with the stand-in planner.</p>
 
   <h2>What a fault does to memory</h2>
   <p>The fault did not spoil the memories' geometry. It spoiled their <b>outcome labels</b>, and it <b>left gaps</b>: the faulty robot never got past grasping.</p>
