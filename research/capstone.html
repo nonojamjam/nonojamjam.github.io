@@ -10,7 +10,7 @@
 <main class="wrap page">
   <p class="crumb"><a href="../index.html">← Juhyeok Park</a></p>
   <h1>Noise-robust object detection via heterogeneous relational KD</h1>
-  <p class="meta">Capstone · 2025.11 – 2026.09 · team lead, sole ML code</p>
+  <p class="meta">Capstone &amp; graduation thesis · 2025.11 – 2026.11 · team lead, sole ML code</p>
   <div class="btns top"><a href="https://nonojamjam.github.io/noise-robust-detection-rkd/">interactive demo &amp; code</a></div>
   <p class="ko">위성 센서 노이즈 속에서도 가벼운 검출기가 동작하게 하는 연구입니다. 배포 모델은 그대로 두고 학습만 바꿨습니다.</p>
   <p class="lead">Keep a lightweight detector working under satellite sensor noise. DINOv2 (ViT) → YOLOv8s-seg (CNN) distance-wise relational distillation, plus 50:50 mixed-noise training; teacher and adapter are removed at inference, so the deployed model is unchanged (11.8M parameters / 22 MB).</p>
@@ -50,6 +50,31 @@
     <p>Running all four combinations (with / without distillation × with / without noise training) separated the two effects. Noise training alone gives +0.163 noisy mAP50 — 97% of the gain; distillation adds +0.005, small but positive in all four comparisons. The two barely interact. Robustness is not free: clean mAP50 drops by about 0.06.</p>
   </details>
   <div class="box">The robustness came from what the model trained on, not from what it was taught by the teacher. The open question is whether the clean/noisy trade-off is fundamental or a side effect of sharing one set of weights and normalisation statistics.</div>
+  <h2>Update · 2026.11 — spatial distillation (graduation thesis)</h2>
+  <p class="meta">Source: J. Park, B.S. graduation thesis, Chungbuk National University (in preparation, v2.1), Tables 3–4 and Fig. 3.</p>
+  <p>The 2 × 2 left one question open: can the teacher add more than +0.005 if it teaches <i>where</i>, not just how images relate? I aligned DINOv2 patch tokens to student features position by position (cosine distance, teacher tokens with outlier norms masked) and checked each variant against a control in which the teacher's token positions are shuffled per image.</p>
+  <p class="meta">Official iSAID split (18,732 / 6,048 patches) with corrected box labels, so these numbers are not directly comparable with the 2 × 2 above. All conditions include noise training. Kaggle T4, 10 epochs, σ = 0.3, box mAP50, last-epoch weights, every model re-evaluated on the same noisy images.</p>
+  <ul class="keys">
+    <li><b>+0.020 / +0.010</b> noisy mAP50 over noise training alone with centred alignment (seeds 0 / 1); clean also +0.014 / +0.017</li>
+    <li><b>[+0.015, +0.024]</b> 95% bootstrap interval of that gap on seed 0 (evaluation-sample variation only)</li>
+    <li>plain alignment (λ = 0.5) and image-level relational KD: <b>no gain</b> (−0.008; +0.001 / −0.002)</li>
+  </ul>
+  <table style="border-collapse:collapse;font-size:.92rem;margin:6px 0 12px">
+    <tr><th style="text-align:left;padding:4px 14px 4px 0">condition (seed 0)</th><th style="padding:4px 14px">clean</th><th style="padding:4px 14px">noisy</th><th style="padding:4px 14px">noisy, small objects</th></tr>
+    <tr><td style="padding:3px 14px 3px 0">noise training only (λ = 0)</td><td style="padding:3px 14px">0.597</td><td style="padding:3px 14px">0.381</td><td style="padding:3px 14px">0.242</td></tr>
+    <tr><td style="padding:3px 14px 3px 0">+ image-level relational KD</td><td style="padding:3px 14px">0.593</td><td style="padding:3px 14px">0.382</td><td style="padding:3px 14px">0.244</td></tr>
+    <tr><td style="padding:3px 14px 3px 0">+ plain alignment, λ = 0.5</td><td style="padding:3px 14px">0.596</td><td style="padding:3px 14px">0.374</td><td style="padding:3px 14px">0.240</td></tr>
+    <tr><td style="padding:3px 14px 3px 0">&nbsp;&nbsp;same, positions shuffled</td><td style="padding:3px 14px">0.591</td><td style="padding:3px 14px">0.384</td><td style="padding:3px 14px">0.245</td></tr>
+    <tr><td style="padding:3px 14px 3px 0"><b>+ centred alignment, λ = 2.5</b></td><td style="padding:3px 14px"><b>0.611</b></td><td style="padding:3px 14px"><b>0.401</b></td><td style="padding:3px 14px"><b>0.253</b></td></tr>
+    <tr><td style="padding:3px 14px 3px 0">&nbsp;&nbsp;same, positions shuffled</td><td style="padding:3px 14px">0.587</td><td style="padding:3px 14px">0.375</td><td style="padding:3px 14px">0.245</td></tr>
+    <tr><td style="padding:3px 14px 3px 0">+ plain alignment, λ = 2.5</td><td style="padding:3px 14px">0.606</td><td style="padding:3px 14px">0.391</td><td style="padding:3px 14px">0.248</td></tr>
+  </table>
+  <p class="meta">Small objects: approximate AP50 for boxes under 32² px at 640 px input (not COCO small AP). Deployed student unchanged: 11.8M parameters; teacher and adapter removed at inference.</p>
+  <p>In a short diagnostic run, plain alignment pushed student features toward one position-independent direction. Subtracting each image's mean token from teacher and student before the cosine distance (centring) removes that shared component and aligns each position's deviation. It is the only variant that beat both noise training alone and its own shuffled control. Across evaluation noise levels, centred alignment led at σ = 0.1–0.3 on both seeds, and in all six seed × noise-sample combinations at σ = 0.3.</p>
+  <details class="more"><summary>What this does not show yet</summary>
+    <p>Centring and λ changed together; plain alignment at λ = 2.5 landed in between (0.391), so the two effects are not separated. The shuffled controls and that check have one seed each. The main comparison has two training seeds, and at σ = 0.4 the sign flipped on seed 1. The bootstrap resamples patches cut from 458 source images, so the interval is likely too narrow. Only Gaussian noise was tested.</p>
+  </details>
+  <div class="box">Teaching the student <i>where</i> things are helped under noise once the shared, position-independent component was removed from both sides — and on seed 0 the gain disappeared when the teacher's positions were shuffled.</div>
   <h2>Implementation</h2>
   <p>Implementation (sole author of the ML code): RKD loss, custom Ultralytics trainer (SPPF hook, adapter, mixed noise), three framework-level bug fixes.</p>
 
